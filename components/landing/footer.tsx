@@ -15,13 +15,13 @@ export function Footer() {
         </Link>
 
         <div className="flex items-center gap-6 text-[13px] text-[#b0aca4]">
-          <a href="#features" className="hover:text-[#8a8680] transition-colors">Features</a>
-          <a href="#apps" className="hover:text-[#8a8680] transition-colors">Apps</a>
+          <a href="#features" className="hover:text-[#8a8680] transition-colors">功能</a>
+          <a href="#apps" className="hover:text-[#8a8680] transition-colors">应用</a>
           <Link href="/register" className="hover:text-[#8a8680] transition-colors">注册</Link>
         </div>
 
         <p className="text-[12px] text-[#c5c0b8]">
-          Built with Next.js. Not affiliated with Apple Inc.
+          基于 Next.js 构建，与 Apple Inc. 无关。
         </p>
       </div>
     </footer>

@@ -6,6 +6,17 @@ import Link from "next/link"
 import { Eye, EyeOff, AlertCircle, Check, Monitor } from "lucide-react"
 import { registerUser } from "@/lib/auth-store"
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  )
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const [form, setForm] = useState({ username: "", email: "", password: "", confirmPassword: "" })
@@ -15,15 +26,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
 
   const validate = (): string | null => {
-    if (!form.username.trim()) return "Please enter a username"
-    if (form.username.length < 2) return "Username must be at least 2 characters"
-    if (form.username.length > 20) return "Username must be 20 characters or less"
-    if (!/^[a-zA-Z0-9_]+$/.test(form.username)) return "Username can only contain letters, numbers and underscores"
-    if (!form.email.trim()) return "Please enter your email"
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Please enter a valid email"
-    if (!form.password) return "Please enter a password"
-    if (form.password.length < 6) return "Password must be at least 6 characters"
-    if (form.password !== form.confirmPassword) return "The passwords you typed do not match."
+    if (!form.username.trim()) return "请输入用户名"
+    if (form.username.length < 2) return "用户名至少需要 2 个字符"
+    if (form.username.length > 20) return "用户名不能超过 20 个字符"
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(form.username)) return "用户名只能包含字母、数字、下划线或中文"
+    if (!form.email.trim()) return "请输入邮箱地址"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "请输入有效的邮箱地址"
+    if (!form.password) return "请输入密码"
+    if (form.password.length < 6) return "密码至少需要 6 个字符"
+    if (form.password !== form.confirmPassword) return "两次输入的密码不一致"
     return null
   }
 
@@ -40,7 +51,7 @@ export default function RegisterPage() {
     setTimeout(() => {
       const result = registerUser(form.username, form.email, form.password)
       if (!result.success) {
-        setError(result.error || "Registration failed")
+        setError(result.error || "注册失败")
         setLoading(false)
         return
       }
@@ -55,6 +66,33 @@ export default function RegisterPage() {
     setError("")
   }
 
+  const handleGoogleSignUp = () => {
+    // Simulated Google sign up
+    setLoading(true)
+    setTimeout(() => {
+      const gUsername = "google_user_" + Math.floor(Math.random() * 10000)
+      const result = registerUser(gUsername, "user@gmail.com", "google_oauth_" + Date.now())
+      if (result.success) {
+        setSuccess(true)
+        setTimeout(() => router.push("/desktop"), 1200)
+      } else {
+        setError("Google 账号已注册，请直接登录")
+        setLoading(false)
+      }
+    }, 800)
+  }
+
+  const strengthLevel = (() => {
+    const p = form.password
+    if (!p) return 0
+    if (p.length >= 12 && /[A-Z]/.test(p) && /[0-9]/.test(p) && /[^a-zA-Z0-9]/.test(p)) return 4
+    if (p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p)) return 3
+    if (p.length >= 6) return 2
+    return 1
+  })()
+
+  const strengthLabel = ["", "弱", "一般", "良好", "强"][strengthLevel]
+
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Brand */}
@@ -67,7 +105,7 @@ export default function RegisterPage() {
             Cloud<span className="text-[#34c759]">OS</span>
           </span>
         </Link>
-        <p className="mt-4 text-[14px] text-[#8a8680]">Your desktop in the cloud.</p>
+        <p className="mt-4 text-[14px] text-[#8a8680]">你的云端桌面。</p>
       </div>
 
       {/* Right Panel - Form */}
@@ -88,7 +126,7 @@ export default function RegisterPage() {
           <div className="w-full max-w-[440px]">
             {/* Title */}
             <h1 className="text-center text-[32px] font-bold leading-tight tracking-tight text-[#1a1a2e] md:text-[40px]">
-              Register for<br />CloudOS
+              注册<br />CloudOS
             </h1>
 
             {success ? (
@@ -97,152 +135,159 @@ export default function RegisterPage() {
                   <Check className="h-7 w-7 text-[#34c759]" />
                 </div>
                 <div>
-                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">Account Created</h3>
-                  <p className="mt-1 text-[14px] text-[#8a8680]">Redirecting to your desktop...</p>
+                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">账户创建成功</h3>
+                  <p className="mt-1 text-[14px] text-[#8a8680]">正在跳转到你的桌面...</p>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="mt-10 space-y-5">
+              <div className="mt-10">
+                {/* Google Sign Up */}
+                <button
+                  type="button"
+                  onClick={handleGoogleSignUp}
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#e0dcd6] bg-white py-3.5 text-[15px] font-medium text-[#1a1a2e] transition-all hover:bg-[#faf8f5] hover:border-[#d0ccc6] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <GoogleIcon className="h-5 w-5" />
+                  使用 Google 账号注册
+                </button>
+
+                {/* Divider */}
+                <div className="my-6 flex items-center gap-4">
+                  <div className="h-px flex-1 bg-[#e8e4de]" />
+                  <span className="text-[13px] text-[#b0aca4]">或</span>
+                  <div className="h-px flex-1 bg-[#e8e4de]" />
+                </div>
+
                 {error && (
-                  <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600 animate-shake">
+                  <div className="mb-5 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600 animate-shake">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {error}
                   </div>
                 )}
 
-                {/* Username */}
-                <div>
-                  <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="your_username"
-                    value={form.username}
-                    onChange={(e) => update("username", e.target.value)}
-                    className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
-                    autoComplete="username"
-                  />
-                </div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Username */}
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
+                      用户名
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="your_username"
+                      value={form.username}
+                      onChange={(e) => update("username", e.target.value)}
+                      className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
+                      autoComplete="username"
+                    />
+                  </div>
 
-                {/* Email */}
-                <div>
-                  <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={form.email}
-                    onChange={(e) => update("email", e.target.value)}
-                    className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
-                    autoComplete="email"
-                  />
-                </div>
+                  {/* Email */}
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
+                      邮箱
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={form.email}
+                      onChange={(e) => update("email", e.target.value)}
+                      className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
+                      autoComplete="email"
+                    />
+                  </div>
 
-                {/* Password */}
-                <div>
-                  <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                    Password
-                  </label>
-                  <div className="relative">
+                  {/* Password */}
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
+                      密码
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="至少 6 个字符"
+                        value={form.password}
+                        onChange={(e) => update("password", e.target.value)}
+                        className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 pr-11 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#c5c0b8] hover:text-[#8a8680] transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
+                      确认密码
+                    </label>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Min 6 characters"
-                      value={form.password}
-                      onChange={(e) => update("password", e.target.value)}
-                      className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 pr-11 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
+                      placeholder="再次输入你的密码"
+                      value={form.confirmPassword}
+                      onChange={(e) => update("confirmPassword", e.target.value)}
+                      className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
                       autoComplete="new-password"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#c5c0b8] hover:text-[#8a8680] transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    {form.confirmPassword && form.password !== form.confirmPassword && (
+                      <p className="mt-1.5 text-right text-[12px] text-red-500">
+                        两次输入的密码不一致
+                      </p>
+                    )}
                   </div>
-                </div>
 
-                {/* Confirm Password */}
-                <div>
-                  <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                    Confirm password
-                  </label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Re-enter your password"
-                    value={form.confirmPassword}
-                    onChange={(e) => update("confirmPassword", e.target.value)}
-                    className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
-                    autoComplete="new-password"
-                  />
-                  {form.confirmPassword && form.password !== form.confirmPassword && (
-                    <p className="mt-1.5 text-right text-[12px] text-red-500">
-                      The passwords you typed do not match.
-                    </p>
-                  )}
-                </div>
-
-                {/* Password strength */}
-                {form.password && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-1 gap-1.5">
-                      {[1, 2, 3, 4].map((level) => {
-                        const strength =
-                          form.password.length >= 12 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) && /[^a-zA-Z0-9]/.test(form.password) ? 4
-                          : form.password.length >= 8 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) ? 3
-                          : form.password.length >= 6 ? 2
-                          : 1
-                        const active = level <= strength
-                        const color = strength <= 1 ? "bg-red-400" : strength === 2 ? "bg-orange-400" : strength === 3 ? "bg-yellow-400" : "bg-[#34c759]"
-                        return (
-                          <div
-                            key={level}
-                            className={`h-1 flex-1 rounded-full transition-all ${active ? color : "bg-[#e8e4de]"}`}
-                          />
-                        )
-                      })}
+                  {/* Password strength */}
+                  {form.password && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-1 gap-1.5">
+                        {[1, 2, 3, 4].map((level) => {
+                          const active = level <= strengthLevel
+                          const color = strengthLevel <= 1 ? "bg-red-400" : strengthLevel === 2 ? "bg-orange-400" : strengthLevel === 3 ? "bg-yellow-400" : "bg-[#34c759]"
+                          return (
+                            <div
+                              key={level}
+                              className={`h-1 flex-1 rounded-full transition-all ${active ? color : "bg-[#e8e4de]"}`}
+                            />
+                          )
+                        })}
+                      </div>
+                      <span className="text-[11px] text-[#b0aca4]">{strengthLabel}</span>
                     </div>
-                    <span className="text-[11px] text-[#b0aca4]">
-                      {(() => {
-                        const s = form.password.length >= 12 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) && /[^a-zA-Z0-9]/.test(form.password) ? 4
-                          : form.password.length >= 8 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) ? 3
-                          : form.password.length >= 6 ? 2
-                          : 1
-                        return s <= 1 ? "Weak" : s === 2 ? "Fair" : s === 3 ? "Good" : "Strong"
-                      })()}
-                    </span>
-                  </div>
-                )}
-
-                {/* Register Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-xl bg-[#34c759] py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Creating account...
-                    </span>
-                  ) : (
-                    "Register"
                   )}
-                </button>
 
-                {/* Log in Button */}
-                <Link
-                  href="/desktop"
-                  className="flex w-full items-center justify-center rounded-xl border border-[#34c759] py-3.5 text-[15px] font-semibold text-[#34c759] transition-all hover:bg-[#34c759]/[0.04] active:scale-[0.99]"
-                >
-                  Log in
-                </Link>
-              </form>
+                  {/* Register Button */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-[#34c759] py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        正在创建账户...
+                      </span>
+                    ) : (
+                      "注册"
+                    )}
+                  </button>
+
+                  {/* Log in Button */}
+                  <Link
+                    href="/desktop"
+                    className="flex w-full items-center justify-center rounded-xl border border-[#34c759] py-3.5 text-[15px] font-semibold text-[#34c759] transition-all hover:bg-[#34c759]/[0.04] active:scale-[0.99]"
+                  >
+                    登录
+                  </Link>
+                </form>
+              </div>
             )}
           </div>
         </div>
@@ -255,7 +300,7 @@ export default function RegisterPage() {
             </div>
             <span className="text-[13px] font-semibold text-[#8a8680]">CloudOS</span>
           </Link>
-          <p className="text-[11px] text-[#c5c0b8]">Not affiliated with Apple Inc.</p>
+          <p className="text-[11px] text-[#c5c0b8]">与 Apple Inc. 无关。</p>
         </div>
       </div>
     </div>

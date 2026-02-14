@@ -18,12 +18,12 @@ export function HeroSection() {
       {/* Badge */}
       <div className="animate-hero mb-6 flex items-center gap-2 rounded-full border border-[#e8e4de] bg-white px-4 py-1.5 shadow-sm">
         <Sparkles className="h-3.5 w-3.5 text-[#34c759]" />
-        <span className="text-[13px] text-[#6e6a62]">Your Desktop, Reimagined</span>
+        <span className="text-[13px] text-[#6e6a62]">重新定义你的桌面体验</span>
       </div>
 
       {/* Headline */}
       <h1 className="animate-hero-delay-1 max-w-3xl text-center text-5xl font-bold leading-[1.1] tracking-tight text-[#1a1a2e] md:text-7xl text-balance">
-        A Complete{" "}
+        完整的{" "}
         <span
           className="bg-clip-text text-transparent animate-shimmer"
           style={{
@@ -31,16 +31,15 @@ export function HeroSection() {
             backgroundSize: "200% auto",
           }}
         >
-          Desktop
+          云端桌面
         </span>
         <br />
-        in Your Browser
+        尽在浏览器中
       </h1>
 
       {/* Subtitle */}
       <p className="animate-hero-delay-2 mt-6 max-w-xl text-center text-[17px] leading-relaxed text-[#8a8680]">
-        Experience a fully-featured operating system right in your browser.
-        Finder, Terminal, Safari, Music, and more -- no installation required.
+        在浏览器中体验功能完整的操作系统。访达、终端、Safari、音乐等一应俱全，无需安装。
       </p>
 
       {/* CTAs */}
@@ -70,7 +69,7 @@ export function HeroSection() {
         >
           <Image
             src="/images/wallpaper.jpg"
-            alt="CloudOS Desktop Preview"
+            alt="CloudOS 桌面预览"
             width={1920}
             height={1080}
             className="w-full"
