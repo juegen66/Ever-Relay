@@ -18,12 +18,12 @@ export function HeroSection() {
       {/* Badge */}
       <div className="animate-hero mb-6 flex items-center gap-2 rounded-full border border-[#e8e4de] bg-white px-4 py-1.5 shadow-sm">
         <Sparkles className="h-3.5 w-3.5 text-[#34c759]" />
-        <span className="text-[13px] text-[#6e6a62]">重新定义你的桌面体验</span>
+        <span className="text-[13px] text-[#6e6a62]">Your Desktop, Reimagined</span>
       </div>
 
       {/* Headline */}
       <h1 className="animate-hero-delay-1 max-w-3xl text-center text-5xl font-bold leading-[1.1] tracking-tight text-[#1a1a2e] md:text-7xl text-balance">
-        完整的{" "}
+        A Complete{" "}
         <span
           className="bg-clip-text text-transparent animate-shimmer"
           style={{
@@ -31,15 +31,16 @@ export function HeroSection() {
             backgroundSize: "200% auto",
           }}
         >
-          云端桌面
+          Desktop
         </span>
         <br />
-        尽在浏览器中
+        in Your Browser
       </h1>
 
       {/* Subtitle */}
       <p className="animate-hero-delay-2 mt-6 max-w-xl text-center text-[17px] leading-relaxed text-[#8a8680]">
-        在浏览器中体验功能完整的操作系统。访达、终端、Safari、音乐等一应俱全，无需安装。
+        Experience a fully-featured operating system right in your browser.
+        Finder, Terminal, Safari, Music, and more -- no installation required.
       </p>
 
       {/* CTAs */}
@@ -48,14 +49,14 @@ export function HeroSection() {
           href="/register"
           className="group flex items-center gap-2 rounded-full bg-[#34c759] px-7 py-3 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
         >
-          免费注册
+          Get Started Free
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
           href="/desktop"
           className="rounded-full border border-[#ddd8d0] bg-white px-7 py-3 text-[15px] font-semibold text-[#1a1a2e] transition-all hover:bg-[#f5f2ee] hover:border-[#ccc7bf]"
         >
-          登录桌面
+          Sign In
         </Link>
       </div>
 
@@ -69,7 +70,7 @@ export function HeroSection() {
         >
           <Image
             src="/images/wallpaper.jpg"
-            alt="CloudOS 桌面预览"
+            alt="CloudOS Desktop Preview"
             width={1920}
             height={1080}
             className="w-full"

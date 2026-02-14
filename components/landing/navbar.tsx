@@ -36,10 +36,10 @@ export function Navbar() {
         {/* Desktop Nav */}
         <div className="hidden items-center gap-8 md:flex">
           <a href="#features" className="text-[14px] text-[#8a8680] transition-colors hover:text-[#1a1a2e]">
-            功能
+            Features
           </a>
           <a href="#apps" className="text-[14px] text-[#8a8680] transition-colors hover:text-[#1a1a2e]">
-            应用
+            Apps
           </a>
         </div>
 
@@ -49,13 +49,13 @@ export function Navbar() {
             href="/desktop"
             className="text-[14px] font-medium text-[#8a8680] transition-colors hover:text-[#1a1a2e]"
           >
-            登录
+            Sign In
           </Link>
           <Link
             href="/register"
             className="rounded-full bg-[#34c759] px-5 py-2 text-[14px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-md hover:shadow-[#34c759]/15"
           >
-            免费注册
+            Get Started
           </Link>
         </div>
 
@@ -73,11 +73,11 @@ export function Navbar() {
       {mobileOpen && (
         <div className="border-t border-[#e8e4de] bg-[#faf8f5]/95 backdrop-blur-xl px-6 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            <a href="#features" onClick={() => setMobileOpen(false)} className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">功能</a>
-            <a href="#apps" onClick={() => setMobileOpen(false)} className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">应用</a>
+            <a href="#features" onClick={() => setMobileOpen(false)} className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">Features</a>
+            <a href="#apps" onClick={() => setMobileOpen(false)} className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">Apps</a>
             <div className="pt-2 border-t border-[#e8e4de] flex flex-col gap-2">
-              <Link href="/desktop" className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">登录</Link>
-              <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-full bg-[#34c759] px-5 py-2.5 text-center text-[14px] font-semibold text-white">免费注册</Link>
+            <Link href="/desktop" className="text-[14px] text-[#8a8680] hover:text-[#1a1a2e] py-2">Sign In</Link>
+            <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-full bg-[#34c759] px-5 py-2.5 text-center text-[14px] font-semibold text-white">Get Started</Link>
             </div>
           </div>
         </div>
