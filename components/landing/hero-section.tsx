@@ -49,14 +49,14 @@ export function HeroSection() {
           href="/register"
           className="group flex items-center gap-2 rounded-full bg-[#34c759] px-7 py-3 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
         >
-          Get Started Free
+          免费注册
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
           href="/desktop"
           className="rounded-full border border-[#ddd8d0] bg-white px-7 py-3 text-[15px] font-semibold text-[#1a1a2e] transition-all hover:bg-[#f5f2ee] hover:border-[#ccc7bf]"
         >
-          Sign In
+          登录桌面
         </Link>
       </div>
 

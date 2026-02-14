@@ -176,13 +176,13 @@ export function FeaturesSection() {
           <h2
             className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
           >
-            Ready to start?
+            准备好开始了吗？
           </h2>
           <p
             className={`mt-4 text-[17px] text-[#8a8680] ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
             style={{ animationDelay: "0.1s" }}
           >
-            Create a free account and access your cloud desktop in seconds.
+            创建免费账户，几秒钟即可访问你的云端桌面。
           </p>
           <div
             className={`mt-8 flex items-center justify-center gap-4 ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
@@ -192,7 +192,7 @@ export function FeaturesSection() {
               href="/register"
               className="group flex items-center gap-2 rounded-full bg-[#34c759] px-8 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
             >
-              Create Free Account
+              免费注册账户
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
