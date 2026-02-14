@@ -1,28 +1,68 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { MenuBar } from "./menu-bar"
 import { Dock } from "./dock"
 import { AppWindow } from "./app-window"
+import { ContextMenu } from "./context-menu"
+import { Spotlight } from "./spotlight"
+import { BootScreen } from "./boot-screen"
 import type { AppId, WindowState } from "./types"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
-  finder: { w: 720, h: 460 },
-  calculator: { w: 260, h: 380 },
-  notes: { w: 560, h: 440 },
-  terminal: { w: 620, h: 420 },
-  safari: { w: 820, h: 540 },
-  settings: { w: 680, h: 480 },
-  photos: { w: 700, h: 500 },
+  finder: { w: 780, h: 480 },
+  calculator: { w: 260, h: 400 },
+  notes: { w: 680, h: 500 },
+  terminal: { w: 660, h: 440 },
+  safari: { w: 900, h: 580 },
+  settings: { w: 740, h: 520 },
+  photos: { w: 780, h: 540 },
+  music: { w: 820, h: 520 },
+  calendar: { w: 760, h: 520 },
+  mail: { w: 820, h: 540 },
+  weather: { w: 420, h: 520 },
+  clock: { w: 340, h: 380 },
+  maps: { w: 780, h: 520 },
+  appstore: { w: 820, h: 560 },
+  messages: { w: 700, h: 500 },
 }
 
 export function Desktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
   const [nextZIndex, setNextZIndex] = useState(1)
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null)
+  const [booted, setBooted] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [showSpotlight, setShowSpotlight] = useState(false)
+  const [desktopReady, setDesktopReady] = useState(false)
+  const desktopRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (booted) {
+      setTimeout(() => setDesktopReady(true), 100)
+    }
+  }, [booted])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === " ") {
+        e.preventDefault()
+        setShowSpotlight((prev) => !prev)
+      }
+      if (e.key === "Escape") {
+        setShowSpotlight(false)
+        setContextMenu(null)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   const openApp = useCallback(
     (appId: AppId) => {
+      setShowSpotlight(false)
+      setContextMenu(null)
+
       const existing = windows.find((w) => w.appId === appId && !w.minimized)
       if (existing) {
         focusWindow(existing.id)
@@ -42,12 +82,14 @@ export function Desktop() {
 
       const size = DEFAULT_WINDOW_SIZE[appId] || { w: 600, h: 400 }
       const id = `${appId}-${Date.now()}`
-      const offset = (windows.length % 8) * 30
+      const offset = (windows.length % 6) * 28
+      const viewW = window.innerWidth
+      const viewH = window.innerHeight
       const newWindow: WindowState = {
         id,
         appId,
-        x: 120 + offset,
-        y: 60 + offset,
+        x: Math.max(40, (viewW - size.w) / 2 + offset),
+        y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
         width: size.w,
         height: size.h,
         zIndex: nextZIndex,
@@ -58,6 +100,7 @@ export function Desktop() {
       setActiveWindowId(id)
       setNextZIndex((z) => z + 1)
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [windows, nextZIndex]
   )
 
@@ -74,19 +117,36 @@ export function Desktop() {
 
   const closeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id))
-    setActiveWindowId(null)
+    setActiveWindowId((prev) => (prev === id ? null : prev))
   }, [])
 
   const minimizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
       prev.map((w) => (w.id === id ? { ...w, minimized: true } : w))
     )
-    setActiveWindowId(null)
+    setActiveWindowId((prev) => (prev === id ? null : prev))
   }, [])
 
   const maximizeWindow = useCallback((id: string) => {
     setWindows((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, maximized: !w.maximized } : w))
+      prev.map((w) => {
+        if (w.id !== id) return w
+        if (w.maximized) {
+          return {
+            ...w,
+            maximized: false,
+            x: w.prevBounds?.x ?? w.x,
+            y: w.prevBounds?.y ?? w.y,
+            width: w.prevBounds?.width ?? w.width,
+            height: w.prevBounds?.height ?? w.height,
+          }
+        }
+        return {
+          ...w,
+          maximized: true,
+          prevBounds: { x: w.x, y: w.y, width: w.width, height: w.height },
+        }
+      })
     )
   }, [])
 
@@ -105,18 +165,37 @@ export function Desktop() {
     []
   )
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }, [])
+
+  const handleDesktopClick = useCallback(() => {
+    setContextMenu(null)
+    setActiveWindowId(null)
+  }, [])
+
   const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
+
+  if (!booted) {
+    return <BootScreen onComplete={() => setBooted(true)} />
+  }
 
   return (
     <div
+      ref={desktopRef}
       className="relative h-screen w-screen overflow-hidden select-none"
       style={{
         backgroundImage: "url(/images/wallpaper.jpg)",
         backgroundSize: "cover",
         backgroundPosition: "center",
+        opacity: desktopReady ? 1 : 0,
+        transition: "opacity 0.8s ease-in-out",
       }}
+      onContextMenu={handleContextMenu}
+      onClick={handleDesktopClick}
     >
-      <MenuBar activeApp={activeApp} />
+      <MenuBar activeApp={activeApp} openApp={openApp} />
 
       {windows.map((win) =>
         win.minimized ? null : (
@@ -134,7 +213,28 @@ export function Desktop() {
         )
       )}
 
-      <Dock openApp={openApp} openWindows={windows} />
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onAction={(action) => {
+            if (action === "finder") openApp("finder")
+            if (action === "terminal") openApp("terminal")
+            if (action === "settings") openApp("settings")
+            setContextMenu(null)
+          }}
+        />
+      )}
+
+      {showSpotlight && (
+        <Spotlight
+          onClose={() => setShowSpotlight(false)}
+          onOpenApp={openApp}
+        />
+      )}
+
+      <Dock openApp={openApp} openWindows={windows} activeWindowId={activeWindowId} />
     </div>
   )
 }

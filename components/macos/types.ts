@@ -6,6 +6,14 @@ export type AppId =
   | "safari"
   | "settings"
   | "photos"
+  | "music"
+  | "calendar"
+  | "mail"
+  | "weather"
+  | "clock"
+  | "maps"
+  | "appstore"
+  | "messages"
 
 export interface WindowState {
   id: string
@@ -17,10 +25,19 @@ export interface WindowState {
   zIndex: number
   minimized: boolean
   maximized: boolean
+  prevBounds?: { x: number; y: number; width: number; height: number }
 }
 
 export interface AppInfo {
   id: AppId
   name: string
   icon: React.ReactNode
+}
+
+export interface Notification {
+  id: string
+  appId: AppId
+  title: string
+  message: string
+  time: Date
 }
