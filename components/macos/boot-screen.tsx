@@ -57,7 +57,7 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-black">
         <Apple className="mb-8 h-16 w-16 fill-white text-white" />
-        <div className="h-1 w-48 overflow-hidden rounded-full bg-white/20">
+        <div className="h-1 w-48 overflow-hidden rounded-full bg-white/20 progress-glow">
           <div
             className="h-full rounded-full bg-white transition-all duration-200 ease-out"
             style={{ width: `${Math.min(progress, 100)}%` }}
@@ -92,7 +92,7 @@ export function BootScreen({ onComplete }: { onComplete: () => void }) {
           transition: "all 0.8s ease-in-out",
         }}
       >
-        <div className="mb-8 text-[64px] font-light text-white tracking-tight" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}>
+        <div className="mb-8 text-[64px] font-light text-white tracking-tight animate-fade-up" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}>
           {time}
         </div>
         <div className="mb-2 text-[13px] text-white/60">

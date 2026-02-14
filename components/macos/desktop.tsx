@@ -7,6 +7,9 @@ import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
 import { Spotlight } from "./spotlight"
 import { BootScreen } from "./boot-screen"
+import { Launchpad } from "./launchpad"
+import { AboutMac } from "./about-mac"
+import { NotificationPopup, type NotificationItem } from "./notification-center"
 import type { AppId, WindowState } from "./types"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
@@ -27,6 +30,12 @@ const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   messages: { w: 700, h: 500 },
 }
 
+const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
+  { app: "Mail", title: "New Email", message: "Sarah Johnson: Q1 Report Review - I've attached the Q1 report for your review...", time: "now", iconColor: "#007aff" },
+  { app: "Messages", title: "Sarah", message: "See you tomorrow!", time: "2m ago", iconColor: "#34c759" },
+  { app: "Calendar", title: "Upcoming Event", message: "Team Standup in 30 minutes", time: "5m ago", iconColor: "#ff3b30" },
+]
+
 export function Desktop() {
   const [windows, setWindows] = useState<WindowState[]>([])
   const [nextZIndex, setNextZIndex] = useState(1)
@@ -34,12 +43,31 @@ export function Desktop() {
   const [booted, setBooted] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [showSpotlight, setShowSpotlight] = useState(false)
+  const [showLaunchpad, setShowLaunchpad] = useState(false)
+  const [showAboutMac, setShowAboutMac] = useState(false)
   const [desktopReady, setDesktopReady] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [bouncingApp, setBouncingApp] = useState<AppId | null>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
+  const notificationQueueRef = useRef<Omit<NotificationItem, "id">[]>([])
 
   useEffect(() => {
     if (booted) {
       setTimeout(() => setDesktopReady(true), 100)
+      // Queue startup notifications with delays
+      notificationQueueRef.current = [...STARTUP_NOTIFICATIONS]
+      const showNext = (delay: number) => {
+        setTimeout(() => {
+          const next = notificationQueueRef.current.shift()
+          if (next) {
+            setNotifications((prev) => [...prev, { ...next, id: String(Date.now()) }])
+            if (notificationQueueRef.current.length > 0) {
+              showNext(6000)
+            }
+          }
+        }, delay)
+      }
+      showNext(2000)
     }
   }, [booted])
 
@@ -48,9 +76,11 @@ export function Desktop() {
       if ((e.metaKey || e.ctrlKey) && e.key === " ") {
         e.preventDefault()
         setShowSpotlight((prev) => !prev)
+        setShowLaunchpad(false)
       }
       if (e.key === "Escape") {
         setShowSpotlight(false)
+        setShowLaunchpad(false)
         setContextMenu(null)
       }
     }
@@ -58,9 +88,14 @@ export function Desktop() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }, [])
+
   const openApp = useCallback(
     (appId: AppId) => {
       setShowSpotlight(false)
+      setShowLaunchpad(false)
       setContextMenu(null)
 
       const existing = windows.find((w) => w.appId === appId && !w.minimized)
@@ -79,6 +114,10 @@ export function Desktop() {
         setNextZIndex((z) => z + 1)
         return
       }
+
+      // Bounce animation
+      setBouncingApp(appId)
+      setTimeout(() => setBouncingApp(null), 600)
 
       const size = DEFAULT_WINDOW_SIZE[appId] || { w: 600, h: 400 }
       const id = `${appId}-${Date.now()}`
@@ -195,7 +234,12 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       onClick={handleDesktopClick}
     >
-      <MenuBar activeApp={activeApp} openApp={openApp} />
+      <MenuBar
+        activeApp={activeApp}
+        openApp={openApp}
+        onShowAbout={() => setShowAboutMac(true)}
+        onShowLaunchpad={() => setShowLaunchpad(true)}
+      />
 
       {windows.map((win) =>
         win.minimized ? null : (
@@ -234,7 +278,31 @@ export function Desktop() {
         />
       )}
 
-      <Dock openApp={openApp} openWindows={windows} activeWindowId={activeWindowId} />
+      {showLaunchpad && (
+        <Launchpad
+          onClose={() => setShowLaunchpad(false)}
+          onOpenApp={openApp}
+        />
+      )}
+
+      {showAboutMac && (
+        <AboutMac onClose={() => setShowAboutMac(false)} />
+      )}
+
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <NotificationPopup
+          notification={notifications[notifications.length - 1]}
+          onDismiss={() => dismissNotification(notifications[notifications.length - 1].id)}
+        />
+      )}
+
+      <Dock
+        openApp={openApp}
+        openWindows={windows}
+        activeWindowId={activeWindowId}
+        bouncingApp={bouncingApp}
+      />
     </div>
   )
 }

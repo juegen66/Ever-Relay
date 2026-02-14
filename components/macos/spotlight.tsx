@@ -90,7 +90,7 @@ export function Spotlight({ onClose, onOpenApp }: SpotlightProps) {
       }}
     >
       <div
-        className="w-[540px] overflow-hidden"
+        className="w-[540px] overflow-hidden animate-spotlight"
         style={{
           background: "rgba(242,242,242,0.88)",
           backdropFilter: "blur(60px) saturate(180%)",

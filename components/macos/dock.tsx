@@ -32,9 +32,10 @@ interface DockProps {
   openApp: (id: AppId) => void
   openWindows: WindowState[]
   activeWindowId: string | null
+  bouncingApp?: AppId | null
 }
 
-export function Dock({ openApp, openWindows, activeWindowId }: DockProps) {
+export function Dock({ openApp, openWindows, activeWindowId, bouncingApp }: DockProps) {
   const dockRef = useRef<HTMLDivElement>(null)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [mouseX, setMouseX] = useState<number | null>(null)
@@ -128,7 +129,7 @@ export function Dock({ openApp, openWindows, activeWindowId }: DockProps) {
                     e.stopPropagation()
                     openApp(item.id)
                   }}
-                  className="flex h-11 w-11 items-center justify-center rounded-[11px] shadow-lg active:brightness-90"
+                  className={`flex h-11 w-11 items-center justify-center rounded-[11px] shadow-lg active:brightness-90 ${bouncingApp === item.id ? "dock-bounce" : ""}`}
                   style={{
                     background: item.id === "calendar" ? "#fff" : item.color,
                     transform: `scale(${scale}) translateY(${(scale - 1) * -16}px)`,

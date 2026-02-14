@@ -44,7 +44,7 @@ export function ContextMenu({ x, y, onClose, onAction }: ContextMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-[10001] min-w-[200px] animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-[10001] min-w-[200px] animate-ctx-menu"
       style={{
         top: adjustedY,
         left: adjustedX,

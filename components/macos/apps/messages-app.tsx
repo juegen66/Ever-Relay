@@ -64,6 +64,7 @@ export function MessagesApp() {
   const [activeChat, setActiveChat] = useState<string>("1")
   const [inputText, setInputText] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const currentChat = chats.find((c) => c.id === activeChat)
@@ -71,6 +72,19 @@ export function MessagesApp() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [currentChat?.messages])
+
+  const AUTO_REPLIES = [
+    "That sounds great!",
+    "I'll get back to you on that",
+    "Thanks for letting me know!",
+    "Sure, no problem!",
+    "Hmm, let me think about it...",
+    "Haha that's funny",
+    "Awesome!",
+    "Got it, thanks!",
+    "I was just thinking the same thing",
+    "Can we talk about this later?",
+  ]
 
   const sendMessage = () => {
     if (!inputText.trim() || !activeChat) return
@@ -88,6 +102,27 @@ export function MessagesApp() {
         : c
     ))
     setInputText("")
+
+    // Show typing indicator then auto-reply
+    const chatId = activeChat
+    setIsTyping(true)
+    setTimeout(() => {
+      setIsTyping(false)
+      const replyTime = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+      const reply: Message = {
+        id: String(Date.now()),
+        text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
+        sender: "them",
+        time: replyTime,
+      }
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === chatId
+            ? { ...c, messages: [...c.messages, reply], lastMessage: reply.text, time: replyTime }
+            : c
+        )
+      )
+    }, 1500 + Math.random() * 2000)
   }
 
   const filteredChats = searchQuery
@@ -186,6 +221,15 @@ export function MessagesApp() {
                   </div>
                 </div>
               ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-bl-md bg-[#e9e9eb] px-4 py-2.5 flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-[#999] typing-dot-1" />
+                    <div className="h-2 w-2 rounded-full bg-[#999] typing-dot-2" />
+                    <div className="h-2 w-2 rounded-full bg-[#999] typing-dot-3" />
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 

@@ -83,14 +83,8 @@ export function AppWindow({
   const isResizing = useRef<string | false>(false)
   const dragStart = useRef({ x: 0, y: 0 })
   const [showBtns, setShowBtns] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
   const { x, y, width, height, zIndex, maximized, appId } = windowState
   const isDark = DARK_TITLEBAR_APPS.has(appId)
-
-  useEffect(() => {
-    requestAnimationFrame(() => setMounted(true))
-  }, [])
 
   const handleMouseDownTitle = useCallback(
     (e: React.MouseEvent) => {
@@ -185,7 +179,7 @@ export function AppWindow({
   return (
     <div
       ref={windowRef}
-      className="absolute flex flex-col overflow-hidden"
+      className="absolute flex flex-col overflow-hidden animate-window-open"
       style={{
         ...windowStyle,
         borderRadius: maximized ? 0 : "10px",
@@ -204,11 +198,9 @@ export function AppWindow({
         boxShadow: isActive
           ? "0 22px 70px 4px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(0,0,0,0.12)"
           : "0 5px 20px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "scale(1)" : "scale(0.95)",
         transition: maximized
-          ? "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease, border-radius 0.3s ease"
-          : "opacity 0.2s ease, transform 0.2s ease",
+          ? "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, box-shadow 0.2s ease"
+          : "box-shadow 0.2s ease",
       }}
       onMouseDown={(e) => {
         e.stopPropagation()

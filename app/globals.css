@@ -54,3 +54,128 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* macOS scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Dock bounce animation */
+@keyframes dock-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-14px); }
+  50% { transform: translateY(-4px); }
+  75% { transform: translateY(-8px); }
+}
+.dock-bounce {
+  animation: dock-bounce 0.6s ease-in-out;
+}
+
+/* Window minimize animation */
+@keyframes window-open {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-window-open {
+  animation: window-open 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Notification slide in */
+@keyframes notify-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes notify-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+.animate-notify-in {
+  animation: notify-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-notify-out {
+  animation: notify-out 0.2s ease-in both;
+}
+
+/* Spotlight animation */
+@keyframes spotlight-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-spotlight {
+  animation: spotlight-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Boot progress bar glow */
+@keyframes progress-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 0 16px rgba(255,255,255,0.4); }
+}
+.progress-glow {
+  animation: progress-glow 2s ease-in-out infinite;
+}
+
+/* Login screen fade */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+/* Launchpad backdrop */
+@keyframes launchpad-in {
+  from { opacity: 0; transform: scale(1.1); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-launchpad {
+  animation: launchpad-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Music equalizer bars */
+@keyframes eq-bar {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+.eq-bar-1 { animation: eq-bar 0.45s ease-in-out infinite; }
+.eq-bar-2 { animation: eq-bar 0.55s ease-in-out infinite 0.1s; }
+.eq-bar-3 { animation: eq-bar 0.4s ease-in-out infinite 0.2s; }
+
+/* Context menu animation */
+@keyframes ctx-menu {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-ctx-menu {
+  animation: ctx-menu 0.1s ease-out both;
+}
+
+/* About Mac gradient */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* Typing indicator */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1); }
+}
+.typing-dot-1 { animation: typing-dot 1.4s ease-in-out infinite; }
+.typing-dot-2 { animation: typing-dot 1.4s ease-in-out infinite 0.2s; }
+.typing-dot-3 { animation: typing-dot 1.4s ease-in-out infinite 0.4s; }

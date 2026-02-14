@@ -93,9 +93,11 @@ const VIEW_MENU = [
 interface MenuBarProps {
   activeApp: AppId | null
   openApp: (id: AppId) => void
+  onShowAbout?: () => void
+  onShowLaunchpad?: () => void
 }
 
-export function MenuBar({ activeApp, openApp }: MenuBarProps) {
+export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad }: MenuBarProps) {
   const [time, setTime] = useState("")
   const [date, setDate] = useState("")
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -132,9 +134,10 @@ export function MenuBar({ activeApp, openApp }: MenuBarProps) {
 
   const handleMenuAction = useCallback((action?: string) => {
     setOpenMenu(null)
+    if (action === "about" && onShowAbout) onShowAbout()
     if (action === "settings") openApp("settings")
     if (action === "appstore") openApp("appstore")
-  }, [openApp])
+  }, [openApp, onShowAbout])
 
   const renderMenu = (items: typeof APPLE_MENU) => (
     <div
