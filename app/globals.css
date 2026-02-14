@@ -179,3 +179,65 @@
 .typing-dot-1 { animation: typing-dot 1.4s ease-in-out infinite; }
 .typing-dot-2 { animation: typing-dot 1.4s ease-in-out infinite 0.2s; }
 .typing-dot-3 { animation: typing-dot 1.4s ease-in-out infinite 0.4s; }
+
+/* ========== Landing Page Animations ========== */
+@keyframes hero-fade-in {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-hero {
+  animation: hero-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-hero-delay-1 {
+  animation: hero-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+.animate-hero-delay-2 {
+  animation: hero-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+.animate-hero-delay-3 {
+  animation: hero-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to { background-position: 200% center; }
+}
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Scroll reveal */
+@keyframes scroll-reveal {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal-on-scroll {
+  animation: scroll-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Login shake */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}

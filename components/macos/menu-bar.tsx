@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import {
   Apple,
   Wifi,
@@ -16,6 +17,8 @@ import {
   SkipBack,
 } from "lucide-react"
 import type { AppId } from "./types"
+import type { User } from "@/lib/auth-store"
+import { logoutUser } from "@/lib/auth-store"
 
 const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",
@@ -50,7 +53,7 @@ const APPLE_MENU = [
   { label: "Shut Down...", action: "shutdown" },
   { type: "separator" as const },
   { label: "Lock Screen", action: "lock" },
-  { label: "Log Out User...", action: "logout" },
+  { label: "Log Out", action: "logout" },
 ]
 
 const FILE_MENU = [
@@ -95,9 +98,11 @@ interface MenuBarProps {
   openApp: (id: AppId) => void
   onShowAbout?: () => void
   onShowLaunchpad?: () => void
+  currentUser?: User | null
 }
 
-export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad }: MenuBarProps) {
+export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad, currentUser }: MenuBarProps) {
+  const router = useRouter()
   const [time, setTime] = useState("")
   const [date, setDate] = useState("")
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -137,7 +142,13 @@ export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad }: Me
     if (action === "about" && onShowAbout) onShowAbout()
     if (action === "settings") openApp("settings")
     if (action === "appstore") openApp("appstore")
-  }, [openApp, onShowAbout])
+    if (action === "logout") {
+      logoutUser()
+      router.push("/")
+    }
+  }, [openApp, onShowAbout, router])
+
+  const userName = currentUser?.username || "User"
 
   const renderMenu = (items: typeof APPLE_MENU) => (
     <div
@@ -160,7 +171,7 @@ export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad }: Me
             onClick={() => handleMenuAction("action" in item ? item.action : undefined)}
             className="flex w-full items-center justify-between px-4 py-1 text-[13px] text-[#262626] hover:bg-[#0058d0] hover:text-white transition-colors"
           >
-            <span>{item.label}</span>
+            <span>{"action" in item && item.action === "logout" ? `Log Out ${userName}...` : item.label}</span>
             <span className="flex items-center gap-1 text-[12px] opacity-50">
               {"shortcut" in item && item.shortcut && (
                 <>

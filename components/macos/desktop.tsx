@@ -11,6 +11,7 @@ import { Launchpad } from "./launchpad"
 import { AboutMac } from "./about-mac"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
 import type { AppId, WindowState } from "./types"
+import type { User } from "@/lib/auth-store"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   finder: { w: 780, h: 480 },
@@ -41,6 +42,7 @@ export function Desktop() {
   const [nextZIndex, setNextZIndex] = useState(1)
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null)
   const [booted, setBooted] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const [showSpotlight, setShowSpotlight] = useState(false)
   const [showLaunchpad, setShowLaunchpad] = useState(false)
@@ -217,7 +219,7 @@ export function Desktop() {
   const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
 
   if (!booted) {
-    return <BootScreen onComplete={() => setBooted(true)} />
+    return <BootScreen onComplete={(user) => { setCurrentUser(user); setBooted(true) }} />
   }
 
   return (
@@ -239,6 +241,7 @@ export function Desktop() {
         openApp={openApp}
         onShowAbout={() => setShowAboutMac(true)}
         onShowLaunchpad={() => setShowLaunchpad(true)}
+        currentUser={currentUser}
       />
 
       {windows.map((win) =>

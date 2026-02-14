@@ -6,8 +6,8 @@ import './globals.css'
 const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'macOS Desktop',
-  description: 'A web-based macOS desktop environment',
+  title: 'CloudOS - Your Desktop in the Cloud',
+  description: 'A beautiful web-based desktop environment. Access your workspace from any browser, anywhere.',
 }
 
 export const viewport: Viewport = {
@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased overflow-hidden">{children}</body>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   )
 }
