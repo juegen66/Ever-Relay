@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import { ArrowRight } from "lucide-react"
 import {
   Monitor,
   Terminal,
@@ -37,7 +39,7 @@ const FEATURES = [
     icon: Shield,
     title: "Secure Login",
     description: "Account-based authentication protects your workspace with password security.",
-    color: "#30d158",
+    color: "#34c759",
   },
   {
     icon: Palette,
@@ -50,16 +52,16 @@ const FEATURES = [
 const APPS = [
   { icon: FolderOpen, name: "Finder", desc: "File management", color: "#007aff" },
   { icon: Globe, name: "Safari", desc: "Web browser", color: "#007aff" },
-  { icon: Terminal, name: "Terminal", desc: "Command line", color: "#1a1a1a" },
+  { icon: Terminal, name: "Terminal", desc: "Command line", color: "#3a3a3c" },
   { icon: Music, name: "Music", desc: "Audio player", color: "#fc3c44" },
   { icon: Mail, name: "Mail", desc: "Email client", color: "#007aff" },
-  { icon: Calculator, name: "Calculator", desc: "Math tools", color: "#333" },
+  { icon: Calculator, name: "Calculator", desc: "Math tools", color: "#636366" },
   { icon: Camera, name: "Photos", desc: "Photo gallery", color: "#ff375f" },
-  { icon: MessageSquare, name: "Messages", desc: "Chat app", color: "#30d158" },
+  { icon: MessageSquare, name: "Messages", desc: "Chat app", color: "#34c759" },
   { icon: CalendarDays, name: "Calendar", desc: "Schedule planner", color: "#ff3b30" },
   { icon: Cloud, name: "Weather", desc: "Forecasts", color: "#64d2ff" },
-  { icon: MapPin, name: "Maps", desc: "Navigation", color: "#30d158" },
-  { icon: Monitor, name: "Settings", desc: "System preferences", color: "#8e8e93" },
+  { icon: MapPin, name: "Maps", desc: "Navigation", color: "#34c759" },
+  { icon: Monitor, name: "Settings", desc: "Preferences", color: "#8e8e93" },
 ]
 
 function useInView(threshold = 0.15) {
@@ -81,6 +83,7 @@ function useInView(threshold = 0.15) {
 export function FeaturesSection() {
   const features = useInView()
   const apps = useInView()
+  const cta = useInView()
 
   return (
     <>
@@ -89,13 +92,13 @@ export function FeaturesSection() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2
-              className={`text-3xl font-bold tracking-tight text-white md:text-5xl ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
               Everything you need,{" "}
-              <span className="text-white/40">built in.</span>
+              <span className="text-[#b0aca4]">built in.</span>
             </h2>
             <p
-              className={`mt-4 text-[17px] text-white/40 ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`mt-4 text-[17px] text-[#8a8680] ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
               A desktop experience designed for the modern web.
@@ -106,19 +109,19 @@ export function FeaturesSection() {
             {FEATURES.map((f, i) => (
               <div
                 key={f.title}
-                className={`group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:border-white/[0.12] hover:bg-white/[0.04] ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+                className={`group rounded-2xl border border-[#e8e4de] bg-white p-6 transition-all hover:border-[#d8d4ce] hover:shadow-md ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
                 style={{ animationDelay: `${0.1 + i * 0.08}s` }}
               >
                 <div
                   className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ background: `${f.color}18` }}
+                  style={{ background: `${f.color}14` }}
                 >
                   <f.icon className="h-5 w-5" style={{ color: f.color }} />
                 </div>
-                <h3 className="mb-2 text-[15px] font-semibold text-white">
+                <h3 className="mb-2 text-[15px] font-semibold text-[#1a1a2e]">
                   {f.title}
                 </h3>
-                <p className="text-[13px] leading-relaxed text-white/40">
+                <p className="text-[13px] leading-relaxed text-[#8a8680]">
                   {f.description}
                 </p>
               </div>
@@ -132,12 +135,12 @@ export function FeaturesSection() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2
-              className={`text-3xl font-bold tracking-tight text-white md:text-5xl ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
               15+ Built-in Apps
             </h2>
             <p
-              className={`mt-4 text-[17px] text-white/40 ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`mt-4 text-[17px] text-[#8a8680] ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
               Every app you need for productivity, entertainment, and communication.
@@ -148,7 +151,7 @@ export function FeaturesSection() {
             {APPS.map((app, i) => (
               <div
                 key={app.name}
-                className={`group flex flex-col items-center gap-3 rounded-2xl border border-white/[0.04] bg-white/[0.02] p-5 transition-all hover:border-white/[0.1] hover:bg-white/[0.05] ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+                className={`group flex flex-col items-center gap-3 rounded-2xl border border-[#e8e4de] bg-white p-5 transition-all hover:border-[#d8d4ce] hover:shadow-md ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
                 style={{ animationDelay: `${0.05 + i * 0.04}s` }}
               >
                 <div
@@ -158,11 +161,40 @@ export function FeaturesSection() {
                   <app.icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="text-center">
-                  <div className="text-[13px] font-medium text-white">{app.name}</div>
-                  <div className="text-[11px] text-white/30">{app.desc}</div>
+                  <div className="text-[13px] font-medium text-[#1a1a2e]">{app.name}</div>
+                  <div className="text-[11px] text-[#b0aca4]">{app.desc}</div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative px-6 py-24" ref={cta.ref}>
+        <div className="mx-auto max-w-2xl text-center">
+          <h2
+            className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+          >
+            Ready to start?
+          </h2>
+          <p
+            className={`mt-4 text-[17px] text-[#8a8680] ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+            style={{ animationDelay: "0.1s" }}
+          >
+            Create a free account and access your cloud desktop in seconds.
+          </p>
+          <div
+            className={`mt-8 flex items-center justify-center gap-4 ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+            style={{ animationDelay: "0.2s" }}
+          >
+            <Link
+              href="/register"
+              className="group flex items-center gap-2 rounded-full bg-[#34c759] px-8 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
+            >
+              Create Free Account
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
         </div>
       </section>
