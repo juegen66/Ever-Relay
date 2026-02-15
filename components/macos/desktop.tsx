@@ -5,6 +5,7 @@ import { MenuBar } from "./menu-bar"
 import { Dock } from "./dock"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
+import { DesktopIcon, type DesktopFolder } from "./desktop-icon"
 import { Spotlight } from "./spotlight"
 import { BootScreen } from "./boot-screen"
 import { Launchpad } from "./launchpad"
@@ -50,6 +51,8 @@ export function Desktop() {
   const [desktopReady, setDesktopReady] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [bouncingApp, setBouncingApp] = useState<AppId | null>(null)
+  const [desktopFolders, setDesktopFolders] = useState<DesktopFolder[]>([])
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
   const notificationQueueRef = useRef<Omit<NotificationItem, "id">[]>([])
 
@@ -206,6 +209,30 @@ export function Desktop() {
     []
   )
 
+  const createFolder = useCallback((x: number, y: number) => {
+    const id = `folder-${Date.now()}`
+    // Snap to a grid aligned position, clamped to desktop area
+    const snappedX = Math.min(Math.max(x - 45, 20), window.innerWidth - 110)
+    const snappedY = Math.min(Math.max(y - 40, 36), window.innerHeight - 140)
+    setDesktopFolders((prev) => [
+      ...prev,
+      { id, name: "untitled folder", x: snappedX, y: snappedY, isNew: true },
+    ])
+    setSelectedFolderId(id)
+  }, [])
+
+  const renameFolder = useCallback((id: string, name: string) => {
+    setDesktopFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, name, isNew: false } : f))
+    )
+  }, [])
+
+  const moveFolder = useCallback((id: string, x: number, y: number) => {
+    setDesktopFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, x, y } : f))
+    )
+  }, [])
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY })
@@ -214,6 +241,7 @@ export function Desktop() {
   const handleDesktopClick = useCallback(() => {
     setContextMenu(null)
     setActiveWindowId(null)
+    setSelectedFolderId(null)
   }, [])
 
   const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
@@ -260,12 +288,26 @@ export function Desktop() {
         )
       )}
 
+      {/* Desktop folder icons */}
+      {desktopFolders.map((folder) => (
+        <DesktopIcon
+          key={folder.id}
+          folder={folder}
+          selected={selectedFolderId === folder.id}
+          onSelect={() => setSelectedFolderId(folder.id)}
+          onDoubleClick={() => openApp("finder")}
+          onRename={renameFolder}
+          onMove={moveFolder}
+        />
+      ))}
+
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
           onAction={(action) => {
+            if (action === "new-folder") createFolder(contextMenu.x, contextMenu.y)
             if (action === "finder") openApp("finder")
             if (action === "terminal") openApp("terminal")
             if (action === "settings") openApp("settings")
