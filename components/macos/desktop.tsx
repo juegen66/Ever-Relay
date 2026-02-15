@@ -225,7 +225,7 @@ export function Desktop() {
   return (
     <div
       ref={desktopRef}
-      className="relative h-screen w-screen overflow-hidden select-none"
+      className="desktop-container relative h-screen w-screen overflow-hidden select-none"
       style={{
         backgroundImage: "url(/images/wallpaper.jpg)",
         backgroundSize: "cover",

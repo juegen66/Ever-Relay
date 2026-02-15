@@ -53,6 +53,25 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Disable default browser context menu on desktop page */
+  .desktop-container,
+  .desktop-container * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Allow text selection in specific areas */
+  .desktop-container input,
+  .desktop-container textarea,
+  .desktop-container [contenteditable="true"] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
 }
 
 /* macOS scrollbar styling */
