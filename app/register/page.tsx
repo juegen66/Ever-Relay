@@ -26,15 +26,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
 
   const validate = (): string | null => {
-    if (!form.username.trim()) return "请输入用户名"
-    if (form.username.length < 2) return "用户名至少需要 2 个字符"
-    if (form.username.length > 20) return "用户名不能超过 20 个字符"
-    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(form.username)) return "用户名只能包含字母、数字、下划线或中文"
-    if (!form.email.trim()) return "请输入邮箱地址"
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "请输入有效的邮箱地址"
-    if (!form.password) return "请输入密码"
-    if (form.password.length < 6) return "密码至少需要 6 个字符"
-    if (form.password !== form.confirmPassword) return "两次输入的密码不一致"
+    if (!form.username.trim()) return "Please enter a username"
+    if (form.username.length < 2) return "Username must be at least 2 characters"
+    if (form.username.length > 20) return "Username cannot exceed 20 characters"
+    if (!/^[a-zA-Z0-9_]+$/.test(form.username)) return "Username can only contain letters, numbers, and underscores"
+    if (!form.email.trim()) return "Please enter an email address"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "Please enter a valid email address"
+    if (!form.password) return "Please enter a password"
+    if (form.password.length < 6) return "Password must be at least 6 characters"
+    if (form.password !== form.confirmPassword) return "The passwords you typed do not match"
     return null
   }
 
@@ -51,7 +51,7 @@ export default function RegisterPage() {
     setTimeout(() => {
       const result = registerUser(form.username, form.email, form.password)
       if (!result.success) {
-        setError(result.error || "注册失败")
+        setError(result.error || "Registration failed")
         setLoading(false)
         return
       }
@@ -67,7 +67,6 @@ export default function RegisterPage() {
   }
 
   const handleGoogleSignUp = () => {
-    // Simulated Google sign up
     setLoading(true)
     setTimeout(() => {
       const gUsername = "google_user_" + Math.floor(Math.random() * 10000)
@@ -76,7 +75,7 @@ export default function RegisterPage() {
         setSuccess(true)
         setTimeout(() => router.push("/desktop"), 1200)
       } else {
-        setError("Google 账号已注册，请直接登录")
+        setError("This Google account is already registered. Please sign in instead.")
         setLoading(false)
       }
     }, 800)
@@ -91,7 +90,7 @@ export default function RegisterPage() {
     return 1
   })()
 
-  const strengthLabel = ["", "弱", "一般", "良好", "强"][strengthLevel]
+  const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][strengthLevel]
 
   return (
     <div className="flex min-h-screen">
@@ -105,7 +104,7 @@ export default function RegisterPage() {
             Cloud<span className="text-[#34c759]">OS</span>
           </span>
         </Link>
-        <p className="mt-4 text-[14px] text-[#8a8680]">你的云端桌面。</p>
+        <p className="mt-4 text-[14px] text-[#8a8680]">Your desktop in the cloud.</p>
       </div>
 
       {/* Right Panel - Form */}
@@ -126,7 +125,7 @@ export default function RegisterPage() {
           <div className="w-full max-w-[440px]">
             {/* Title */}
             <h1 className="text-center text-[32px] font-bold leading-tight tracking-tight text-[#1a1a2e] md:text-[40px]">
-              注册<br />CloudOS
+              Register for<br />CloudOS
             </h1>
 
             {success ? (
@@ -135,8 +134,8 @@ export default function RegisterPage() {
                   <Check className="h-7 w-7 text-[#34c759]" />
                 </div>
                 <div>
-                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">账户创建成功</h3>
-                  <p className="mt-1 text-[14px] text-[#8a8680]">正在跳转到你的桌面...</p>
+                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">Account created successfully</h3>
+                  <p className="mt-1 text-[14px] text-[#8a8680]">Redirecting to your desktop...</p>
                 </div>
               </div>
             ) : (
@@ -149,13 +148,13 @@ export default function RegisterPage() {
                   className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#e0dcd6] bg-white py-3.5 text-[15px] font-medium text-[#1a1a2e] transition-all hover:bg-[#faf8f5] hover:border-[#d0ccc6] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <GoogleIcon className="h-5 w-5" />
-                  使用 Google 账号注册
+                  Sign up with Google
                 </button>
 
                 {/* Divider */}
                 <div className="my-6 flex items-center gap-4">
                   <div className="h-px flex-1 bg-[#e8e4de]" />
-                  <span className="text-[13px] text-[#b0aca4]">或</span>
+                  <span className="text-[13px] text-[#b0aca4]">or</span>
                   <div className="h-px flex-1 bg-[#e8e4de]" />
                 </div>
 
@@ -170,7 +169,7 @@ export default function RegisterPage() {
                   {/* Username */}
                   <div>
                     <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                      用户名
+                      Username
                     </label>
                     <input
                       type="text"
@@ -185,7 +184,7 @@ export default function RegisterPage() {
                   {/* Email */}
                   <div>
                     <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                      邮箱
+                      Email
                     </label>
                     <input
                       type="email"
@@ -200,12 +199,12 @@ export default function RegisterPage() {
                   {/* Password */}
                   <div>
                     <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                      密码
+                      Password
                     </label>
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
-                        placeholder="至少 6 个字符"
+                        placeholder="At least 6 characters"
                         value={form.password}
                         onChange={(e) => update("password", e.target.value)}
                         className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 pr-11 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
@@ -224,11 +223,11 @@ export default function RegisterPage() {
                   {/* Confirm Password */}
                   <div>
                     <label className="mb-1.5 block text-[14px] font-medium text-[#1a1a2e]">
-                      确认密码
+                      Confirm password
                     </label>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="再次输入你的密码"
+                      placeholder="Re-enter your password"
                       value={form.confirmPassword}
                       onChange={(e) => update("confirmPassword", e.target.value)}
                       className="w-full rounded-xl border border-[#e0dcd6] bg-white px-4 py-3 text-[14px] text-[#1a1a2e] outline-none transition-all placeholder:text-[#c5c0b8] focus:border-[#34c759] focus:ring-2 focus:ring-[#34c759]/10"
@@ -236,7 +235,7 @@ export default function RegisterPage() {
                     />
                     {form.confirmPassword && form.password !== form.confirmPassword && (
                       <p className="mt-1.5 text-right text-[12px] text-red-500">
-                        两次输入的密码不一致
+                        The new passwords you typed do not match.
                       </p>
                     )}
                   </div>
@@ -272,10 +271,10 @@ export default function RegisterPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        正在创建账户...
+                        Creating account...
                       </span>
                     ) : (
-                      "注册"
+                      "Register"
                     )}
                   </button>
 
@@ -284,7 +283,7 @@ export default function RegisterPage() {
                     href="/desktop"
                     className="flex w-full items-center justify-center rounded-xl border border-[#34c759] py-3.5 text-[15px] font-semibold text-[#34c759] transition-all hover:bg-[#34c759]/[0.04] active:scale-[0.99]"
                   >
-                    登录
+                    Log in
                   </Link>
                 </form>
               </div>
@@ -300,7 +299,7 @@ export default function RegisterPage() {
             </div>
             <span className="text-[13px] font-semibold text-[#8a8680]">CloudOS</span>
           </Link>
-          <p className="text-[11px] text-[#c5c0b8]">与 Apple Inc. 无关。</p>
+          <p className="text-[11px] text-[#c5c0b8]">Not affiliated with Apple Inc.</p>
         </div>
       </div>
     </div>

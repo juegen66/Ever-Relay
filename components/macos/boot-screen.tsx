@@ -36,7 +36,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
   useEffect(() => {
     const now = new Date()
     setTime(
-      now.toLocaleTimeString("zh-CN", { hour: "numeric", minute: "2-digit", hour12: true })
+      now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
     )
   }, [])
 
@@ -94,7 +94,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
 
     const result = loginUser(selectedUser.username, password)
     if (!result.success) {
-      setError(result.error || "登录失败")
+      setError(result.error || "Login failed")
       setShaking(true)
       setTimeout(() => setShaking(false), 500)
       return
@@ -109,19 +109,15 @@ export function BootScreen({ onComplete }: BootScreenProps) {
   const handleGoogleLogin = () => {
     setGoogleLoading(true)
     setTimeout(() => {
-      // Check if a Google user exists, if not create one
       const allUsers = getUsers()
       const googleUser = allUsers.find(u => u.email === "user@gmail.com")
       if (googleUser) {
-        const result = loginUser(googleUser.username, googleUser.password || "")
-        // Direct login for google users
         setPhase("logging-in")
         setTimeout(() => {
           onComplete(googleUser)
         }, 1200)
         return
       }
-      // Create a new google user
       const gUsername = "Google_" + Math.floor(Math.random() * 10000)
       const gPassword = "google_oauth_" + Date.now()
       const result = registerUser(gUsername, "user@gmail.com", gPassword)
@@ -131,7 +127,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
           onComplete(result.user!)
         }, 1200)
       } else {
-        setError("Google 登录失败，请重试")
+        setError("Google sign in failed. Please try again.")
         setGoogleLoading(false)
       }
     }, 800)
@@ -201,7 +197,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
           {time}
         </div>
         <div className="mb-8 text-[13px] text-white/60">
-          {new Date().toLocaleDateString("zh-CN", { weekday: "long", month: "long", day: "numeric" })}
+          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </div>
 
         {/* No registered users */}
@@ -212,9 +208,9 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
-            <p className="mb-4 text-[15px] font-medium text-white/60">未找到账户</p>
+            <p className="mb-4 text-[15px] font-medium text-white/60">No accounts found</p>
             <p className="mb-5 text-[13px] text-white/35 max-w-[260px] text-center">
-              请先在官网注册账户，或使用 Google 快速登录。
+              Please register on our website first, or sign in quickly with Google.
             </p>
 
             {/* Google login for no-user state */}
@@ -225,7 +221,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
               style={{ backdropFilter: "blur(20px)" }}
             >
               <GoogleIcon className="h-4 w-4" />
-              {googleLoading ? "正在登录..." : "使用 Google 登录"}
+              {googleLoading ? "Signing in..." : "Sign in with Google"}
             </button>
 
             <button
@@ -233,7 +229,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
               className="rounded-full bg-white/10 px-6 py-2 text-[13px] font-medium text-white/70 transition-all hover:bg-white/20 border border-white/15"
               style={{ backdropFilter: "blur(20px)" }}
             >
-              前往注册
+              Go to Register
             </button>
           </div>
         )}
@@ -273,7 +269,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
             <div className="mt-8 flex flex-col items-center gap-2">
               <div className="mb-1 flex items-center gap-3">
                 <div className="h-px w-16 bg-white/15" />
-                <span className="text-[11px] text-white/30">或</span>
+                <span className="text-[11px] text-white/30">or</span>
                 <div className="h-px w-16 bg-white/15" />
               </div>
               <button
@@ -283,7 +279,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                 style={{ backdropFilter: "blur(20px)" }}
               >
                 <GoogleIcon className="h-3.5 w-3.5" />
-                {googleLoading ? "正在登录..." : "使用 Google 登录"}
+                {googleLoading ? "Signing in..." : "Sign in with Google"}
               </button>
             </div>
           </div>
@@ -301,7 +297,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="15,18 9,12 15,6" />
                 </svg>
-                返回
+                Back
               </button>
             )}
 
@@ -340,7 +336,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                     type="password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError("") }}
-                    placeholder="输入密码"
+                    placeholder="Enter Password"
                     autoFocus
                     className="h-8 w-52 rounded-full border bg-white/15 px-4 text-center text-[13px] text-white outline-none placeholder:text-white/50 focus:bg-white/20 transition-colors"
                     style={{
@@ -357,7 +353,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                 )}
 
                 <div className="mt-3 text-center text-[11px] text-white/40">
-                  按回车键登录
+                  Press Enter to sign in
                 </div>
 
                 <button
@@ -381,13 +377,13 @@ export function BootScreen({ onComplete }: BootScreenProps) {
                   style={{ backdropFilter: "blur(20px)" }}
                 >
                   <GoogleIcon className="h-3 w-3" />
-                  {googleLoading ? "正在登录..." : "Google 登录"}
+                  {googleLoading ? "Signing in..." : "Sign in with Google"}
                 </button>
                 <button
                   onClick={() => router.push("/")}
                   className="text-[11px] text-white/30 transition-colors hover:text-white/60"
                 >
-                  返回首页
+                  Back to Homepage
                 </button>
               </div>
             </div>

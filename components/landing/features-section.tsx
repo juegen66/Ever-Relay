@@ -25,43 +25,43 @@ import {
 const FEATURES = [
   {
     icon: Layers,
-    title: "窗口管理",
-    description: "拖拽、调整大小、最小化、最大化 -- 像真实桌面一样的完整窗口管理。",
+    title: "Window Management",
+    description: "Drag, resize, minimize, maximize -- full window management just like a real desktop.",
     color: "#007aff",
   },
   {
     icon: Zap,
-    title: "即时访问",
-    description: "无需下载或安装，打开浏览器即可立即开始使用。",
+    title: "Instant Access",
+    description: "No downloads or installations. Open your browser and start working immediately.",
     color: "#ff9f0a",
   },
   {
     icon: Shield,
-    title: "安全登录",
-    description: "基于账户的身份认证，密码安全保护你的工作空间。",
+    title: "Secure Login",
+    description: "Account-based authentication protects your workspace with password security.",
     color: "#34c759",
   },
   {
     icon: Palette,
-    title: "精美设计",
-    description: "像素级还原的 macOS 风格界面，毛玻璃效果与流畅动画。",
+    title: "Stunning Design",
+    description: "Pixel-perfect macOS-inspired interface with frosted glass effects and smooth animations.",
     color: "#af52de",
   },
 ]
 
 const APPS = [
-  { icon: FolderOpen, name: "访达", desc: "文件管理", color: "#007aff" },
-  { icon: Globe, name: "Safari", desc: "浏览器", color: "#007aff" },
-  { icon: Terminal, name: "终端", desc: "命令行", color: "#3a3a3c" },
-  { icon: Music, name: "音乐", desc: "音频播放", color: "#fc3c44" },
-  { icon: Mail, name: "邮件", desc: "邮件客户端", color: "#007aff" },
-  { icon: Calculator, name: "计算器", desc: "数学工具", color: "#636366" },
-  { icon: Camera, name: "照片", desc: "相册", color: "#ff375f" },
-  { icon: MessageSquare, name: "信息", desc: "聊天", color: "#34c759" },
-  { icon: CalendarDays, name: "日历", desc: "日程规划", color: "#ff3b30" },
-  { icon: Cloud, name: "天气", desc: "天气预报", color: "#64d2ff" },
-  { icon: MapPin, name: "地图", desc: "导航", color: "#34c759" },
-  { icon: Monitor, name: "设置", desc: "系统偏好", color: "#8e8e93" },
+  { icon: FolderOpen, name: "Finder", desc: "File management", color: "#007aff" },
+  { icon: Globe, name: "Safari", desc: "Web browser", color: "#007aff" },
+  { icon: Terminal, name: "Terminal", desc: "Command line", color: "#3a3a3c" },
+  { icon: Music, name: "Music", desc: "Audio player", color: "#fc3c44" },
+  { icon: Mail, name: "Mail", desc: "Email client", color: "#007aff" },
+  { icon: Calculator, name: "Calculator", desc: "Math tools", color: "#636366" },
+  { icon: Camera, name: "Photos", desc: "Photo gallery", color: "#ff375f" },
+  { icon: MessageSquare, name: "Messages", desc: "Chat app", color: "#34c759" },
+  { icon: CalendarDays, name: "Calendar", desc: "Schedule planner", color: "#ff3b30" },
+  { icon: Cloud, name: "Weather", desc: "Forecasts", color: "#64d2ff" },
+  { icon: MapPin, name: "Maps", desc: "Navigation", color: "#34c759" },
+  { icon: Monitor, name: "Settings", desc: "Preferences", color: "#8e8e93" },
 ]
 
 function useInView(threshold = 0.15) {
@@ -94,14 +94,14 @@ export function FeaturesSection() {
             <h2
               className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
-              你所需要的，{" "}
-              <span className="text-[#b0aca4]">全部内置。</span>
+              Everything you need,{" "}
+              <span className="text-[#b0aca4]">built in.</span>
             </h2>
             <p
               className={`mt-4 text-[17px] text-[#8a8680] ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
-              为现代网络而设计的桌面体验。
+              A desktop experience designed for the modern web.
             </p>
           </div>
 
@@ -137,13 +137,13 @@ export function FeaturesSection() {
             <h2
               className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
-              15+ 款内置应用
+              15+ Built-in Apps
             </h2>
             <p
               className={`mt-4 text-[17px] text-[#8a8680] ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
-              办公、娱乐、沟通，你需要的每款应用都已就绪。
+              Every app you need for productivity, entertainment, and communication.
             </p>
           </div>
 
@@ -176,13 +176,13 @@ export function FeaturesSection() {
           <h2
             className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
           >
-            准备好开始了吗？
+            Ready to start?
           </h2>
           <p
             className={`mt-4 text-[17px] text-[#8a8680] ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
             style={{ animationDelay: "0.1s" }}
           >
-            创建免费账户，几秒钟即可访问你的云端桌面。
+            Create a free account and access your cloud desktop in seconds.
           </p>
           <div
             className={`mt-8 flex items-center justify-center gap-4 ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
@@ -192,7 +192,7 @@ export function FeaturesSection() {
               href="/register"
               className="group flex items-center gap-2 rounded-full bg-[#34c759] px-8 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
             >
-              免费注册账户
+              Create Free Account
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
