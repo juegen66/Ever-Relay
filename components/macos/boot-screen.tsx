@@ -189,6 +189,25 @@ export function BootScreen({ onComplete }: BootScreenProps) {
           transition: "all 0.8s ease-in-out",
         }}
       >
+        {/* Skip login for testing */}
+        <button
+          onClick={() => {
+            const testUser: User = {
+              username: "Guest",
+              email: "guest@cloudos.app",
+              passwordHash: "",
+              avatar: "from-blue-500 to-cyan-500",
+              createdAt: new Date().toISOString(),
+            }
+            setPhase("logging-in")
+            setTimeout(() => onComplete(testUser), 600)
+          }}
+          className="absolute top-6 right-6 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-medium text-white/70 transition-all hover:bg-white/25 hover:text-white"
+          style={{ backdropFilter: "blur(20px)" }}
+        >
+          Skip Login (Test)
+        </button>
+
         {/* Clock */}
         <div
           className="mb-6 text-[64px] font-light text-white tracking-tight animate-fade-up"
