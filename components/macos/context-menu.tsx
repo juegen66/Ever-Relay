@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { FolderPlus, Info, Image, LayoutGrid, Layers, ArrowUpDown, Sparkles, Eye, Terminal as TerminalIcon, FolderOpen } from "lucide-react"
 
 interface ContextMenuProps {
   x: number
@@ -10,19 +11,19 @@ interface ContextMenuProps {
 }
 
 const MENU_ITEMS = [
-  { label: "New Folder", action: "new-folder" },
-  { label: "Get Info", action: "info" },
+  { label: "New Folder", action: "new-folder", icon: FolderPlus },
+  { label: "Get Info", action: "info", icon: Info },
   { type: "separator" as const },
-  { label: "Change Wallpaper...", action: "settings" },
-  { label: "Edit Widgets...", action: "widgets" },
+  { label: "Change Wallpaper...", action: "settings", icon: Image },
+  { label: "Edit Widgets...", action: "widgets", icon: LayoutGrid },
   { type: "separator" as const },
-  { label: "Use Stacks", action: "stacks" },
-  { label: "Sort By", action: "sort", hasSubmenu: true },
-  { label: "Clean Up", action: "cleanup" },
+  { label: "Use Stacks", action: "stacks", icon: Layers },
+  { label: "Sort By", action: "sort", hasSubmenu: true, icon: ArrowUpDown },
+  { label: "Clean Up", action: "cleanup", icon: Sparkles },
   { type: "separator" as const },
-  { label: "Show View Options", action: "view-options" },
-  { label: "Open Terminal Here", action: "terminal" },
-  { label: "Open in Finder", action: "finder" },
+  { label: "Show View Options", action: "view-options", icon: Eye },
+  { label: "Open Terminal Here", action: "terminal", icon: TerminalIcon },
+  { label: "Open in Finder", action: "finder", icon: FolderOpen },
 ]
 
 export function ContextMenu({ x, y, onClose, onAction }: ContextMenuProps) {
@@ -67,13 +68,17 @@ export function ContextMenu({ x, y, onClose, onAction }: ContextMenuProps) {
             />
           )
         }
+        const Icon = item.icon
         return (
           <button
             key={item.action}
             onClick={() => onAction(item.action!)}
             className="flex w-full items-center justify-between rounded-[4px] px-3 py-1 text-left text-[13px] text-[#262626] transition-colors hover:bg-[#0058d0] hover:text-white"
           >
-            <span>{item.label}</span>
+            <span className="flex items-center gap-2">
+              {Icon && <Icon className="h-3.5 w-3.5 opacity-60" />}
+              {item.label}
+            </span>
             {item.hasSubmenu && (
               <svg className="h-3 w-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="9,6 15,12 9,18" />
