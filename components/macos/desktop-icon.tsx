@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Folder } from "lucide-react"
+import { Folder, Pencil, Trash2, FolderOpen, Info } from "lucide-react"
 
 export interface DesktopFolder {
   id: string
@@ -17,6 +17,7 @@ interface DesktopIconProps {
   onSelect: () => void
   onDoubleClick: () => void
   onRename: (id: string, name: string) => void
+  onDelete: (id: string) => void
   onMove: (id: string, x: number, y: number) => void
 }
 
@@ -26,12 +27,15 @@ export function DesktopIcon({
   onSelect,
   onDoubleClick,
   onRename,
+  onDelete,
   onMove,
 }: DesktopIconProps) {
   const [editing, setEditing] = useState(folder.isNew ?? false)
   const [name, setName] = useState(folder.name)
   const [dragging, setDragging] = useState(false)
+  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
@@ -40,6 +44,25 @@ export function DesktopIcon({
       inputRef.current.select()
     }
   }, [editing])
+
+  // Close folder context menu on outside click
+  useEffect(() => {
+    if (!folderMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setFolderMenu(null)
+      }
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFolderMenu(null)
+    }
+    window.addEventListener("mousedown", handleClick)
+    window.addEventListener("keydown", handleKey)
+    return () => {
+      window.removeEventListener("mousedown", handleClick)
+      window.removeEventListener("keydown", handleKey)
+    }
+  }, [folderMenu])
 
   const commitRename = useCallback(() => {
     const trimmed = name.trim() || "Untitled Folder"
@@ -60,7 +83,7 @@ export function DesktopIcon({
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (editing) return
+    if (editing || e.button === 2) return
     e.stopPropagation()
     onSelect()
 
@@ -84,59 +107,118 @@ export function DesktopIcon({
     window.addEventListener("mouseup", handleMouseUp)
   }
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onSelect()
+    setFolderMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  const FOLDER_MENU_ITEMS = [
+    { label: "Open", icon: FolderOpen, action: "open" as const },
+    { label: "Get Info", icon: Info, action: "info" as const },
+    { type: "separator" as const },
+    { label: "Rename", icon: Pencil, action: "rename" as const },
+    { type: "separator" as const },
+    { label: "Move to Trash", icon: Trash2, action: "delete" as const, danger: true },
+  ]
+
   return (
-    <div
-      className="absolute flex w-[90px] flex-col items-center gap-1 cursor-default"
-      style={{
-        left: folder.x,
-        top: folder.y,
-        zIndex: dragging ? 9999 : 1,
-        opacity: dragging ? 0.8 : 1,
-      }}
-      onMouseDown={handleMouseDown}
-      onDoubleClick={(e) => {
-        if (!editing) {
-          e.stopPropagation()
-          onDoubleClick()
-        }
-      }}
-    >
-      {/* Folder icon */}
+    <>
       <div
-        className={`flex h-[60px] w-[60px] items-center justify-center rounded-lg transition-colors ${
-          selected ? "bg-white/25" : "hover:bg-white/10"
-        }`}
+        className="absolute flex w-[90px] flex-col items-center gap-1 cursor-default"
+        style={{
+          left: folder.x,
+          top: folder.y,
+          zIndex: dragging ? 9999 : 1,
+          opacity: dragging ? 0.8 : 1,
+        }}
+        onMouseDown={handleMouseDown}
+        onContextMenu={handleContextMenu}
+        onDoubleClick={(e) => {
+          if (!editing) {
+            e.stopPropagation()
+            onDoubleClick()
+          }
+        }}
       >
-        <Folder className="h-12 w-12 fill-[#56a3f8] text-[#2d87f3] drop-shadow-sm" />
+        {/* Folder icon */}
+        <div
+          className={`flex h-[60px] w-[60px] items-center justify-center rounded-lg transition-colors ${
+            selected ? "bg-white/25" : "hover:bg-white/10"
+          }`}
+        >
+          <Folder className="h-12 w-12 fill-[#56a3f8] text-[#2d87f3] drop-shadow-sm" />
+        </div>
+
+        {/* Name label */}
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={handleKeyDown}
+            className="w-[90px] rounded-[3px] border border-[#4a9df8] bg-white px-1 text-center text-[11px] leading-tight text-[#1a1a1a] outline-none"
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            className={`max-w-[90px] truncate rounded-[3px] px-1.5 py-0.5 text-center text-[11px] font-medium leading-tight ${
+              selected
+                ? "bg-[#0058d0] text-white"
+                : "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+            }`}
+          >
+            {folder.name}
+          </span>
+        )}
       </div>
 
-      {/* Name label */}
-      {editing ? (
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitRename}
-          onKeyDown={handleKeyDown}
-          className="w-[90px] rounded-[3px] border border-[#4a9df8] bg-white px-1 text-center text-[11px] leading-tight text-[#1a1a1a] outline-none"
-          onClick={(e) => e.stopPropagation()}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
-      ) : (
-        <span
-          className={`max-w-[90px] truncate rounded-[3px] px-1.5 py-0.5 text-center text-[11px] font-medium leading-tight ${
-            selected
-              ? "bg-[#0058d0] text-white"
-              : "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-          }`}
-          onDoubleClick={(e) => {
-            e.stopPropagation()
-            setEditing(true)
-          }}
+      {/* Folder-specific right-click context menu */}
+      {folderMenu && (
+        <div
+          ref={menuRef}
+          className="fixed z-[10002] min-w-[200px] animate-ctx-menu"
+          style={{ left: folderMenu.x, top: folderMenu.y }}
         >
-          {folder.name}
-        </span>
+          <div
+            className="rounded-lg border border-black/10 py-1 shadow-xl"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.85)",
+              backdropFilter: "blur(60px) saturate(180%)",
+            }}
+          >
+            {FOLDER_MENU_ITEMS.map((item, i) => {
+              if ("type" in item && item.type === "separator") {
+                return <div key={`sep-${i}`} className="mx-2 my-1 h-px bg-black/8" />
+              }
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.action}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFolderMenu(null)
+                    if (item.action === "open") onDoubleClick()
+                    if (item.action === "rename") setEditing(true)
+                    if (item.action === "delete") onDelete(folder.id)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-[4px] px-3 py-1 text-left text-[13px] transition-colors ${
+                    item.danger
+                      ? "text-red-500 hover:bg-red-500 hover:text-white"
+                      : "text-[#262626] hover:bg-[#0058d0] hover:text-white"
+                  }`}
+                >
+                  {Icon && <Icon className="h-3.5 w-3.5 opacity-60" />}
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       )}
-    </div>
+    </>
   )
 }
