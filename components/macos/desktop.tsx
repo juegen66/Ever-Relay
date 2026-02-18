@@ -5,32 +5,16 @@ import { MenuBar } from "./menu-bar"
 import { Dock } from "./dock"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
-import { DesktopIcon, type DesktopFolder } from "./desktop-icon"
+import { DesktopIcon } from "./desktop-icon"
 import { Spotlight } from "./spotlight"
 import { BootScreen } from "./boot-screen"
 import { Launchpad } from "./launchpad"
 import { AboutMac } from "./about-mac"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
-import type { AppId, WindowState } from "./types"
-import type { User } from "@/lib/auth-store"
-
-const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
-  finder: { w: 780, h: 480 },
-  calculator: { w: 260, h: 400 },
-  notes: { w: 680, h: 500 },
-  terminal: { w: 660, h: 440 },
-  safari: { w: 900, h: 580 },
-  settings: { w: 740, h: 520 },
-  photos: { w: 780, h: 540 },
-  music: { w: 820, h: 520 },
-  calendar: { w: 760, h: 520 },
-  mail: { w: 820, h: 540 },
-  weather: { w: 420, h: 520 },
-  clock: { w: 340, h: 380 },
-  maps: { w: 780, h: 520 },
-  appstore: { w: 820, h: 560 },
-  messages: { w: 700, h: 500 },
-}
+import type { DesktopUser } from "@/lib/auth-user"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
   { app: "Mail", title: "New Email", message: "Sarah Johnson: Q1 Report Review - I've attached the Q1 report for your review...", time: "now", iconColor: "#007aff" },
@@ -39,27 +23,51 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 ]
 
 export function Desktop() {
-  const [windows, setWindows] = useState<WindowState[]>([])
-  const [nextZIndex, setNextZIndex] = useState(1)
-  const [activeWindowId, setActiveWindowId] = useState<string | null>(null)
+  const windows = useDesktopWindowStore((state) => state.windows)
+  const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
+  const openApp = useDesktopWindowStore((state) => state.openApp)
+  const openFolderWindow = useDesktopWindowStore((state) => state.openFolderWindow)
+  const focusWindow = useDesktopWindowStore((state) => state.focusWindow)
+  const closeWindow = useDesktopWindowStore((state) => state.closeWindow)
+  const minimizeWindow = useDesktopWindowStore((state) => state.minimizeWindow)
+  const maximizeWindow = useDesktopWindowStore((state) => state.maximizeWindow)
+  const updateWindowPosition = useDesktopWindowStore((state) => state.updateWindowPosition)
+  const updateWindowSize = useDesktopWindowStore((state) => state.updateWindowSize)
+  const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
+
+  const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
+  const selectedFolderId = useDesktopItemsStore((state) => state.selectedFolderId)
+  const setSelectedFolderId = useDesktopItemsStore((state) => state.setSelectedFolderId)
+  const clearSelection = useDesktopItemsStore((state) => state.clearSelection)
+  const createFolder = useDesktopItemsStore((state) => state.createFolder)
+  const createFile = useDesktopItemsStore((state) => state.createFile)
+  const deleteItem = useDesktopItemsStore((state) => state.deleteItem)
+  const renameItem = useDesktopItemsStore((state) => state.renameItem)
+  const moveItem = useDesktopItemsStore((state) => state.moveItem)
+  const moveIntoFolder = useDesktopItemsStore((state) => state.moveIntoFolder)
+  const moveItemToDesktop = useDesktopItemsStore((state) => state.moveItemToDesktop)
+  const createItemInFolder = useDesktopItemsStore((state) => state.createItemInFolder)
+
+  const contextMenu = useDesktopUIStore((state) => state.contextMenu)
+  const setContextMenu = useDesktopUIStore((state) => state.setContextMenu)
+  const closeContextMenu = useDesktopUIStore((state) => state.closeContextMenu)
+  const showSpotlight = useDesktopUIStore((state) => state.showSpotlight)
+  const showLaunchpad = useDesktopUIStore((state) => state.showLaunchpad)
+  const showAboutMac = useDesktopUIStore((state) => state.showAboutMac)
+  const setShowAboutMac = useDesktopUIStore((state) => state.setShowAboutMac)
+  const toggleSpotlight = useDesktopUIStore((state) => state.toggleSpotlight)
+  const closeTransientUi = useDesktopUIStore((state) => state.closeTransientUi)
+
   const [booted, setBooted] = useState(false)
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
-  const [showSpotlight, setShowSpotlight] = useState(false)
-  const [showLaunchpad, setShowLaunchpad] = useState(false)
-  const [showAboutMac, setShowAboutMac] = useState(false)
+  const [currentUser, setCurrentUser] = useState<DesktopUser | null>(null)
   const [desktopReady, setDesktopReady] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [bouncingApp, setBouncingApp] = useState<AppId | null>(null)
-  const [desktopFolders, setDesktopFolders] = useState<DesktopFolder[]>([])
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
   const notificationQueueRef = useRef<Omit<NotificationItem, "id">[]>([])
 
   useEffect(() => {
     if (booted) {
       setTimeout(() => setDesktopReady(true), 100)
-      // Queue startup notifications with delays
       notificationQueueRef.current = [...STARTUP_NOTIFICATIONS]
       const showNext = (delay: number) => {
         setTimeout(() => {
@@ -80,171 +88,42 @@ export function Desktop() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === " ") {
         e.preventDefault()
-        setShowSpotlight((prev) => !prev)
-        setShowLaunchpad(false)
+        toggleSpotlight()
       }
       if (e.key === "Escape") {
-        setShowSpotlight(false)
-        setShowLaunchpad(false)
-        setContextMenu(null)
+        closeTransientUi()
       }
     }
+
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [toggleSpotlight, closeTransientUi])
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
-  const openApp = useCallback(
-    (appId: AppId) => {
-      setShowSpotlight(false)
-      setShowLaunchpad(false)
-      setContextMenu(null)
+  const folderViewerProps = {
+    allItems: desktopFolders,
+    onOpenFolder: openFolderWindow,
+    onCreateItem: createItemInFolder,
+    onDeleteItem: deleteItem,
+    onRenameItem: renameItem,
+    onMoveItemOut: moveItemToDesktop,
+  }
 
-      const existing = windows.find((w) => w.appId === appId && !w.minimized)
-      if (existing) {
-        focusWindow(existing.id)
-        return
-      }
-      const minimized = windows.find((w) => w.appId === appId && w.minimized)
-      if (minimized) {
-        setWindows((prev) =>
-          prev.map((w) =>
-            w.id === minimized.id ? { ...w, minimized: false, zIndex: nextZIndex } : w
-          )
-        )
-        setActiveWindowId(minimized.id)
-        setNextZIndex((z) => z + 1)
-        return
-      }
-
-      // Bounce animation
-      setBouncingApp(appId)
-      setTimeout(() => setBouncingApp(null), 600)
-
-      const size = DEFAULT_WINDOW_SIZE[appId] || { w: 600, h: 400 }
-      const id = `${appId}-${Date.now()}`
-      const offset = (windows.length % 6) * 28
-      const viewW = window.innerWidth
-      const viewH = window.innerHeight
-      const newWindow: WindowState = {
-        id,
-        appId,
-        x: Math.max(40, (viewW - size.w) / 2 + offset),
-        y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
-        width: size.w,
-        height: size.h,
-        zIndex: nextZIndex,
-        minimized: false,
-        maximized: false,
-      }
-      setWindows((prev) => [...prev, newWindow])
-      setActiveWindowId(id)
-      setNextZIndex((z) => z + 1)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [windows, nextZIndex]
-  )
-
-  const focusWindow = useCallback(
-    (id: string) => {
-      setWindows((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, zIndex: nextZIndex } : w))
-      )
-      setActiveWindowId(id)
-      setNextZIndex((z) => z + 1)
-    },
-    [nextZIndex]
-  )
-
-  const closeWindow = useCallback((id: string) => {
-    setWindows((prev) => prev.filter((w) => w.id !== id))
-    setActiveWindowId((prev) => (prev === id ? null : prev))
-  }, [])
-
-  const minimizeWindow = useCallback((id: string) => {
-    setWindows((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, minimized: true } : w))
-    )
-    setActiveWindowId((prev) => (prev === id ? null : prev))
-  }, [])
-
-  const maximizeWindow = useCallback((id: string) => {
-    setWindows((prev) =>
-      prev.map((w) => {
-        if (w.id !== id) return w
-        if (w.maximized) {
-          return {
-            ...w,
-            maximized: false,
-            x: w.prevBounds?.x ?? w.x,
-            y: w.prevBounds?.y ?? w.y,
-            width: w.prevBounds?.width ?? w.width,
-            height: w.prevBounds?.height ?? w.height,
-          }
-        }
-        return {
-          ...w,
-          maximized: true,
-          prevBounds: { x: w.x, y: w.y, width: w.width, height: w.height },
-        }
-      })
-    )
-  }, [])
-
-  const updateWindowPosition = useCallback((id: string, x: number, y: number) => {
-    setWindows((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, x, y } : w))
-    )
-  }, [])
-
-  const updateWindowSize = useCallback(
-    (id: string, width: number, height: number) => {
-      setWindows((prev) =>
-        prev.map((w) => (w.id === id ? { ...w, width, height } : w))
-      )
-    },
-    []
-  )
-
-  const createFolder = useCallback((x: number, y: number) => {
-    const id = `folder-${Date.now()}`
-    // Snap to a grid aligned position, clamped to desktop area
-    const snappedX = Math.min(Math.max(x - 45, 20), window.innerWidth - 110)
-    const snappedY = Math.min(Math.max(y - 40, 36), window.innerHeight - 140)
-    setDesktopFolders((prev) => [
-      ...prev,
-      { id, name: "untitled folder", x: snappedX, y: snappedY, isNew: true },
-    ])
-    setSelectedFolderId(id)
-  }, [])
-
-  const renameFolder = useCallback((id: string, name: string) => {
-    setDesktopFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, name, isNew: false } : f))
-    )
-  }, [])
-
-  const moveFolder = useCallback((id: string, x: number, y: number) => {
-    setDesktopFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, x, y } : f))
-    )
-  }, [])
+  const rootDesktopItems = desktopFolders.filter((item) => !item.parentId)
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY })
-  }, [])
+  }, [setContextMenu])
 
   const handleDesktopClick = useCallback(() => {
-    setContextMenu(null)
-    setActiveWindowId(null)
-    setSelectedFolderId(null)
-  }, [])
-
-  const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
+    closeContextMenu()
+    clearActiveWindow()
+    clearSelection()
+  }, [closeContextMenu, clearActiveWindow, clearSelection])
 
   if (!booted) {
     return <BootScreen onComplete={(user) => { setCurrentUser(user); setBooted(true) }} />
@@ -264,13 +143,7 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       onClick={handleDesktopClick}
     >
-      <MenuBar
-        activeApp={activeApp}
-        openApp={openApp}
-        onShowAbout={() => setShowAboutMac(true)}
-        onShowLaunchpad={() => setShowLaunchpad(true)}
-        currentUser={currentUser}
-      />
+      <MenuBar currentUser={currentUser} />
 
       {windows.map((win) =>
         win.minimized ? null : (
@@ -284,20 +157,29 @@ export function Desktop() {
             onMaximize={() => maximizeWindow(win.id)}
             onMove={(x, y) => updateWindowPosition(win.id, x, y)}
             onResize={(w, h) => updateWindowSize(win.id, w, h)}
+            folderViewerProps={win.folderId ? folderViewerProps : undefined}
           />
         )
       )}
 
-      {/* Desktop folder icons */}
-      {desktopFolders.map((folder) => (
+      {rootDesktopItems.map((folder) => (
         <DesktopIcon
           key={folder.id}
           folder={folder}
           selected={selectedFolderId === folder.id}
           onSelect={() => setSelectedFolderId(folder.id)}
-          onDoubleClick={() => openApp("finder")}
-          onRename={renameFolder}
-          onMove={moveFolder}
+          onDoubleClick={() => {
+            if (folder.itemType === "folder") {
+              openFolderWindow(folder.id, folder.name)
+            } else {
+              openApp("notes")
+            }
+          }}
+          onRename={renameItem}
+          onDelete={deleteItem}
+          onMove={moveItem}
+          onMoveIntoFolder={moveIntoFolder}
+          allDesktopItems={rootDesktopItems}
         />
       ))}
 
@@ -305,36 +187,29 @@ export function Desktop() {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
+          onClose={closeContextMenu}
           onAction={(action) => {
-            if (action === "new-folder") createFolder(contextMenu.x, contextMenu.y)
+            const { x, y } = contextMenu
+            if (action === "new-folder") createFolder(x, y)
+            if (action === "new-file-text") createFile(x, y, "text")
+            if (action === "new-file-image") createFile(x, y, "image")
+            if (action === "new-file-code") createFile(x, y, "code")
+            if (action === "new-file-spreadsheet") createFile(x, y, "spreadsheet")
+            if (action === "new-file-generic") createFile(x, y, "generic")
             if (action === "finder") openApp("finder")
             if (action === "terminal") openApp("terminal")
             if (action === "settings") openApp("settings")
-            setContextMenu(null)
+            closeContextMenu()
           }}
         />
       )}
 
-      {showSpotlight && (
-        <Spotlight
-          onClose={() => setShowSpotlight(false)}
-          onOpenApp={openApp}
-        />
-      )}
+      {showSpotlight && <Spotlight />}
 
-      {showLaunchpad && (
-        <Launchpad
-          onClose={() => setShowLaunchpad(false)}
-          onOpenApp={openApp}
-        />
-      )}
+      {showLaunchpad && <Launchpad />}
 
-      {showAboutMac && (
-        <AboutMac onClose={() => setShowAboutMac(false)} />
-      )}
+      {showAboutMac && <AboutMac onClose={() => setShowAboutMac(false)} />}
 
-      {/* Notifications */}
       {notifications.length > 0 && (
         <NotificationPopup
           notification={notifications[notifications.length - 1]}
@@ -342,12 +217,7 @@ export function Desktop() {
         />
       )}
 
-      <Dock
-        openApp={openApp}
-        openWindows={windows}
-        activeWindowId={activeWindowId}
-        bouncingApp={bouncingApp}
-      />
+      <Dock />
     </div>
   )
 }

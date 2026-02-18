@@ -4,7 +4,11 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Eye, EyeOff, AlertCircle, Check, Monitor } from "lucide-react"
-import { registerUser } from "@/lib/auth-store"
+import {
+  authClient,
+  GOOGLE_AUTH_ENABLED,
+  getAuthErrorMessage,
+} from "@/lib/auth-client"
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -38,7 +42,7 @@ export default function RegisterPage() {
     return null
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     const validationError = validate()
@@ -48,17 +52,26 @@ export default function RegisterPage() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      const result = registerUser(form.username, form.email, form.password)
-      if (!result.success) {
-        setError(result.error || "Registration failed")
-        setLoading(false)
+    try {
+      const { error: authError } = await authClient.signUp.email({
+        name: form.username.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        callbackURL: "/desktop",
+      })
+
+      if (authError) {
+        setError(getAuthErrorMessage(authError, "Registration failed"))
         return
       }
+
       setSuccess(true)
-      setLoading(false)
       setTimeout(() => router.push("/desktop"), 1200)
-    }, 600)
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Registration failed"))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const update = (key: string, value: string) => {
@@ -66,19 +79,28 @@ export default function RegisterPage() {
     setError("")
   }
 
-  const handleGoogleSignUp = () => {
+  const handleGoogleSignUp = async () => {
+    if (!GOOGLE_AUTH_ENABLED) {
+      setError("Google sign in is not configured in this environment.")
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      const gUsername = "google_user_" + Math.floor(Math.random() * 10000)
-      const result = registerUser(gUsername, "user@gmail.com", "google_oauth_" + Date.now())
-      if (result.success) {
-        setSuccess(true)
-        setTimeout(() => router.push("/desktop"), 1200)
-      } else {
-        setError("This Google account is already registered. Please sign in instead.")
-        setLoading(false)
+    try {
+      const { error: authError } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/desktop",
+      })
+
+      if (authError) {
+        setError(getAuthErrorMessage(authError, "Google sign in failed"))
+        return
       }
-    }, 800)
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Google sign in failed"))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const strengthLevel = (() => {
@@ -144,12 +166,17 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={handleGoogleSignUp}
-                  disabled={loading}
+                  disabled={loading || !GOOGLE_AUTH_ENABLED}
                   className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#e0dcd6] bg-white py-3.5 text-[15px] font-medium text-[#1a1a2e] transition-all hover:bg-[#faf8f5] hover:border-[#d0ccc6] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <GoogleIcon className="h-5 w-5" />
                   Sign up with Google
                 </button>
+                {!GOOGLE_AUTH_ENABLED && (
+                  <p className="mt-2 text-center text-[12px] text-[#b0aca4]">
+                    Google login is currently disabled.
+                  </p>
+                )}
 
                 {/* Divider */}
                 <div className="my-6 flex items-center gap-4">

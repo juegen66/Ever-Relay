@@ -18,12 +18,12 @@ export function HeroSection() {
       {/* Badge */}
       <div className="animate-hero mb-6 flex items-center gap-2 rounded-full border border-[#e8e4de] bg-white px-4 py-1.5 shadow-sm">
         <Sparkles className="h-3.5 w-3.5 text-[#34c759]" />
-        <span className="text-[13px] text-[#6e6a62]">Your Desktop, Reimagined</span>
+        <span className="text-[13px] text-[#6e6a62]">The Workspace for Creators</span>
       </div>
 
       {/* Headline */}
       <h1 className="animate-hero-delay-1 max-w-3xl text-center text-5xl font-bold leading-[1.1] tracking-tight text-[#1a1a2e] md:text-7xl text-balance">
-        A Complete{" "}
+        Begin with a logo — end with a{" "}
         <span
           className="bg-clip-text text-transparent animate-shimmer"
           style={{
@@ -31,16 +31,13 @@ export function HeroSection() {
             backgroundSize: "200% auto",
           }}
         >
-          Desktop
+          brand
         </span>
-        <br />
-        in Your Browser
       </h1>
 
       {/* Subtitle */}
       <p className="animate-hero-delay-2 mt-6 max-w-xl text-center text-[17px] leading-relaxed text-[#8a8680]">
-        Experience a fully-featured operating system right in your browser.
-        Finder, Terminal, Safari, Music, and more -- no installation required.
+        A powerful, browser-based operating system designed for building, managing, and scaling your creative vision. No installation required.
       </p>
 
       {/* CTAs */}
@@ -49,14 +46,14 @@ export function HeroSection() {
           href="/register"
           className="group flex items-center gap-2 rounded-full bg-[#34c759] px-7 py-3 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
         >
-          Get Started Free
+          Start Building
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
           href="/desktop"
           className="rounded-full border border-[#ddd8d0] bg-white px-7 py-3 text-[15px] font-semibold text-[#1a1a2e] transition-all hover:bg-[#f5f2ee] hover:border-[#ccc7bf]"
         >
-          Sign In
+          Launch Workspace
         </Link>
       </div>
 

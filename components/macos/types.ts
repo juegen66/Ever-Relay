@@ -26,6 +26,8 @@ export interface WindowState {
   minimized: boolean
   maximized: boolean
   prevBounds?: { x: number; y: number; width: number; height: number }
+  folderId?: string
+  folderName?: string
 }
 
 export interface AppInfo {

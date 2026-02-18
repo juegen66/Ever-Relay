@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import type { AppId, WindowState } from "./types"
+import type { AppId } from "./types"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
 interface DockItem {
   id: AppId
@@ -28,16 +29,12 @@ const DOCK_ITEMS: DockItem[] = [
   { id: "settings", name: "System Settings", iconLetter: "S", color: "linear-gradient(135deg, #8e8e93 0%, #636366 100%)" },
 ]
 
-interface DockProps {
-  openApp: (id: AppId) => void
-  openWindows: WindowState[]
-  activeWindowId: string | null
-  bouncingApp?: AppId | null
-}
+export function Dock() {
+  const openApp = useDesktopWindowStore((state) => state.openApp)
+  const openWindows = useDesktopWindowStore((state) => state.windows)
+  const bouncingApp = useDesktopWindowStore((state) => state.bouncingApp)
 
-export function Dock({ openApp, openWindows, activeWindowId, bouncingApp }: DockProps) {
   const dockRef = useRef<HTMLDivElement>(null)
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [mouseX, setMouseX] = useState<number | null>(null)
   const [tooltip, setTooltip] = useState<{ name: string; x: number } | null>(null)
 
@@ -48,7 +45,6 @@ export function Dock({ openApp, openWindows, activeWindowId, bouncingApp }: Dock
   }, [])
 
   const handleMouseLeave = useCallback(() => {
-    setHoveredIndex(null)
     setMouseX(null)
     setTooltip(null)
   }, [])
@@ -112,7 +108,6 @@ export function Dock({ openApp, openWindows, activeWindowId, bouncingApp }: Dock
               <div
                 className="relative flex flex-col items-center"
                 onMouseEnter={(e) => {
-                  setHoveredIndex(index)
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                   const dockRect = dockRef.current?.getBoundingClientRect()
                   if (dockRect) {
@@ -120,7 +115,6 @@ export function Dock({ openApp, openWindows, activeWindowId, bouncingApp }: Dock
                   }
                 }}
                 onMouseLeave={() => {
-                  setHoveredIndex(null)
                   setTooltip(null)
                 }}
               >

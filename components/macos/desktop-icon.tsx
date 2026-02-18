@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Folder, Pencil, Trash2, FolderOpen, Info } from "lucide-react"
+import { Folder, Pencil, Trash2, FolderOpen, Info, FileText, File, FileImage, FileCode, FileSpreadsheet } from "lucide-react"
+
+export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
 
 export interface DesktopFolder {
   id: string
@@ -9,6 +11,8 @@ export interface DesktopFolder {
   x: number
   y: number
   isNew?: boolean
+  itemType?: DesktopItemType
+  parentId?: string | null
 }
 
 interface DesktopIconProps {
@@ -19,6 +23,17 @@ interface DesktopIconProps {
   onRename: (id: string, name: string) => void
   onDelete: (id: string) => void
   onMove: (id: string, x: number, y: number) => void
+  onMoveIntoFolder?: (itemId: string, targetFolderId: string) => void
+  allDesktopItems?: DesktopFolder[]
+}
+
+const FILE_ICON_MAP: Record<DesktopItemType, { icon: typeof File; fillClass: string; textClass: string }> = {
+  folder: { icon: Folder, fillClass: "fill-[#56a3f8]", textClass: "text-[#2d87f3]" },
+  text: { icon: FileText, fillClass: "", textClass: "text-[#5ac8fa]" },
+  image: { icon: FileImage, fillClass: "", textClass: "text-[#ff9f0a]" },
+  code: { icon: FileCode, fillClass: "", textClass: "text-[#bf5af2]" },
+  spreadsheet: { icon: FileSpreadsheet, fillClass: "", textClass: "text-[#30d158]" },
+  generic: { icon: File, fillClass: "", textClass: "text-[#8e8e93]" },
 }
 
 export function DesktopIcon({
@@ -29,14 +44,19 @@ export function DesktopIcon({
   onRename,
   onDelete,
   onMove,
+  onMoveIntoFolder,
+  allDesktopItems,
 }: DesktopIconProps) {
   const [editing, setEditing] = useState(folder.isNew ?? false)
   const [name, setName] = useState(folder.name)
   const [dragging, setDragging] = useState(false)
+  const [isDropTarget, setIsDropTarget] = useState(false)
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
+  const itemType = folder.itemType || "folder"
+  const isFolder = itemType === "folder"
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -92,20 +112,85 @@ export function DesktopIcon({
       y: e.clientY - folder.y,
     }
 
+    let didDrag = false
+
     const handleMouseMove = (ev: MouseEvent) => {
+      didDrag = true
       setDragging(true)
       onMove(folder.id, ev.clientX - dragOffset.current.x, ev.clientY - dragOffset.current.y)
+
+      // Dispatch custom event so other icons can detect hover
+      window.dispatchEvent(
+        new CustomEvent("desktop-drag-move", {
+          detail: { draggedId: folder.id, x: ev.clientX, y: ev.clientY },
+        })
+      )
     }
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (ev: MouseEvent) => {
       setDragging(false)
       window.removeEventListener("mousemove", handleMouseMove)
       window.removeEventListener("mouseup", handleMouseUp)
+
+      // Check if dropped on a folder
+      if (didDrag && onMoveIntoFolder && allDesktopItems) {
+        const dropX = ev.clientX
+        const dropY = ev.clientY
+        const targetFolder = allDesktopItems.find((item) => {
+          if (item.id === folder.id || item.itemType !== "folder") return false
+          const rect = {
+            left: item.x,
+            top: item.y,
+            right: item.x + 90,
+            bottom: item.y + 90,
+          }
+          return dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom
+        })
+        if (targetFolder) {
+          onMoveIntoFolder(folder.id, targetFolder.id)
+        }
+      }
+
+      // Clear drop target on all icons
+      window.dispatchEvent(new CustomEvent("desktop-drag-end"))
     }
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mouseup", handleMouseUp)
   }
+
+  // Listen for drag events from other icons to show drop target highlight
+  useEffect(() => {
+    if (!isFolder) return
+
+    const handleDragMove = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail.draggedId === folder.id) return
+      const rect = {
+        left: folder.x,
+        top: folder.y,
+        right: folder.x + 90,
+        bottom: folder.y + 90,
+      }
+      const isOver =
+        detail.x >= rect.left &&
+        detail.x <= rect.right &&
+        detail.y >= rect.top &&
+        detail.y <= rect.bottom
+      setIsDropTarget(isOver)
+    }
+
+    const handleDragEnd = () => {
+      setIsDropTarget(false)
+    }
+
+    window.addEventListener("desktop-drag-move", handleDragMove)
+    window.addEventListener("desktop-drag-end", handleDragEnd)
+    return () => {
+      window.removeEventListener("desktop-drag-move", handleDragMove)
+      window.removeEventListener("desktop-drag-end", handleDragEnd)
+    }
+  }, [isFolder, folder.id, folder.x, folder.y])
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -115,13 +200,17 @@ export function DesktopIcon({
   }
 
   const FOLDER_MENU_ITEMS = [
-    { label: "Open", icon: FolderOpen, action: "open" as const },
+    { label: "Open", icon: isFolder ? FolderOpen : FileText, action: "open" as const },
     { label: "Get Info", icon: Info, action: "info" as const },
     { type: "separator" as const },
     { label: "Rename", icon: Pencil, action: "rename" as const },
+    { label: "Duplicate", icon: File, action: "duplicate" as const },
     { type: "separator" as const },
     { label: "Move to Trash", icon: Trash2, action: "delete" as const, danger: true },
   ]
+
+  const iconConfig = FILE_ICON_MAP[itemType]
+  const IconComponent = iconConfig.icon
 
   return (
     <>
@@ -132,6 +221,7 @@ export function DesktopIcon({
           top: folder.y,
           zIndex: dragging ? 9999 : 1,
           opacity: dragging ? 0.8 : 1,
+          transition: dragging ? "none" : "opacity 0.15s ease",
         }}
         onMouseDown={handleMouseDown}
         onContextMenu={handleContextMenu}
@@ -142,13 +232,17 @@ export function DesktopIcon({
           }
         }}
       >
-        {/* Folder icon */}
+        {/* Icon */}
         <div
           className={`flex h-[60px] w-[60px] items-center justify-center rounded-lg transition-colors ${
-            selected ? "bg-white/25" : "hover:bg-white/10"
+            isDropTarget
+              ? "bg-[#0058d0]/30 ring-2 ring-[#0058d0]/50"
+              : selected
+                ? "bg-white/25"
+                : "hover:bg-white/10"
           }`}
         >
-          <Folder className="h-12 w-12 fill-[#56a3f8] text-[#2d87f3] drop-shadow-sm" />
+          <IconComponent className={`h-12 w-12 ${iconConfig.fillClass} ${iconConfig.textClass} drop-shadow-sm`} />
         </div>
 
         {/* Name label */}
@@ -204,6 +298,9 @@ export function DesktopIcon({
                     if (item.action === "open") onDoubleClick()
                     if (item.action === "rename") setEditing(true)
                     if (item.action === "delete") onDelete(folder.id)
+                    if (item.action === "duplicate") {
+                      /* duplicate is a no-op for now, just closes the menu */
+                    }
                   }}
                   className={`flex w-full items-center gap-2 rounded-[4px] px-3 py-1 text-left text-[13px] transition-colors ${
                     item.danger

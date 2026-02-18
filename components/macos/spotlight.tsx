@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react"
 import { Search } from "lucide-react"
 import type { AppId } from "./types"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
@@ -22,12 +24,9 @@ const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "appstore", name: "App Store", category: "Applications" },
 ]
 
-interface SpotlightProps {
-  onClose: () => void
-  onOpenApp: (id: AppId) => void
-}
-
-export function Spotlight({ onClose, onOpenApp }: SpotlightProps) {
+export function Spotlight() {
+  const onClose = useDesktopUIStore((state) => state.closeSpotlight)
+  const onOpenApp = useDesktopWindowStore((state) => state.openApp)
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)

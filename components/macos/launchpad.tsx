@@ -1,6 +1,8 @@
 "use client"
 
 import type { AppId } from "./types"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
   { id: "finder", name: "Finder", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)", letter: "F" },
@@ -20,12 +22,10 @@ const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }
   { id: "settings", name: "Settings", color: "linear-gradient(135deg, #8e8e93 0%, #636366 100%)", letter: "S" },
 ]
 
-interface LaunchpadProps {
-  onClose: () => void
-  onOpenApp: (id: AppId) => void
-}
+export function Launchpad() {
+  const onOpenApp = useDesktopWindowStore((state) => state.openApp)
+  const onClose = useDesktopUIStore((state) => state.closeLaunchpad)
 
-export function Launchpad({ onClose, onOpenApp }: LaunchpadProps) {
   return (
     <div
       className="fixed inset-0 z-[10004] flex flex-col items-center justify-center animate-launchpad"

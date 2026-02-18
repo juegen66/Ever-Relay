@@ -17,8 +17,10 @@ import {
   SkipBack,
 } from "lucide-react"
 import type { AppId } from "./types"
-import type { User } from "@/lib/auth-store"
-import { logoutUser } from "@/lib/auth-store"
+import { authClient } from "@/lib/auth-client"
+import type { DesktopUser } from "@/lib/auth-user"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",
@@ -38,7 +40,18 @@ const APP_NAMES: Record<AppId, string> = {
   messages: "Messages",
 }
 
-const APPLE_MENU = [
+type MenuActionItem = {
+  type?: never
+  label: string
+  action?: string
+  shortcut?: string
+  shift?: boolean
+  hasSubmenu?: boolean
+}
+
+type MenuItem = { type: "separator" } | MenuActionItem
+
+const APPLE_MENU: MenuItem[] = [
   { label: "About This Mac", action: "about" },
   { type: "separator" as const },
   { label: "System Settings...", action: "settings" },
@@ -56,7 +69,7 @@ const APPLE_MENU = [
   { label: "Log Out", action: "logout" },
 ]
 
-const FILE_MENU = [
+const FILE_MENU: MenuItem[] = [
   { label: "New Window", shortcut: "N" },
   { label: "New Tab", shortcut: "T" },
   { type: "separator" as const },
@@ -69,7 +82,7 @@ const FILE_MENU = [
   { label: "Print...", shortcut: "P" },
 ]
 
-const EDIT_MENU = [
+const EDIT_MENU: MenuItem[] = [
   { label: "Undo", shortcut: "Z" },
   { label: "Redo", shortcut: "Z", shift: true },
   { type: "separator" as const },
@@ -81,7 +94,7 @@ const EDIT_MENU = [
   { label: "Find...", shortcut: "F" },
 ]
 
-const VIEW_MENU = [
+const VIEW_MENU: MenuItem[] = [
   { label: "as Icons" },
   { label: "as List" },
   { label: "as Columns" },
@@ -94,15 +107,15 @@ const VIEW_MENU = [
 ]
 
 interface MenuBarProps {
-  activeApp: AppId | null
-  openApp: (id: AppId) => void
-  onShowAbout?: () => void
-  onShowLaunchpad?: () => void
-  currentUser?: User | null
+  currentUser?: DesktopUser | null
 }
 
-export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad, currentUser }: MenuBarProps) {
+export function MenuBar({ currentUser }: MenuBarProps) {
   const router = useRouter()
+  const windows = useDesktopWindowStore((state) => state.windows)
+  const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
+  const openApp = useDesktopWindowStore((state) => state.openApp)
+  const setShowAboutMac = useDesktopUIStore((state) => state.setShowAboutMac)
   const [time, setTime] = useState("")
   const [date, setDate] = useState("")
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -135,22 +148,23 @@ export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad, curr
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
   const appName = activeApp ? APP_NAMES[activeApp] : "Finder"
 
-  const handleMenuAction = useCallback((action?: string) => {
+  const handleMenuAction = useCallback(async (action?: string) => {
     setOpenMenu(null)
-    if (action === "about" && onShowAbout) onShowAbout()
+    if (action === "about") setShowAboutMac(true)
     if (action === "settings") openApp("settings")
     if (action === "appstore") openApp("appstore")
     if (action === "logout") {
-      logoutUser()
+      await authClient.signOut()
       router.push("/")
     }
-  }, [openApp, onShowAbout, router])
+  }, [setShowAboutMac, openApp, router])
 
   const userName = currentUser?.username || "User"
 
-  const renderMenu = (items: typeof APPLE_MENU) => (
+  const renderMenu = (items: MenuItem[]) => (
     <div
       className="absolute top-full left-0 mt-0 min-w-[220px] py-1 z-[10002]"
       style={{
@@ -162,24 +176,25 @@ export function MenuBar({ activeApp, openApp, onShowAbout, onShowLaunchpad, curr
       }}
     >
       {items.map((item, i) => {
-        if (item.type === "separator") {
+        if ("type" in item && item.type === "separator") {
           return <div key={`sep-${i}`} className="my-1 mx-2 h-px" style={{ background: "rgba(0,0,0,0.1)" }} />
         }
+        const menuItem = item as MenuActionItem
         return (
           <button
             key={`item-${i}`}
-            onClick={() => handleMenuAction("action" in item ? item.action : undefined)}
+            onClick={() => handleMenuAction(menuItem.action)}
             className="flex w-full items-center justify-between px-4 py-1 text-[13px] text-[#262626] hover:bg-[#0058d0] hover:text-white transition-colors"
           >
-            <span>{"action" in item && item.action === "logout" ? `Log Out ${userName}...` : item.label}</span>
+            <span>{menuItem.action === "logout" ? `Log Out ${userName}...` : menuItem.label}</span>
             <span className="flex items-center gap-1 text-[12px] opacity-50">
-              {"shortcut" in item && item.shortcut && (
+              {menuItem.shortcut && (
                 <>
-                  {"shift" in item && item.shift && <span>Shift+</span>}
-                  <span>Cmd+{item.shortcut}</span>
+                  {menuItem.shift && <span>Shift+</span>}
+                  <span>Cmd+{menuItem.shortcut}</span>
                 </>
               )}
-              {"hasSubmenu" in item && item.hasSubmenu && (
+              {menuItem.hasSubmenu && (
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="9,6 15,12 9,18" />
                 </svg>

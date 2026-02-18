@@ -17,6 +17,8 @@ import { ClockApp } from "./apps/clock-app"
 import { MapsApp } from "./apps/maps-app"
 import { AppStoreApp } from "./apps/appstore-app"
 import { MessagesApp } from "./apps/messages-app"
+import { FolderViewer } from "./apps/folder-viewer"
+import type { DesktopFolder, DesktopItemType } from "./desktop-icon"
 
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",
@@ -66,6 +68,15 @@ interface AppWindowProps {
   onMaximize: () => void
   onMove: (x: number, y: number) => void
   onResize: (w: number, h: number) => void
+  // Folder viewer props
+  folderViewerProps?: {
+    allItems: DesktopFolder[]
+    onOpenFolder: (folderId: string, folderName: string) => void
+    onCreateItem: (parentId: string, itemType: DesktopItemType, name: string) => void
+    onDeleteItem: (id: string) => void
+    onRenameItem: (id: string, name: string) => void
+    onMoveItemOut: (id: string) => void
+  }
 }
 
 export function AppWindow({
@@ -77,6 +88,7 @@ export function AppWindow({
   onMaximize,
   onMove,
   onResize,
+  folderViewerProps,
 }: AppWindowProps) {
   const windowRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -156,7 +168,8 @@ export function AppWindow({
     }
   }, [width, height, x, y, onMove, onResize])
 
-  const AppContent = APP_COMPONENTS[appId]
+  const isFolderViewer = appId === "finder" && windowState.folderId
+  const AppContent = isFolderViewer ? null : APP_COMPONENTS[appId]
 
   const windowStyle = maximized
     ? {
@@ -263,14 +276,27 @@ export function AppWindow({
         </div>
 
         <div className={`flex-1 text-center text-[13px] font-medium ${isDark ? "text-white/60" : "text-[#4a4a4a]"}`}>
-          {APP_TITLES[appId]}
+          {isFolderViewer ? windowState.folderName || "Folder" : APP_TITLES[appId]}
         </div>
         <div className="w-[62px]" />
       </div>
 
       {/* App Content */}
       <div className="flex-1 overflow-hidden">
-        {AppContent ? <AppContent /> : null}
+        {isFolderViewer && folderViewerProps ? (
+          <FolderViewer
+            folderId={windowState.folderId!}
+            folderName={windowState.folderName || "Folder"}
+            allItems={folderViewerProps.allItems}
+            onOpenFolder={folderViewerProps.onOpenFolder}
+            onCreateItem={folderViewerProps.onCreateItem}
+            onDeleteItem={folderViewerProps.onDeleteItem}
+            onRenameItem={folderViewerProps.onRenameItem}
+            onMoveItemOut={folderViewerProps.onMoveItemOut}
+          />
+        ) : AppContent ? (
+          <AppContent />
+        ) : null}
       </div>
 
       {/* Resize Handles - all edges and corners */}

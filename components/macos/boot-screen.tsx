@@ -1,9 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Apple } from "lucide-react"
-import { getUsers, loginUser, getCurrentUser, registerUser, type User } from "@/lib/auth-store"
+import {
+  authClient,
+  GOOGLE_AUTH_ENABLED,
+  getAuthErrorMessage,
+} from "@/lib/auth-client"
+import {
+  extractSessionUser,
+  toDesktopUser,
+  type DesktopUser,
+} from "@/lib/auth-user"
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -16,129 +25,183 @@ function GoogleIcon({ className }: { className?: string }) {
   )
 }
 
+type BootPhase = "boot" | "login" | "logging-in"
+
 interface BootScreenProps {
-  onComplete: (user: User) => void
+  onComplete: (user: DesktopUser) => void
 }
 
 export function BootScreen({ onComplete }: BootScreenProps) {
   const router = useRouter()
-  const [phase, setPhase] = useState<"boot" | "login" | "logging-in">("boot")
+  const [phase, setPhase] = useState<BootPhase>("boot")
   const [progress, setProgress] = useState(0)
-  const [users, setUsers] = useState<User[]>([])
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [time, setTime] = useState("")
+  const [date, setDate] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPasswordField, setShowPasswordField] = useState(false)
   const [error, setError] = useState("")
   const [shaking, setShaking] = useState(false)
-  const [time, setTime] = useState("")
+  const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
+  const completeLogin = useCallback(
+    (payload: unknown) => {
+      const authUser = extractSessionUser(payload)
+      if (!authUser) return false
+
+      setPhase("logging-in")
+      const desktopUser = toDesktopUser(authUser)
+      setTimeout(() => {
+        onComplete(desktopUser)
+      }, 900)
+      return true
+    },
+    [onComplete]
+  )
+
+  const restoreSession = useCallback(async () => {
+    try {
+      const { data, error: sessionError } = await authClient.getSession()
+      if (sessionError) return false
+      return completeLogin(data)
+    } catch {
+      return false
+    }
+  }, [completeLogin])
+
   useEffect(() => {
-    const now = new Date()
-    setTime(
-      now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-    )
+    const updateClock = () => {
+      const now = new Date()
+      setTime(
+        now.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      )
+      setDate(
+        now.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })
+      )
+    }
+
+    updateClock()
+    const interval = setInterval(updateClock, 1000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
-    // Check if already logged in
-    const current = getCurrentUser()
-    if (current) {
-      setPhase("boot")
-      const autoLogin = () => {
-        onComplete(current)
+    if (phase !== "boot") return
+
+    let currentProgress = 0
+    let finished = false
+
+    const interval = setInterval(() => {
+      if (finished) return
+
+      currentProgress = Math.min(100, currentProgress + Math.random() * 8 + 2)
+      setProgress(currentProgress)
+
+      if (currentProgress >= 100) {
+        finished = true
+        clearInterval(interval)
+
+        void (async () => {
+          const restored = await restoreSession()
+          if (!restored) {
+            setPhase("login")
+          }
+        })()
       }
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            setTimeout(autoLogin, 300)
-            return 100
-          }
-          return prev + Math.random() * 12 + 4
-        })
-      }, 60)
-      return () => clearInterval(interval)
-    }
+    }, 80)
 
-    // Load registered users
-    const allUsers = getUsers()
-    setUsers(allUsers)
-
-    // Boot animation
-    if (phase === "boot") {
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            setTimeout(() => setPhase("login"), 300)
-            return 100
-          }
-          return prev + Math.random() * 8 + 2
-        })
-      }, 80)
-      return () => clearInterval(interval)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase])
+    return () => clearInterval(interval)
+  }, [phase, restoreSession])
 
   useEffect(() => {
     if (phase === "login") {
-      setTimeout(() => setShowPasswordField(true), 500)
+      const timer = setTimeout(() => setShowPasswordField(true), 220)
+      return () => clearTimeout(timer)
     }
   }, [phase])
 
-  const handleLogin = () => {
-    if (!selectedUser) return
+  const showLoginError = (message: string) => {
+    setError(message)
+    setShaking(true)
+    setTimeout(() => setShaking(false), 500)
+  }
+
+  const handleEmailLogin = async (e: FormEvent) => {
+    e.preventDefault()
     setError("")
 
-    const result = loginUser(selectedUser.username, password)
-    if (!result.success) {
-      setError(result.error || "Login failed")
-      setShaking(true)
-      setTimeout(() => setShaking(false), 500)
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail || !password) {
+      showLoginError("Please enter email and password")
       return
     }
 
-    setPhase("logging-in")
-    setTimeout(() => {
-      if (result.user) onComplete(result.user)
-    }, 1200)
-  }
+    setLoading(true)
+    try {
+      const { data, error: signInError } = await authClient.signIn.email({
+        email: normalizedEmail,
+        password,
+        rememberMe: true,
+        callbackURL: "/desktop",
+      })
 
-  const handleGoogleLogin = () => {
-    setGoogleLoading(true)
-    setTimeout(() => {
-      const allUsers = getUsers()
-      const googleUser = allUsers.find(u => u.email === "user@gmail.com")
-      if (googleUser) {
-        setPhase("logging-in")
-        setTimeout(() => {
-          onComplete(googleUser)
-        }, 1200)
+      if (signInError) {
+        showLoginError(getAuthErrorMessage(signInError, "Login failed"))
         return
       }
-      const gUsername = "Google_" + Math.floor(Math.random() * 10000)
-      const gPassword = "google_oauth_" + Date.now()
-      const result = registerUser(gUsername, "user@gmail.com", gPassword)
-      if (result.success && result.user) {
-        setPhase("logging-in")
-        setTimeout(() => {
-          onComplete(result.user!)
-        }, 1200)
-      } else {
-        setError("Google sign in failed. Please try again.")
-        setGoogleLoading(false)
+
+      if (completeLogin(data)) return
+
+      const restored = await restoreSession()
+      if (!restored) {
+        showLoginError("Unable to read session after sign in")
       }
-    }, 800)
+    } catch (err) {
+      showLoginError(getAuthErrorMessage(err, "Login failed"))
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Boot phase - Apple logo + progress bar
-  if (phase === "boot" && !getCurrentUser()) {
+  const handleGoogleLogin = async () => {
+    setError("")
+
+    if (!GOOGLE_AUTH_ENABLED) {
+      showLoginError("Google sign in is not configured in this environment.")
+      return
+    }
+
+    setGoogleLoading(true)
+    try {
+      const { error: socialError } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/desktop",
+      })
+
+      if (socialError) {
+        showLoginError(getAuthErrorMessage(socialError, "Google sign in failed"))
+      }
+    } catch (err) {
+      showLoginError(getAuthErrorMessage(err, "Google sign in failed"))
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  if (phase === "boot") {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-black overflow-hidden">
+      <div className="flex h-screen w-screen flex-col items-center justify-center overflow-hidden bg-black">
         <Apple className="mb-8 h-16 w-16 fill-white text-white" />
-        <div className="h-1 w-48 overflow-hidden rounded-full bg-white/20 progress-glow">
+        <div className="progress-glow h-1 w-48 overflow-hidden rounded-full bg-white/20">
           <div
             className="h-full rounded-full bg-white transition-all duration-200 ease-out"
             style={{ width: `${Math.min(progress, 100)}%` }}
@@ -148,22 +211,6 @@ export function BootScreen({ onComplete }: BootScreenProps) {
     )
   }
 
-  // Auto-login boot (already logged in)
-  if (getCurrentUser()) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-black overflow-hidden">
-        <Apple className="mb-8 h-16 w-16 fill-white text-white" />
-        <div className="h-1 w-48 overflow-hidden rounded-full bg-white/20 progress-glow">
-          <div
-            className="h-full rounded-full bg-white transition-all duration-200 ease-out"
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // Login phase
   return (
     <div
       className="flex h-screen w-screen flex-col items-center justify-center overflow-hidden"
@@ -176,238 +223,117 @@ export function BootScreen({ onComplete }: BootScreenProps) {
       <div
         className="absolute inset-0"
         style={{
-          backdropFilter: "blur(60px) brightness(0.7)",
-          WebkitBackdropFilter: "blur(60px) brightness(0.7)",
+          backdropFilter: "blur(60px) brightness(0.72)",
+          WebkitBackdropFilter: "blur(60px) brightness(0.72)",
         }}
       />
 
       <div
-        className="relative z-10 flex flex-col items-center"
+        className="relative z-10 flex w-[320px] flex-col items-center"
         style={{
           opacity: phase === "logging-in" ? 0 : 1,
-          transform: phase === "logging-in" ? "scale(1.1)" : "scale(1)",
+          transform: phase === "logging-in" ? "scale(1.08)" : "scale(1)",
           transition: "all 0.8s ease-in-out",
         }}
       >
-        {/* Clock */}
         <div
-          className="mb-6 text-[64px] font-light text-white tracking-tight animate-fade-up"
+          className="mb-2 text-[64px] font-light tracking-tight text-white animate-fade-up"
           style={{ textShadow: "0 2px 20px rgba(0,0,0,0.3)" }}
         >
           {time}
         </div>
-        <div className="mb-8 text-[13px] text-white/60">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+        <div className="mb-8 text-[13px] text-white/60">{date}</div>
+
+        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-white/20 bg-white/10">
+          <svg className="h-10 w-10 text-white/50" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
         </div>
 
-        {/* No registered users */}
-        {users.length === 0 && !selectedUser && (
-          <div className="flex flex-col items-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
-            <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-white/10 border border-white/20">
-              <svg className="h-10 w-10 text-white/40" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-            </div>
-            <p className="mb-4 text-[15px] font-medium text-white/60">No accounts found</p>
-            <p className="mb-5 text-[13px] text-white/35 max-w-[260px] text-center">
-              Please register on our website first, or sign in quickly with Google.
-            </p>
+        <div className="mb-5 text-[17px] font-medium text-white">CloudOS Account</div>
 
-            {/* Google login for no-user state */}
-            <button
-              onClick={handleGoogleLogin}
-              disabled={googleLoading}
-              className="mb-3 flex items-center gap-2.5 rounded-full bg-white/15 px-5 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-white/25 border border-white/20 disabled:opacity-50"
-              style={{ backdropFilter: "blur(20px)" }}
-            >
-              <GoogleIcon className="h-4 w-4" />
-              {googleLoading ? "Signing in..." : "Sign in with Google"}
-            </button>
+        <form
+          onSubmit={handleEmailLogin}
+          className="flex w-full flex-col items-center"
+          style={{
+            opacity: showPasswordField ? 1 : 0,
+            transform: showPasswordField ? "translateY(0)" : "translateY(8px)",
+            transition: "all 0.45s ease-out",
+          }}
+        >
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError("")
+            }}
+            placeholder="Email"
+            autoComplete="email"
+            className="mb-2 h-8 w-64 rounded-full border border-white/30 bg-white/15 px-4 text-center text-[13px] text-white outline-none placeholder:text-white/50 focus:bg-white/20"
+            style={{ backdropFilter: "blur(20px)" }}
+          />
 
-            <button
-              onClick={() => router.push("/register")}
-              className="rounded-full bg-white/10 px-6 py-2 text-[13px] font-medium text-white/70 transition-all hover:bg-white/20 border border-white/15"
-              style={{ backdropFilter: "blur(20px)" }}
-            >
-              Go to Register
-            </button>
-
-            {/* Skip login for testing */}
-            <button
-              onClick={() => {
-                const testUser: User = {
-                  username: "Guest",
-                  email: "guest@cloudos.app",
-                  passwordHash: "",
-                  avatar: "from-blue-500 to-cyan-500",
-                  createdAt: new Date().toISOString(),
-                }
-                setPhase("logging-in")
-                setTimeout(() => onComplete(testUser), 600)
+          <div className={shaking ? "animate-shake" : ""}>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setError("")
               }}
-              className="mt-3 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-medium text-white/70 transition-all hover:bg-white/25 hover:text-white"
-              style={{ backdropFilter: "blur(20px)" }}
-            >
-              Skip Login (Test)
-            </button>
-          </div>
-        )}
-
-        {/* User selection (multiple users) */}
-        {users.length > 0 && !selectedUser && (
-          <div className="flex flex-col items-center animate-fade-up" style={{ animationDelay: "0.2s" }}>
-            <div className="flex gap-6">
-              {users.map((user) => (
-                <button
-                  key={user.username}
-                  onClick={() => {
-                    setSelectedUser(user)
-                    setPassword("")
-                    setError("")
-                  }}
-                  className="group flex flex-col items-center gap-2 transition-transform hover:scale-105"
-                >
-                  <div
-                    className={`flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br shadow-lg shadow-black/30 transition-all group-hover:shadow-xl group-hover:shadow-black/40 ${user.avatar}`}
-                  >
-                    <span className="text-2xl font-semibold text-white">
-                      {user.username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span
-                    className="text-[14px] font-medium text-white"
-                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
-                  >
-                    {user.username}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Google login below user avatars */}
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <div className="mb-1 flex items-center gap-3">
-                <div className="h-px w-16 bg-white/15" />
-                <span className="text-[11px] text-white/30">or</span>
-                <div className="h-px w-16 bg-white/15" />
-              </div>
-              <button
-                onClick={handleGoogleLogin}
-                disabled={googleLoading}
-                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[12px] font-medium text-white/70 transition-all hover:bg-white/20 border border-white/15 disabled:opacity-50"
-                style={{ backdropFilter: "blur(20px)" }}
-              >
-                <GoogleIcon className="h-3.5 w-3.5" />
-                {googleLoading ? "Signing in..." : "Sign in with Google"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Password entry for selected user */}
-        {selectedUser && (
-          <div className="flex flex-col items-center">
-            {/* Back button if multiple users */}
-            {users.length > 1 && (
-              <button
-                onClick={() => { setSelectedUser(null); setPassword(""); setError("") }}
-                className="mb-4 flex items-center gap-1 text-[12px] text-white/40 hover:text-white/70 transition-colors"
-              >
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="15,18 9,12 15,6" />
-                </svg>
-                Back
-              </button>
-            )}
-
-            {/* Avatar */}
-            <div
-              className={`mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br shadow-lg shadow-black/30 ${selectedUser.avatar}`}
-            >
-              <span className="text-2xl font-semibold text-white">
-                {selectedUser.username.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div
-              className="mb-5 text-[17px] font-medium text-white"
-              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
-            >
-              {selectedUser.username}
-            </div>
-
-            {/* Password field */}
-            <div
+              placeholder="Password"
+              autoComplete="current-password"
+              className="h-8 w-64 rounded-full border bg-white/15 px-4 text-center text-[13px] text-white outline-none placeholder:text-white/50 focus:bg-white/20"
               style={{
-                opacity: showPasswordField ? 1 : 0,
-                transform: showPasswordField ? "translateY(0)" : "translateY(10px)",
-                transition: "all 0.5s ease-out",
+                backdropFilter: "blur(20px)",
+                borderColor: error ? "rgba(255,59,48,0.5)" : "rgba(255,255,255,0.3)",
               }}
-            >
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  handleLogin()
-                }}
-                className="flex flex-col items-center"
-              >
-                <div className={shaking ? "animate-shake" : ""}>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError("") }}
-                    placeholder="Enter Password"
-                    autoFocus
-                    className="h-8 w-52 rounded-full border bg-white/15 px-4 text-center text-[13px] text-white outline-none placeholder:text-white/50 focus:bg-white/20 transition-colors"
-                    style={{
-                      backdropFilter: "blur(20px)",
-                      borderColor: error ? "rgba(255,59,48,0.5)" : "rgba(255,255,255,0.3)",
-                    }}
-                  />
-                </div>
-
-                {error && (
-                  <p className="mt-2 text-[12px] text-[#ff453a]" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
-                    {error}
-                  </p>
-                )}
-
-                <div className="mt-3 text-center text-[11px] text-white/40">
-                  Press Enter to sign in
-                </div>
-
-                <button
-                  type="submit"
-                  className="mt-2 flex items-center justify-center"
-                >
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30">
-                    <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="9,18 15,12 9,6" />
-                    </svg>
-                  </div>
-                </button>
-              </form>
-
-              {/* Google login + homepage link */}
-              <div className="mt-6 flex flex-col items-center gap-3">
-                <button
-                  onClick={handleGoogleLogin}
-                  disabled={googleLoading}
-                  className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-[11px] font-medium text-white/60 transition-all hover:bg-white/20 border border-white/15 disabled:opacity-50"
-                  style={{ backdropFilter: "blur(20px)" }}
-                >
-                  <GoogleIcon className="h-3 w-3" />
-                  {googleLoading ? "Signing in..." : "Sign in with Google"}
-                </button>
-                <button
-                  onClick={() => router.push("/")}
-                  className="text-[11px] text-white/30 transition-colors hover:text-white/60"
-                >
-                  Back to Homepage
-                </button>
-              </div>
-            </div>
+            />
           </div>
-        )}
+
+          {error && (
+            <p className="mt-2 text-[12px] text-[#ff453a]" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-4 flex h-8 min-w-[140px] items-center justify-center rounded-full border border-white/20 bg-white/20 px-4 text-[12px] font-medium text-white transition-all hover:bg-white/30 disabled:opacity-50"
+            style={{ backdropFilter: "blur(20px)" }}
+          >
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
+
+        <div className="mt-5 flex flex-col items-center gap-2">
+          <button
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || !GOOGLE_AUTH_ENABLED}
+            className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-[11px] font-medium text-white/70 transition-all hover:bg-white/20 disabled:opacity-50"
+            style={{ backdropFilter: "blur(20px)" }}
+          >
+            <GoogleIcon className="h-3 w-3" />
+            {googleLoading ? "Redirecting..." : "Sign in with Google"}
+          </button>
+          {!GOOGLE_AUTH_ENABLED && (
+            <p className="text-[11px] text-white/35">Google login is disabled.</p>
+          )}
+          <button
+            onClick={() => router.push("/register")}
+            className="text-[11px] text-white/45 transition-colors hover:text-white/70"
+          >
+            Create account
+          </button>
+          <button
+            onClick={() => router.push("/")}
+            className="text-[11px] text-white/30 transition-colors hover:text-white/60"
+          >
+            Back to Homepage
+          </button>
+        </div>
       </div>
     </div>
   )
