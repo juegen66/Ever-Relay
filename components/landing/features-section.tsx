@@ -25,40 +25,40 @@ import {
 const FEATURES = [
   {
     icon: Layers,
-    title: "Window Management",
-    description: "Drag, resize, minimize, maximize -- full window management just like a real desktop.",
+    title: "Multitasking Canvas",
+    description: "Drag, resize, and organize your tools. Keep your inspiration and work side-by-side.",
     color: "#007aff",
   },
   {
     icon: Zap,
-    title: "Instant Access",
-    description: "No downloads or installations. Open your browser and start working immediately.",
+    title: "Zero Friction",
+    description: "No downloads. Open your browser and start creating immediately.",
     color: "#ff9f0a",
   },
   {
     icon: Shield,
-    title: "Secure Login",
-    description: "Account-based authentication protects your workspace with password security.",
+    title: "Asset Protection",
+    description: "Account-based authentication keeps your brand assets and projects secure.",
     color: "#34c759",
   },
   {
     icon: Palette,
-    title: "Stunning Design",
-    description: "Pixel-perfect macOS-inspired interface with frosted glass effects and smooth animations.",
+    title: "Canvas-Ready UI",
+    description: "A pixel-perfect interface that stays out of your way and lets your work shine.",
     color: "#af52de",
   },
 ]
 
 const APPS = [
-  { icon: FolderOpen, name: "Finder", desc: "File management", color: "#007aff" },
-  { icon: Globe, name: "Safari", desc: "Web browser", color: "#007aff" },
-  { icon: Terminal, name: "Terminal", desc: "Command line", color: "#3a3a3c" },
+  { icon: FolderOpen, name: "Finder", desc: "Asset Manager", color: "#007aff" },
+  { icon: Globe, name: "Safari", desc: "Research Browser", color: "#007aff" },
+  { icon: Terminal, name: "Terminal", desc: "Dev Tools", color: "#3a3a3c" },
   { icon: Music, name: "Music", desc: "Audio player", color: "#fc3c44" },
   { icon: Mail, name: "Mail", desc: "Email client", color: "#007aff" },
   { icon: Calculator, name: "Calculator", desc: "Math tools", color: "#636366" },
-  { icon: Camera, name: "Photos", desc: "Photo gallery", color: "#ff375f" },
-  { icon: MessageSquare, name: "Messages", desc: "Chat app", color: "#34c759" },
-  { icon: CalendarDays, name: "Calendar", desc: "Schedule planner", color: "#ff3b30" },
+  { icon: Camera, name: "Photos", desc: "Media Library", color: "#ff375f" },
+  { icon: MessageSquare, name: "Messages", desc: "Team Chat", color: "#34c759" },
+  { icon: CalendarDays, name: "Calendar", desc: "Content Calendar", color: "#ff3b30" },
   { icon: Cloud, name: "Weather", desc: "Forecasts", color: "#64d2ff" },
   { icon: MapPin, name: "Maps", desc: "Navigation", color: "#34c759" },
   { icon: Monitor, name: "Settings", desc: "Preferences", color: "#8e8e93" },
@@ -94,14 +94,13 @@ export function FeaturesSection() {
             <h2
               className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
-              Everything you need,{" "}
-              <span className="text-[#b0aca4]">built in.</span>
+              Tools for your creative flow.
             </h2>
             <p
               className={`mt-4 text-[17px] text-[#8a8680] ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
-              A desktop experience designed for the modern web.
+              An operating system optimized for your creative process.
             </p>
           </div>
 
@@ -137,13 +136,13 @@ export function FeaturesSection() {
             <h2
               className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
             >
-              15+ Built-in Apps
+              A Suite for Creators
             </h2>
             <p
               className={`mt-4 text-[17px] text-[#8a8680] ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
-              Every app you need for productivity, entertainment, and communication.
+              Essential tools for managing your brand and workflow.
             </p>
           </div>
 
@@ -176,7 +175,7 @@ export function FeaturesSection() {
           <h2
             className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
           >
-            Ready to start?
+            Ready to build your brand?
           </h2>
           <p
             className={`mt-4 text-[17px] text-[#8a8680] ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
@@ -192,7 +191,7 @@ export function FeaturesSection() {
               href="/register"
               className="group flex items-center gap-2 rounded-full bg-[#34c759] px-8 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] hover:shadow-lg hover:shadow-[#34c759]/20"
             >
-              Create Free Account
+              Start Building for Free
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
