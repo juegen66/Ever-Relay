@@ -44,6 +44,36 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 211 100% 50%;
   }
+
+  .canvas-theme {
+    --background: 38 47% 93%;
+    --foreground: 120 25% 25%;
+    --card: 38 47% 93%;
+    --card-foreground: 120 25% 25%;
+    --popover: 38 47% 93%;
+    --popover-foreground: 120 25% 25%;
+    --primary: 120 14% 43%;
+    --primary-foreground: 38 47% 93%;
+    --secondary: 96 24% 90%;
+    --secondary-foreground: 120 25% 25%;
+    --muted: 96 22% 88%;
+    --muted-foreground: 120 17% 35%;
+    --accent: 96 22% 88%;
+    --accent-foreground: 120 25% 25%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 109 18% 60%;
+    --input: 109 18% 60%;
+    --ring: 120 14% 43%;
+    --sidebar-background: 38 47% 93%;
+    --sidebar-foreground: 120 25% 25%;
+    --sidebar-primary: 120 14% 43%;
+    --sidebar-primary-foreground: 38 47% 93%;
+    --sidebar-accent: 96 22% 88%;
+    --sidebar-accent-foreground: 120 25% 25%;
+    --sidebar-border: 109 18% 60%;
+    --sidebar-ring: 120 14% 43%;
+  }
 }
 
 @layer base {

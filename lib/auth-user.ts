@@ -13,28 +13,44 @@ type MaybeAuthUser = {
   image?: unknown
 }
 
+function hasRequiredUserFields(user: MaybeAuthUser): user is MaybeAuthUser & { id: string; email: string } {
+  return (
+    typeof user.id === "string" &&
+    user.id.trim().length > 0 &&
+    typeof user.email === "string" &&
+    user.email.trim().length > 0
+  )
+}
+
 export function extractSessionUser(payload: unknown): MaybeAuthUser | null {
   if (!payload || typeof payload !== "object") return null
 
   const record = payload as Record<string, unknown>
 
+  let candidate: MaybeAuthUser | null = null
+
   if ("email" in record || "name" in record || "id" in record) {
-    return record as MaybeAuthUser
+    candidate = record as MaybeAuthUser
   }
 
-  if (record.user && typeof record.user === "object") {
-    return record.user as MaybeAuthUser
+  if (!candidate && record.user && typeof record.user === "object") {
+    candidate = record.user as MaybeAuthUser
   }
 
-  return null
+  if (!candidate || !hasRequiredUserFields(candidate)) {
+    return null
+  }
+
+  return candidate
 }
 
 export function toDesktopUser(user: MaybeAuthUser): DesktopUser {
-  const email =
-    typeof user.email === "string" && user.email.trim()
-      ? user.email.trim()
-      : "user@cloudos.app"
+  if (!hasRequiredUserFields(user)) {
+    throw new Error("Invalid authenticated user payload")
+  }
 
+  const id = user.id.trim()
+  const email = user.email.trim()
   const fallbackName = email.split("@")[0] || "User"
   const name =
     typeof user.name === "string" && user.name.trim()
@@ -44,10 +60,7 @@ export function toDesktopUser(user: MaybeAuthUser): DesktopUser {
         : fallbackName
 
   return {
-    id:
-      typeof user.id === "string" && user.id.trim()
-        ? user.id
-        : `anon-${email}`,
+    id,
     email,
     username: name,
     image: typeof user.image === "string" ? user.image : null,

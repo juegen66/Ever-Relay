@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import type { AppId, WindowState } from "@/components/macos/types"
+import type { AppId, WindowState } from "@/app/desktop/components/macos/types"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
@@ -20,6 +20,8 @@ const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   maps: { w: 780, h: 520 },
   appstore: { w: 820, h: 560 },
   messages: { w: 700, h: 500 },
+  canvas: { w: 1160, h: 760 },
+  textedit: { w: 720, h: 520 },
 }
 
 function getViewportSize() {
@@ -36,6 +38,7 @@ interface DesktopWindowStore {
   bouncingApp: AppId | null
   openApp: (appId: AppId) => void
   openFolderWindow: (folderId: string, folderName: string) => void
+  openFileWindow: (fileId: string, fileName: string) => void
   focusWindow: (id: string) => void
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
@@ -126,6 +129,41 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       maximized: false,
       folderId,
       folderName,
+    }
+
+    set((state) => ({
+      windows: [...state.windows, newWindow],
+      activeWindowId: id,
+      nextZIndex: state.nextZIndex + 1,
+    }))
+  },
+  openFileWindow: (fileId, fileName) => {
+    useDesktopUIStore.getState().closeTransientUi()
+    const { windows, nextZIndex } = get()
+    const existing = windows.find(
+      (w) => w.appId === "textedit" && w.fileId === fileId && !w.minimized
+    )
+    if (existing) {
+      get().focusWindow(existing.id)
+      return
+    }
+
+    const size = DEFAULT_WINDOW_SIZE.textedit
+    const id = `textedit-file-${Date.now()}`
+    const offset = (windows.length % 6) * 28
+    const { width: viewW, height: viewH } = getViewportSize()
+    const newWindow: WindowState = {
+      id,
+      appId: "textedit",
+      x: Math.max(40, (viewW - size.w) / 2 + offset),
+      y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
+      width: size.w,
+      height: size.h,
+      zIndex: nextZIndex,
+      minimized: false,
+      maximized: false,
+      fileId,
+      fileName,
     }
 
     set((state) => ({

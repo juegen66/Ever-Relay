@@ -1,14 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Eye, EyeOff, AlertCircle, Check, Monitor } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Check, Monitor, ArrowLeft, Mail } from "lucide-react"
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp"
 import {
   authClient,
   GOOGLE_AUTH_ENABLED,
   getAuthErrorMessage,
-} from "@/lib/auth-client"
+} from "@/lib/auth/auth-client"
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -28,6 +33,18 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<"form" | "otp">("form")
+  const [otp, setOtp] = useState("")
+  const [otpEmail, setOtpEmail] = useState("")
+  const [countdown, setCountdown] = useState(0)
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [countdown])
+
+  const startCountdown = useCallback(() => setCountdown(60), [])
 
   const validate = (): string | null => {
     if (!form.username.trim()) return "Please enter a username"
@@ -53,11 +70,11 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
+      const email = form.email.trim().toLowerCase()
       const { error: authError } = await authClient.signUp.email({
         name: form.username.trim(),
-        email: form.email.trim().toLowerCase(),
+        email,
         password: form.password,
-        callbackURL: "/desktop",
       })
 
       if (authError) {
@@ -65,10 +82,68 @@ export default function RegisterPage() {
         return
       }
 
+      const { error: otpError } = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "email-verification",
+      })
+
+      if (otpError) {
+        setError(getAuthErrorMessage(otpError, "Failed to send verification code"))
+        return
+      }
+
+      setOtpEmail(email)
+      setStep("otp")
+      startCountdown()
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Registration failed"))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) return
+    setError("")
+    setLoading(true)
+    try {
+      const { error: verifyError } = await authClient.emailOtp.verifyEmail({
+        email: otpEmail,
+        otp,
+      })
+
+      if (verifyError) {
+        setError(getAuthErrorMessage(verifyError, "Invalid verification code"))
+        return
+      }
+
       setSuccess(true)
       setTimeout(() => router.push("/desktop"), 1200)
     } catch (err) {
-      setError(getAuthErrorMessage(err, "Registration failed"))
+      setError(getAuthErrorMessage(err, "Verification failed"))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    if (countdown > 0) return
+    setError("")
+    setLoading(true)
+    try {
+      const { error: otpError } = await authClient.emailOtp.sendVerificationOtp({
+        email: otpEmail,
+        type: "email-verification",
+      })
+
+      if (otpError) {
+        setError(getAuthErrorMessage(otpError, "Failed to resend verification code"))
+        return
+      }
+
+      startCountdown()
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Failed to resend verification code"))
     } finally {
       setLoading(false)
     }
@@ -156,8 +231,90 @@ export default function RegisterPage() {
                   <Check className="h-7 w-7 text-[#34c759]" />
                 </div>
                 <div>
-                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">Account created successfully</h3>
+                  <h3 className="text-[17px] font-semibold text-[#1a1a2e]">Account verified successfully</h3>
                   <p className="mt-1 text-[14px] text-[#8a8680]">Redirecting to your desktop...</p>
+                </div>
+              </div>
+            ) : step === "otp" ? (
+              <div className="mt-10">
+                <div className="mb-6 flex flex-col items-center gap-3 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#34c759]/10">
+                    <Mail className="h-7 w-7 text-[#34c759]" />
+                  </div>
+                  <div>
+                    <h3 className="text-[17px] font-semibold text-[#1a1a2e]">Check your email</h3>
+                    <p className="mt-1 text-[14px] text-[#8a8680]">
+                      A 6-digit verification code has been sent to
+                    </p>
+                    <p className="mt-0.5 text-[14px] font-medium text-[#1a1a2e]">{otpEmail}</p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mb-5 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-600 animate-shake">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex flex-col items-center gap-6">
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={setOtp}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} className="h-12 w-12 text-lg" />
+                      <InputOTPSlot index={1} className="h-12 w-12 text-lg" />
+                      <InputOTPSlot index={2} className="h-12 w-12 text-lg" />
+                      <InputOTPSlot index={3} className="h-12 w-12 text-lg" />
+                      <InputOTPSlot index={4} className="h-12 w-12 text-lg" />
+                      <InputOTPSlot index={5} className="h-12 w-12 text-lg" />
+                    </InputOTPGroup>
+                  </InputOTP>
+
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={loading || otp.length !== 6}
+                    className="w-full rounded-xl bg-[#34c759] py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-[#2fb84e] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Verifying...
+                      </span>
+                    ) : (
+                      "Verify"
+                    )}
+                  </button>
+
+                  <div className="flex items-center gap-3 text-[13px]">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={loading || countdown > 0}
+                      className="font-medium text-[#34c759] transition-colors hover:text-[#2fb84e] disabled:text-[#b0aca4] disabled:cursor-not-allowed"
+                    >
+                      {countdown > 0 ? `Resend in ${countdown}s` : "Resend code"}
+                    </button>
+                    <span className="text-[#e0dcd6]">|</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep("form")
+                        setOtp("")
+                        setError("")
+                      }}
+                      className="flex items-center gap-1 font-medium text-[#8a8680] transition-colors hover:text-[#1a1a2e]"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Back to form
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

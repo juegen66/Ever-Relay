@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1771505672722,
+      "tag": "0000_legal_captain_flint",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771512507286,
+      "tag": "0001_first_post",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771600000000,
+      "tag": "0002_s3_to_db_content",
+      "breakpoints": true
+    }
+  ]
+}
