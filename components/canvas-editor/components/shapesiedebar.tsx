@@ -22,7 +22,7 @@ export const ShapesSidebar = ({ activeTool, onToolChange, editor }: ShapesSideba
     };
 
     return (
-        <aside className="h-full w-60 shrink-0 flex flex-col gap-y-4 border-r border-border bg-background min-h-[calc(100vh-136px)] relative">
+        <aside className="relative flex h-full min-h-[calc(100vh-136px)] w-60 shrink-0 flex-col gap-y-4 border-r border-black/5 bg-white/80 shadow-sm backdrop-blur-xl saturate-150">
             <ScrollArea className="h-full p-4">
                 <div className="grid grid-cols-2 gap-3">
                     <ShapeToolbar Icon={Square} onClick={() => editor?.addRectangle()} />

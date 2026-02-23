@@ -191,8 +191,8 @@ export function AppWindow({
 
   const titleBarBg = isCanvasApp
     ? isActive
-      ? "rgba(246, 241, 230, 0.92)"
-      : "rgba(241, 236, 225, 0.88)"
+      ? "rgba(248, 249, 251, 0.86)"
+      : "rgba(245, 246, 248, 0.82)"
     : isDark
       ? isActive
         ? "rgba(40, 40, 40, 0.95)"
@@ -210,8 +210,8 @@ export function AppWindow({
         borderRadius: maximized ? 0 : "10px",
         background: isCanvasApp
           ? isActive
-            ? "rgba(246, 241, 230, 0.94)"
-            : "rgba(246, 241, 230, 0.9)"
+            ? "rgba(244, 246, 249, 0.9)"
+            : "rgba(244, 246, 249, 0.84)"
           : isDark
             ? isActive
               ? "rgba(30, 30, 30, 0.96)"
@@ -223,17 +223,17 @@ export function AppWindow({
         WebkitBackdropFilter: "blur(50px) saturate(180%)",
         border: isCanvasApp
           ? isActive
-            ? "0.5px solid rgba(143,168,137,0.55)"
-            : "0.5px solid rgba(143,168,137,0.42)"
+            ? "0.5px solid rgba(0,0,0,0.16)"
+            : "0.5px solid rgba(0,0,0,0.1)"
           : isActive
             ? "0.5px solid rgba(0,0,0,0.22)"
             : "0.5px solid rgba(0,0,0,0.12)",
         boxShadow: isActive
           ? isCanvasApp
-            ? "0 22px 70px 4px rgba(47,79,47,0.2), 0 0 0 0.5px rgba(143,168,137,0.5)"
+            ? "0 22px 70px 4px rgba(0,0,0,0.24), 0 0 0 0.5px rgba(0,0,0,0.08)"
             : "0 22px 70px 4px rgba(0,0,0,0.28), 0 0 0 0.5px rgba(0,0,0,0.12)"
           : isCanvasApp
-            ? "0 5px 20px rgba(47,79,47,0.12), 0 0 0 0.5px rgba(143,168,137,0.35)"
+            ? "0 5px 20px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(0,0,0,0.05)"
             : "0 5px 20px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
         transition: maximized
           ? "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, box-shadow 0.2s ease"
@@ -250,7 +250,7 @@ export function AppWindow({
         style={{
           background: titleBarBg,
           borderBottom: isCanvasApp
-            ? "1px solid rgba(143,168,137,0.45)"
+            ? "1px solid rgba(0,0,0,0.08)"
             : isDark
               ? "1px solid rgba(255,255,255,0.06)"
               : "1px solid rgba(0,0,0,0.08)",

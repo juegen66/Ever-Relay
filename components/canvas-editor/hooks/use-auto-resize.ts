@@ -22,11 +22,41 @@ export const useAutoResize = ({ container, canvas }: UseAutoResizeProps) => {
                 .getObjects()
                 .find((obj) => {
                     const dataRole = (obj as fabric.Object & { data?: { role?: string } }).data?.role
-                    return dataRole === "workspace" || (obj.type === "rect" && obj.fill === "#f6f1e6")
+                    const fill = typeof obj.fill === "string" ? obj.fill : ""
+                    return (
+                        dataRole === "workspace" ||
+                        (obj.type === "rect" &&
+                            (fill === "#ffffff" ||
+                                fill === "rgba(255, 255, 255, 1)" ||
+                                fill === "#f6f1e6" ||
+                                fill === "rgba(246, 241, 230, 1)"))
+                    )
                 })
 
             if (workspace) {
                 canvas.centerObject(workspace)
+                workspace.setCoords()
+
+                const clipPath = canvas.clipPath instanceof fabric.Rect
+                    ? canvas.clipPath
+                    : new fabric.Rect({
+                        width: workspace.width ?? 0,
+                        height: workspace.height ?? 0,
+                        left: workspace.left ?? 0,
+                        top: workspace.top ?? 0,
+                        absolutePositioned: true,
+                        evented: false,
+                        selectable: false,
+                    })
+
+                canvas.clipPath = clipPath
+                clipPath.set({
+                    width: workspace.width ?? 0,
+                    height: workspace.height ?? 0,
+                    left: workspace.left ?? 0,
+                    top: workspace.top ?? 0,
+                })
+                clipPath.setCoords()
             }
 
             canvas.renderAll()

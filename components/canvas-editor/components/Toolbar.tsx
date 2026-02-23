@@ -41,7 +41,7 @@ export default function Toolbar({ activeTool, onToolChange, editor, hasSelection
     }
 
     return (
-        <div className="h-[68px] bg-background overflow-x-auto border-b border-border shrink-0 flex items-center gap-x-4 px-4">
+        <div className="flex h-[68px] shrink-0 items-center gap-x-4 overflow-x-auto border-b border-black/5 bg-white/80 px-4 shadow-sm backdrop-blur-xl saturate-150">
             <div className="flex items-center gap-x-3">
                 {TOOL_CONFIG.map(({ id, label, Icon }) => {
                     if (activeTool === "Text" && id === "Stroke") {
@@ -55,9 +55,9 @@ export default function Toolbar({ activeTool, onToolChange, editor, hasSelection
                             size="icon"
                             title={label}
                             onClick={() => onToolChange(id)}
-                            className={`flex items-center justify-center border-[#8fa889] transition-transform duration-150 hover:scale-105 ${isActive
-                                ? "bg-[#5f7d5f] text-[#f6f1e6] hover:bg-[#4e694e]"
-                                : "bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8]"
+                            className={`flex items-center justify-center border-black/10 transition-transform duration-150 hover:scale-105 ${isActive
+                                ? "bg-[#0058d0] text-white hover:bg-[#0045a6]"
+                                : "bg-white/70 text-neutral-800 hover:bg-black/5"
                                 }`}
                         >
                             <Icon className="size-4" />
@@ -72,7 +72,7 @@ export default function Toolbar({ activeTool, onToolChange, editor, hasSelection
                     size="icon"
                     title="Bring Forward"
                     disabled={!hasSelection || !editor}
-                    className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8] disabled:opacity-40"
+                    className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5 disabled:opacity-40"
                     onClick={() => editor?.bringForward()}
                 >
                     <ArrowUp className="size-4" />
@@ -82,7 +82,7 @@ export default function Toolbar({ activeTool, onToolChange, editor, hasSelection
                     size="icon"
                     title="Send Backward"
                     disabled={!hasSelection || !editor}
-                    className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8] disabled:opacity-40"
+                    className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5 disabled:opacity-40"
                     onClick={() => editor?.sendBackward()}
                 >
                     <ArrowDown className="size-4" />
@@ -93,28 +93,28 @@ export default function Toolbar({ activeTool, onToolChange, editor, hasSelection
                             variant="outline"
                             size="icon"
                             title="Clear Canvas"
-                            className="border-[#5f7d5f] text-[#2f4f2f] hover:bg-[#eef4e8]"
+                            className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"
                             disabled={!editor}
                         >
                             <Trash2 className="size-4" />
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f]">
+                    <AlertDialogContent className="border-black/10 bg-white/90 text-neutral-900 shadow-lg shadow-black/10 backdrop-blur-xl">
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="text-[#2f4f2f]">
+                            <AlertDialogTitle className="text-neutral-900">
                                 Clear the canvas?
                             </AlertDialogTitle>
-                            <AlertDialogDescription className="text-[#4f664f]">
+                            <AlertDialogDescription className="text-neutral-600">
                                 This will remove all objects from the current canvas. You can restore it with Undo.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8]">
+                            <AlertDialogCancel className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5">
                                 Cancel
                             </AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={handleClearCanvas}
-                                className="bg-[#5f7d5f] text-[#f6f1e6] hover:bg-[#4e694e]"
+                                className="bg-[#0058d0] text-white hover:bg-[#0045a6]"
                             >
                                 Clear
                             </AlertDialogAction>

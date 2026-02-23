@@ -44,4 +44,11 @@ export const serverConfig = {
       return Boolean(this.accessKeyId && this.secretAccessKey && this.defaultFrom)
     },
   },
+
+  imageProcessing: {
+    removeBgApiKey: process.env.REMOVE_BG_API_KEY ?? "",
+    get enabled() {
+      return Boolean(this.removeBgApiKey)
+    },
+  },
 } as const

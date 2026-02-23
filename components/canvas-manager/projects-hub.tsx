@@ -1,0 +1,230 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { Archive, Plus, RefreshCcw, Search } from "lucide-react"
+
+import { ProjectCard } from "@/components/canvas-manager/project-card"
+import { ProjectCreateDialog } from "@/components/canvas-manager/project-create-dialog"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useCanvasProjectsStore } from "@/lib/stores/canvas-projects-store"
+
+interface ProjectsHubProps {
+  onOpenProject: (projectId: string) => void | Promise<void>
+}
+
+const STATUS_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Draft", value: "draft" },
+  { label: "Published", value: "published" },
+  { label: "Archived", value: "archived" },
+] as const
+
+export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
+  const {
+    projects,
+    trashProjects,
+    loading,
+    loadingTrash,
+    error,
+    query,
+    statusFilter,
+    setQuery,
+    setStatusFilter,
+    fetchProjects,
+    fetchTrashProjects,
+    fetchTags,
+    createProject,
+    updateProject,
+    deleteProject,
+    restoreProject,
+    duplicateProject,
+  } = useCanvasProjectsStore()
+
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [trashDialogOpen, setTrashDialogOpen] = useState(false)
+
+  useEffect(() => {
+    void fetchTags()
+  }, [fetchTags])
+
+  useEffect(() => {
+    void fetchProjects()
+  }, [query, statusFilter, fetchProjects])
+
+  const projectCountLabel = useMemo(() => {
+    if (loading) {
+      return "Loading projects..."
+    }
+    return `${projects.length} projects`
+  }, [loading, projects.length])
+
+  const handleCreate = async ({ title, description }: { title: string; description?: string }) => {
+    const created = await createProject({
+      title,
+      description,
+    })
+    if (created) {
+      await onOpenProject(created.id)
+    }
+  }
+
+  const handleDelete = async (projectId: string) => {
+    const confirmed = window.confirm("Move this project to trash?")
+    if (!confirmed) return
+
+    await deleteProject(projectId)
+  }
+
+  const handleOpenTrash = async () => {
+    setTrashDialogOpen(true)
+    await fetchTrashProjects()
+  }
+
+  return (
+    <section className="flex h-full min-h-0 flex-col bg-gradient-to-b from-neutral-100/80 to-neutral-200/30 text-neutral-900">
+      <div className="border-b border-black/5 bg-white/80 px-5 py-4 backdrop-blur-xl">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">My Canvas Projects</h2>
+            <p className="text-sm text-neutral-500">{projectCountLabel}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"
+              onClick={() => void fetchProjects()}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"
+              onClick={handleOpenTrash}
+            >
+              <Archive className="mr-2 h-4 w-4" />
+              Trash
+            </Button>
+            <Button className="bg-[#0058d0] text-white hover:bg-[#0045a6]" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by title or description"
+              className="border-black/10 bg-white/80 pl-9"
+            />
+          </div>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(next) => setStatusFilter(next as typeof statusFilter)}
+          >
+            <SelectTrigger className="w-[180px] border-black/10 bg-white/80">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="border-black/10 bg-white/95 backdrop-blur-xl">
+              {STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-auto p-5">
+        {error ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        {!loading && projects.length === 0 ? (
+          <div className="mt-10 rounded-2xl border border-dashed border-black/15 bg-white/60 p-8 text-center">
+            <h3 className="text-base font-semibold text-neutral-800">No projects yet</h3>
+            <p className="mt-1 text-sm text-neutral-500">Create your first canvas project to get started.</p>
+            <Button className="mt-4 bg-[#0058d0] text-white hover:bg-[#0045a6]" onClick={() => setCreateDialogOpen(true)}>
+              Create Project
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onOpen={(projectId) => void onOpenProject(projectId)}
+                onDuplicate={(projectId) => void duplicateProject(projectId)}
+                onDelete={(projectId) => void handleDelete(projectId)}
+                onChangeStatus={(projectId, status) => void updateProject(projectId, { status })}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <ProjectCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreate={handleCreate}
+      />
+
+      <Dialog open={trashDialogOpen} onOpenChange={setTrashDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-hidden border-black/10 bg-white/90 text-neutral-900 shadow-xl shadow-black/10 backdrop-blur-xl sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Trash</DialogTitle>
+            <DialogDescription>Projects moved to trash can be restored later.</DialogDescription>
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 overflow-auto">
+            {loadingTrash ? (
+              <div className="py-10 text-center text-sm text-neutral-500">Loading trash...</div>
+            ) : trashProjects.length === 0 ? (
+              <div className="py-10 text-center text-sm text-neutral-500">Trash is empty</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {trashProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    inTrash
+                    onOpen={() => undefined}
+                    onDuplicate={() => undefined}
+                    onDelete={() => undefined}
+                    onRestore={(projectId) => void restoreProject(projectId)}
+                    onChangeStatus={() => undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  )
+}

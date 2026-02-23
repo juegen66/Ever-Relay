@@ -10,7 +10,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isApiResponseEnvelope(value: unknown): value is ApiResponse<unknown> {
   if (!isRecord(value)) return false
-  return 'success' in value || 'code' in value || 'message' in value || 'data' in value
+  return (
+    typeof value.success === 'boolean' &&
+    typeof value.code === 'number' &&
+    typeof value.requestId === 'string'
+  )
 }
 
 function unwrapPayload<T>(payload: unknown): T {

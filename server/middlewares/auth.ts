@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from "hono"
 
 import { auth } from "@/server/modules/auth/auth.service"
+import { fail } from "@/server/lib/http/response"
 import type { ServerBindings } from "@/server/types"
 
 export const authMiddleware: MiddlewareHandler<ServerBindings> = async (
@@ -14,31 +15,13 @@ export const authMiddleware: MiddlewareHandler<ServerBindings> = async (
     })
 
     if (!session?.user) {
-      const requestId = context.get("requestId")
-      return context.json(
-        {
-          success: false,
-          code: 401,
-          message: "Unauthorized",
-          requestId,
-        },
-        401
-      )
+      return fail(context, 401, "Unauthorized")
     }
 
     context.set("user", session.user)
     context.set("session", session.session)
     await next()
   } catch {
-    const requestId = context.get("requestId")
-    return context.json(
-      {
-        success: false,
-        code: 401,
-        message: "Unauthorized",
-        requestId,
-      },
-      401
-    )
+    return fail(context, 401, "Unauthorized")
   }
 }

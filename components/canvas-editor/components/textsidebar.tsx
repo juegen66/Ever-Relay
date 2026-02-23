@@ -97,7 +97,7 @@ export const TextSidebar = ({
     const [fontStyle, setFontStyle] = useState<"normal" | "italic">("normal")
     const [underline, setUnderline] = useState<boolean>(false)
     const [textAlign, setTextAlign] = useState<"left" | "center" | "right" | "justify">("left")
-    const [textColor, setTextColor] = useState<string>("#2f4f2f")
+    const [textColor, setTextColor] = useState<string>("#111827")
     const [backgroundColor, setBackgroundColor] = useState<string | undefined>(undefined)
     const [lineHeight, setLineHeight] = useState<number>(1.2)
     const [letterSpacing, setLetterSpacing] = useState<number>(0)
@@ -253,7 +253,7 @@ export const TextSidebar = ({
     }
 
     return (
-        <aside className=" auto-overflow-y-scroll relative flex h-full min-h-[calc(100vh-136px)] w-72 shrink-0 flex-col gap-y-4 border-r border-border bg-background">
+        <aside className="relative flex h-full min-h-[calc(100vh-136px)] w-72 shrink-0 flex-col gap-y-4 border-r border-black/5 bg-white/80 shadow-sm backdrop-blur-xl saturate-150">
             <ScrollArea className="flex-1 p-4">
                 <div className="flex flex-col gap-y-6">
                     <section className="flex flex-col gap-y-3">

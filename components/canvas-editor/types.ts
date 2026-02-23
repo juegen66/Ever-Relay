@@ -2,6 +2,7 @@
 export type ActiveTools =
     | "Select"
     | "Shapes"
+    | "CanvasSize"
     | "Text"
     | "Images"
     | "Draw"
@@ -77,7 +78,7 @@ export const TEXT_OPTION = {
     fontSize: 32,
     fontFamily: "Inter",
     fontWeight: "600",
-    fill: "#2f4f2f",
+    fill: "#111827",
     textAlign: "center" as const,
     lineHeight: 1.2,
     charSpacing: 0,

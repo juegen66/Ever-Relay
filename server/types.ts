@@ -9,5 +9,8 @@ export type ServerBindings = {
     requestId: string
     user?: AuthUser
     session?: AuthSessionData
+    validatedParams?: unknown
+    validatedQuery?: unknown
+    validatedBody?: unknown
   }
 }

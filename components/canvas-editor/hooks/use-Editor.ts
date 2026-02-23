@@ -33,6 +33,14 @@ interface BuildEditorConfig {
 }
 
 const HISTORY_LIMIT = 50
+const DEFAULT_WORKSPACE_WIDTH = 595
+const DEFAULT_WORKSPACE_HEIGHT = 842
+const WORKSPACE_FILL_CANDIDATES = new Set([
+    "#ffffff",
+    "rgba(255, 255, 255, 1)",
+    "#f6f1e6",
+    "rgba(246, 241, 230, 1)",
+])
 
 const getExportFileName = (ext: "png" | "jpg" | "svg" | "json") => {
     const date = new Date()
@@ -83,11 +91,39 @@ const getObjectRole = (object: fabric.Object): string | undefined => {
     return typeof data?.role === "string" ? data.role : undefined
 }
 
+const isWorkspaceFill = (fill: unknown) => {
+    if (typeof fill !== "string") {
+        return false
+    }
+    return WORKSPACE_FILL_CANDIDATES.has(fill.trim().toLowerCase())
+}
+
 const findWorkspaceObject = (canvas: fabric.Canvas): fabric.Rect | null => {
-    const candidate = canvas
+    const byRole = canvas
         .getObjects()
         .find((object) => getObjectRole(object) === "workspace")
-    return candidate instanceof fabric.Rect ? candidate : null
+    if (byRole instanceof fabric.Rect) {
+        return byRole
+    }
+
+    const legacyCandidates = canvas
+        .getObjects()
+        .filter((object): object is fabric.Rect => object instanceof fabric.Rect)
+        .filter((rect) => isWorkspaceFill(rect.fill))
+        .sort((a, b) => {
+            const areaA = (a.width ?? 0) * (a.height ?? 0)
+            const areaB = (b.width ?? 0) * (b.height ?? 0)
+            return areaB - areaA
+        })
+
+    const largest = legacyCandidates[0]
+    if (!largest) {
+        return null
+    }
+
+    const largestArea = (largest.width ?? 0) * (largest.height ?? 0)
+    const canvasArea = Math.max(1, canvas.getWidth() * canvas.getHeight())
+    return largestArea >= canvasArea * 0.15 ? largest : null
 }
 
 const createWorkspaceClipPath = (workspace: fabric.Rect) => {
@@ -99,6 +135,23 @@ const createWorkspaceClipPath = (workspace: fabric.Rect) => {
         absolutePositioned: true,
         evented: false,
         selectable: false,
+    })
+}
+
+const createWorkspaceRect = (targetCanvas: fabric.Canvas) => {
+    const maxWidth = Math.max(120, targetCanvas.getWidth() - 96)
+    const maxHeight = Math.max(120, targetCanvas.getHeight() - 96)
+
+    return new fabric.Rect({
+        left: 50,
+        top: 50,
+        width: Math.min(DEFAULT_WORKSPACE_WIDTH, maxWidth),
+        height: Math.min(DEFAULT_WORKSPACE_HEIGHT, maxHeight),
+        fill: "#ffffff",
+        stroke: "rgba(0,0,0,0.08)",
+        selectable: false,
+        evented: false,
+        data: { role: "workspace" },
     })
 }
 
@@ -292,6 +345,39 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
                 originY: "center",
             }))
         },
+        addImageFromDataUrl: async (dataUrl: string) => {
+            const workspace = getWorkspace()
+            if (!workspace) {
+                console.warn("Workspace is not ready yet.")
+                return
+            }
+
+            const image = await fabric.FabricImage.fromURL(dataUrl)
+            const imageWidth = image.width ?? 1
+            const imageHeight = image.height ?? 1
+            const workspaceWidth = workspace.width ?? 1
+            const workspaceHeight = workspace.height ?? 1
+
+            const maxDisplayWidth = workspaceWidth * 0.9
+            const maxDisplayHeight = workspaceHeight * 0.9
+            const fitScale = Math.min(
+                maxDisplayWidth / imageWidth,
+                maxDisplayHeight / imageHeight,
+                1,
+            )
+
+            image.set({
+                originX: "center",
+                originY: "center",
+            })
+            image.scale(fitScale)
+            centerObjectInWorkspace(image, workspace)
+
+            canvas.add(image)
+            canvas.setActiveObject(image)
+            canvas.requestRenderAll()
+            config.recordHistory()
+        },
         setFillColor: (color: string) => {
             applyToTargets((object) => {
                 object.set("fill", color)
@@ -407,10 +493,50 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
             const fill = workspace.get("fill")
             return typeof fill === "string" ? fill : undefined
         },
+        getWorkspaceSize: (): { width: number; height: number } | undefined => {
+            const workspace = getWorkspace()
+            if (!workspace) return undefined
+            return {
+                width: workspace.width ?? 0,
+                height: workspace.height ?? 0,
+            }
+        },
         setWorkspaceBackground: (color: string) => {
             const workspace = getWorkspace()
             if (!workspace) return
             workspace.set("fill", color)
+            canvas.requestRenderAll()
+            config.recordHistory()
+        },
+        setWorkspaceSize: (width: number, height: number) => {
+            const workspace = getWorkspace()
+            if (!workspace) return
+
+            const nextWidth = Math.max(120, width)
+            const nextHeight = Math.max(120, height)
+
+            const center = workspace.getCenterPoint()
+            workspace.set({
+                width: nextWidth,
+                height: nextHeight,
+                left: center.x - nextWidth / 2,
+                top: center.y - nextHeight / 2,
+            })
+            workspace.setCoords()
+
+            const clipPath = canvas.clipPath instanceof fabric.Rect
+                ? canvas.clipPath
+                : createWorkspaceClipPath(workspace)
+
+            canvas.clipPath = clipPath
+            clipPath.set({
+                width: nextWidth,
+                height: nextHeight,
+                left: workspace.left ?? 0,
+                top: workspace.top ?? 0,
+            })
+            clipPath.setCoords()
+
             canvas.requestRenderAll()
             config.recordHistory()
         },
@@ -552,12 +678,10 @@ export const useEditor = () => {
     }, [serializeCanvas, syncHistoryFlags])
 
     const applyWorkspaceAfterRestore = useCallback((targetCanvas: fabric.Canvas) => {
-        const workspaceObject = findWorkspaceObject(targetCanvas)
-        if (!workspaceObject) {
-            workspaceRef.current = null
-            setWorkspace(null)
-            targetCanvas.clipPath = undefined
-            return
+        const existingWorkspace = findWorkspaceObject(targetCanvas)
+        const workspaceObject = existingWorkspace ?? createWorkspaceRect(targetCanvas)
+        if (!existingWorkspace) {
+            targetCanvas.add(workspaceObject)
         }
 
         const existingData = (workspaceObject as fabric.Object & { data?: Record<string, unknown> }).data
@@ -643,17 +767,7 @@ export const useEditor = () => {
 
         updateCanvasSize()
 
-        const workspaceRect = new fabric.Rect({
-            left: 50,
-            top: 50,
-            width: 595,
-            height: 842,
-            fill: "#f6f1e6",
-            stroke: "#ccc",
-            selectable: false,
-            evented: false,
-            data: { role: "workspace" }
-        })
+        const workspaceRect = createWorkspaceRect(canvasRef)
         canvasRef.add(workspaceRect)
         canvasRef.moveObjectTo(workspaceRect, 0)
         workspaceRef.current = workspaceRect
@@ -700,13 +814,18 @@ export const useEditor = () => {
             const maxLeft = workspaceBounds.left + workspaceBounds.width - objectBounds.width
             const maxTop = workspaceBounds.top + workspaceBounds.height - objectBounds.height
 
-            const constrainedLeft = clamp(objectBounds.left, workspaceBounds.left, maxLeft)
-            const constrainedTop = clamp(objectBounds.top, workspaceBounds.top, maxTop)
+            const constrainedLeft = objectBounds.width >= workspaceBounds.width
+                ? workspaceBounds.left + (workspaceBounds.width - objectBounds.width) / 2
+                : clamp(objectBounds.left, workspaceBounds.left, maxLeft)
+
+            const constrainedTop = objectBounds.height >= workspaceBounds.height
+                ? workspaceBounds.top + (workspaceBounds.height - objectBounds.height) / 2
+                : clamp(objectBounds.top, workspaceBounds.top, maxTop)
 
             const deltaX = constrainedLeft - objectBounds.left
             const deltaY = constrainedTop - objectBounds.top
 
-            if (deltaX !== 0 || deltaY !== 0) {
+            if (Math.abs(deltaX) > 0.01 || Math.abs(deltaY) > 0.01) {
                 target.set({
                     left: (target.left ?? 0) + deltaX,
                     top: (target.top ?? 0) + deltaY,
@@ -720,11 +839,9 @@ export const useEditor = () => {
             const target = event.target
             if (!target) return
 
-            if (target.type === "activeSelection" && target instanceof fabric.ActiveSelection) {
-                target.getObjects().forEach(keepObjectInsideWorkspace)
-            } else {
-                keepObjectInsideWorkspace(target)
-            }
+            // Constrain the moving entity itself. Constraining each child in an ActiveSelection
+            // causes competing position updates and visible jitter while dragging.
+            keepObjectInsideWorkspace(target)
         }
 
         const handleObjectModified = () => pushHistorySnapshot(canvasRef)
@@ -767,6 +884,33 @@ export const useEditor = () => {
         return null
     }, [canvas, workspace, pushHistorySnapshot, redo, undo])
 
+    const getDocumentSnapshot = useCallback(() => {
+        if (!canvas) return null
+        return canvas.toObject(["data"]) as Record<string, unknown>
+    }, [canvas])
+
+    const getDocumentSnapshotString = useCallback(() => {
+        if (!canvas) return null
+        return serializeCanvas(canvas)
+    }, [canvas, serializeCanvas])
+
+    const loadDocument = useCallback(async (snapshot: Record<string, unknown> | string) => {
+        if (!canvas) {
+            return false
+        }
+
+        const serialized = typeof snapshot === "string"
+            ? snapshot
+            : JSON.stringify(snapshot)
+
+        historyRef.current = []
+        redoRef.current = []
+        syncHistoryFlags()
+
+        await restoreSnapshot(canvas, serialized)
+        pushHistorySnapshot(canvas)
+        return true
+    }, [canvas, pushHistorySnapshot, restoreSnapshot, syncHistoryFlags])
 
 
 
@@ -776,5 +920,8 @@ export const useEditor = () => {
         editor,
         canUndo,
         canRedo,
+        loadDocument,
+        getDocumentSnapshot,
+        getDocumentSnapshotString,
     }
 }

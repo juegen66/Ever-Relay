@@ -173,13 +173,17 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     }))
   },
   focusWindow: (id) =>
-    set((state) => ({
-      windows: state.windows.map((w) =>
-        w.id === id ? { ...w, zIndex: state.nextZIndex } : w
-      ),
-      activeWindowId: id,
-      nextZIndex: state.nextZIndex + 1,
-    })),
+    set((state) => {
+      if (state.activeWindowId === id) return state
+
+      return {
+        windows: state.windows.map((w) =>
+          w.id === id ? { ...w, zIndex: state.nextZIndex } : w
+        ),
+        activeWindowId: id,
+        nextZIndex: state.nextZIndex + 1,
+      }
+    }),
   closeWindow: (id) =>
     set((state) => ({
       windows: state.windows.filter((w) => w.id !== id),

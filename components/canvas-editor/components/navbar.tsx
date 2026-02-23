@@ -1,134 +1,167 @@
-'use client'
+"use client"
 
-import { Logo } from "./logo"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ArrowLeft, Download, Redo2, Save, Undo2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { TooltipComponent } from "./tooltip"
-import { Undo2, Redo2, Save, Download } from "lucide-react"
-import { ActiveTools } from "../types"
-import { EditorType } from "../hooks/use-Editor"
-
+import type { EditorType } from "../hooks/use-Editor"
+import type { ActiveTools } from "../types"
 
 interface NavbarProps {
-    activeTool: ActiveTools;
-    onToolChange: (tool: ActiveTools) => void;
-    editor: EditorType | null;
-    canUndo: boolean;
-    canRedo: boolean;
+  activeTool: ActiveTools
+  onToolChange: (tool: ActiveTools) => void
+  editor: EditorType | null
+  canUndo: boolean
+  canRedo: boolean
+  projectTitle: string
+  saveState: "idle" | "saving" | "saved" | "error" | "conflict"
+  saveMessage?: string
+  onBackToHub: () => void
+  onManualSave: () => void
 }
 
-export const Navbar = ({ activeTool, onToolChange, editor, canUndo, canRedo }: NavbarProps) => {
-    const handleExportPng = () => {
-        editor?.exportAsPng()
-    }
+function getSaveStateText(state: NavbarProps["saveState"], message?: string) {
+  if (message) return message
 
-    const handleExportJpeg = () => {
-        editor?.exportAsJpeg()
-    }
+  switch (state) {
+    case "saving":
+      return "Saving..."
+    case "saved":
+      return "Saved"
+    case "error":
+      return "Save failed"
+    case "conflict":
+      return "Version conflict"
+    case "idle":
+    default:
+      return "Idle"
+  }
+}
 
-    const handleExportSvg = () => {
-        editor?.exportAsSvg()
-    }
+export function Navbar({
+  activeTool,
+  onToolChange,
+  editor,
+  canUndo,
+  canRedo,
+  projectTitle,
+  saveState,
+  saveMessage,
+  onBackToHub,
+  onManualSave,
+}: NavbarProps) {
+  const handleExportPng = () => {
+    editor?.exportAsPng()
+  }
 
-    const handleExportJson = () => {
-        editor?.exportAsJson()
-    }
+  const handleExportJpeg = () => {
+    editor?.exportAsJpeg()
+  }
 
-    return (
-        <nav className="w-full flex items-center p-4 h-[68px] border-b gap-x-8 lg:pl-[34px] bg-[#f6f1e6] border-[#8fa889] text-[#2f4f2f]">
-            <Logo />
+  const handleExportSvg = () => {
+    editor?.exportAsSvg()
+  }
 
-            <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="outline"
-                        className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8]"
-                    >
-                        Open
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="z-[2147483647] border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f]">
-                    <DropdownMenuItem className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">
-                        <div className="flex items-center gap-x-2">
-                            <div className="size-8 rounded-full bg-[#e8efdf]"></div>
-                            <div className="flex flex-col">
-                                <p className="text-sm font-medium">User Name</p>
-                                <p className="text-xs text-[#4f664f]">user@example.com</p>
-                            </div>
-                        </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">Item 2</DropdownMenuItem>
-                    <DropdownMenuItem className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">Item 3</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            <TooltipComponent activeTool={activeTool} onToolChange={onToolChange} />
+  const handleExportJson = () => {
+    editor?.exportAsJson()
+  }
 
-            <div className="flex items-center gap-x-2">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    title="Undo"
-                    disabled={!editor || !canUndo}
-                    className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8] disabled:opacity-40"
-                    onClick={() => {
-                        void editor?.undo()
-                    }}
-                >
-                    <Undo2 className="size-4" />
-                </Button>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    title="Redo"
-                    disabled={!editor || !canRedo}
-                    className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8] disabled:opacity-40"
-                    onClick={() => {
-                        void editor?.redo()
-                    }}
-                >
-                    <Redo2 className="size-4" />
-                </Button>
-                <Button
-                    variant="default"
-                    size="icon"
-                    title="Save"
-                    className="bg-[#5f7d5f] text-[#f6f1e6] hover:bg-[#4e694e]"
-                >
-                    <Save className="size-4" />
-                </Button>
-            </div>
+  const saveStateText = getSaveStateText(saveState, saveMessage)
 
-            <div className="ml-auto flex items-center gap-x-2">
-                <span className="text-sm font-medium">Export</span>
-                <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
-                            title="Export"
-                            disabled={!editor}
-                            className="border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f] hover:bg-[#ece6d8] disabled:opacity-40"
-                        >
-                            <Download className="size-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="z-[2147483647] border-[#8fa889] bg-[#f6f1e6] text-[#2f4f2f]">
-                        <DropdownMenuItem onSelect={handleExportPng} className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">
-                            Export as PNG
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleExportJpeg} className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">
-                            Export as JPEG
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleExportSvg} className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">
-                            Export as SVG
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleExportJson} className="focus:bg-[#e8efdf] focus:text-[#2f4f2f]">
-                            Export as JSON
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+  return (
+    <nav className="flex h-[68px] w-full items-center gap-x-3 border-b border-black/5 bg-white/80 px-4 text-neutral-900 shadow-sm backdrop-blur-xl saturate-150">
+      <Button
+        variant="outline"
+        className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"
+        onClick={onBackToHub}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Projects
+      </Button>
 
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-neutral-900">{projectTitle}</p>
+        <p className="text-xs text-neutral-500">Canvas Editor</p>
+      </div>
 
-        </nav>
-    )
+      <TooltipComponent activeTool={activeTool} onToolChange={onToolChange} />
+
+      <div className="flex items-center gap-x-2">
+        <Button
+          variant="outline"
+          size="icon"
+          title="Undo"
+          disabled={!editor || !canUndo}
+          className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5 disabled:opacity-40"
+          onClick={() => {
+            void editor?.undo()
+          }}
+        >
+          <Undo2 className="size-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          title="Redo"
+          disabled={!editor || !canRedo}
+          className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5 disabled:opacity-40"
+          onClick={() => {
+            void editor?.redo()
+          }}
+        >
+          <Redo2 className="size-4" />
+        </Button>
+        <Button
+          variant="default"
+          title="Save"
+          className="bg-[#0058d0] text-white hover:bg-[#0045a6]"
+          onClick={onManualSave}
+          disabled={!editor || saveState === "saving"}
+        >
+          <Save className="mr-2 size-4" />
+          Save
+        </Button>
+      </div>
+
+      <div className="ml-auto flex items-center gap-x-3">
+        <span className="rounded-full border border-black/10 bg-white/60 px-2 py-1 text-xs text-neutral-600">
+          {saveStateText}
+        </span>
+
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              title="Export"
+              disabled={!editor}
+              className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5 disabled:opacity-40"
+            >
+              <Download className="mr-2 size-4" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="z-[2147483647] border-black/10 bg-white/90 text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-xl">
+            <DropdownMenuItem onSelect={handleExportPng} className="focus:bg-black/5 focus:text-neutral-900">
+              Export as PNG
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleExportJpeg} className="focus:bg-black/5 focus:text-neutral-900">
+              Export as JPEG
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleExportSvg} className="focus:bg-black/5 focus:text-neutral-900">
+              Export as SVG
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleExportJson} className="focus:bg-black/5 focus:text-neutral-900">
+              Export as JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </nav>
+  )
 }

@@ -1,53 +1,31 @@
-import { request } from '@/lib/api'
+import { request } from "@/lib/api"
+import type {
+  CreateFileParams,
+  DeleteFileItemResponseData,
+  FileContentResponseData,
+  FileItem,
+  UpdateFileContentBody,
+  UpdateFileContentResponseData,
+  UpdateFileParams,
+} from "@/shared/contracts/files"
 
-// ---------------------------------------------------------------------------
-// DTO Types
-// ---------------------------------------------------------------------------
-
-export interface FileItem {
-  id: string
-  userId: string
-  name: string
-  itemType: string
-  parentId: string | null
-  x: number
-  y: number
-  content: string | null
-  fileSize: number | null
-  mimeType: string | null
-  createdAt: string
-  updatedAt: string
+export type {
+  CreateFileParams,
+  DeleteFileItemResponseData,
+  FileContentResponseData,
+  FileItem,
+  UpdateFileContentBody,
+  UpdateFileContentResponseData,
+  UpdateFileParams,
 }
-
-export interface CreateFileParams {
-  name: string
-  itemType: string
-  x: number
-  y: number
-  parentId?: string | null
-  content?: string | null
-  fileSize?: number | null
-  mimeType?: string | null
-}
-
-export interface UpdateFileParams {
-  name?: string
-  x?: number
-  y?: number
-  parentId?: string | null
-}
-
-// ---------------------------------------------------------------------------
-// Files API Repository
-// ---------------------------------------------------------------------------
 
 export const filesApi = {
   list() {
-    return request.get<FileItem[]>('/files')
+    return request.get<FileItem[]>("/files")
   },
 
   create(params: CreateFileParams) {
-    return request.post<FileItem, CreateFileParams>('/files', params)
+    return request.post<FileItem, CreateFileParams>("/files", params)
   },
 
   update(id: string, params: UpdateFileParams) {
@@ -55,14 +33,19 @@ export const filesApi = {
   },
 
   remove(id: string) {
-    return request.delete<void>(`/files/${id}`)
+    return request.delete<DeleteFileItemResponseData>(`/files/${id}`)
   },
 
   getContent(id: string) {
-    return request.get<{ content: string }>(`/files/${id}/content`)
+    return request.get<FileContentResponseData>(`/files/${id}/content`)
   },
 
   updateContent(id: string, content: string) {
-    return request.put<{ updated: boolean }>(`/files/${id}/content`, { content })
+    const body: UpdateFileContentBody = { content }
+    return request.put<UpdateFileContentResponseData, UpdateFileContentBody>(
+      `/files/${id}/content`,
+      body
+    )
   },
 }
+

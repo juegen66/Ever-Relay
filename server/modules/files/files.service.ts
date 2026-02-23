@@ -1,28 +1,16 @@
 import { eq, and } from "drizzle-orm"
 
+import type {
+  CreateFileParams,
+  FileItemType,
+  UpdateFileParams,
+} from "@/shared/contracts/files"
 import { db } from "@/server/core/database"
 import { desktopItems } from "@/server/db/schema"
 
-export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
-
-export interface CreateItemInput {
-  userId: string
-  name: string
-  itemType: DesktopItemType
-  parentId?: string | null
-  x: number
-  y: number
-  content?: string | null
-  fileSize?: number | null
-  mimeType?: string | null
-}
-
-export interface UpdateItemInput {
-  name?: string
-  parentId?: string | null
-  x?: number
-  y?: number
-}
+export type DesktopItemType = FileItemType
+export type CreateItemInput = CreateFileParams & { userId: string }
+export type UpdateItemInput = UpdateFileParams
 
 export class FilesService {
   /**

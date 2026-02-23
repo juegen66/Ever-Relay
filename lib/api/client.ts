@@ -4,7 +4,7 @@ import { getAccessToken } from './auth'
 import { ApiError, normalizeAxiosError } from './error'
 import type { ApiCode, ApiResponse } from './types'
 
-const SUCCESS_CODES = new Set<ApiCode>([0, '0', 200, '200', 'OK', 'SUCCESS'])
+const SUCCESS_CODES = new Set<ApiCode>([0, '0'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -12,13 +12,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isApiResponseEnvelope(value: unknown): value is ApiResponse<unknown> {
   if (!isRecord(value)) return false
-  return 'success' in value || 'code' in value || 'message' in value
+  return (
+    typeof value.success === 'boolean' &&
+    typeof value.code === 'number' &&
+    typeof value.requestId === 'string'
+  )
 }
 
 function isBusinessSuccess(payload: ApiResponse<unknown>): boolean {
-  if (payload.success === false) return false
-  if (payload.code === undefined || payload.code === null) return true
-  return SUCCESS_CODES.has(payload.code)
+  return payload.success === true && SUCCESS_CODES.has(payload.code)
 }
 
 function toBusinessError(payload: ApiResponse<unknown>, status?: number): ApiError {

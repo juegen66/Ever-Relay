@@ -1,36 +1,70 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
-import { useEditor } from "../hooks/use-Editor"
+import { useCallback, useEffect, useRef, useState } from "react"
 import * as fabric from "fabric"
-import { useState } from "react"
+
+import type { CanvasProject } from "@/lib/api/modules/canvas"
 import { useAutoResize } from "../hooks/use-auto-resize"
-import { Navbar } from "./navbar"
-import { Sidebar } from "./sidebar"
-import { ShapesSidebar } from "./shapesiedebar"
-import Toolbar from "./Toolbar"
-import { Footer } from "./Footer"
-import { ActiveTools } from "../types"
 import { useCanvasEvents } from "../hooks/use-canvas-events"
-import { FillColorSidebar } from "./fillcolor-sidebar"
-import { StrokeColorSidebar } from "./strokecolor-sidebar"
-import { TextSidebar } from "./textsidebar"
-import { StrokeStyleSidebar } from "./stroke-style-sidebar"
+import { useEditor } from "../hooks/use-Editor"
+import type { ActiveTools } from "../types"
 import { BackgroundColorSidebar } from "./backgroundcolor-sidebar"
+import { AiSidebar } from "./ai-sidebar"
+import { CanvasSizeSidebar } from "./canvas-size-sidebar"
+import { FillColorSidebar } from "./fillcolor-sidebar"
+import { Footer } from "./Footer"
+import { ImageSidebar } from "./image-sidebar"
+import { Navbar } from "./navbar"
 import { OpacitySidebar } from "./opacity-sidebar"
+import { SettingsSidebar } from "./settings-sidebar"
+import { ShapesSidebar } from "./shapesiedebar"
+import { Sidebar } from "./sidebar"
+import { StrokeColorSidebar } from "./strokecolor-sidebar"
+import { StrokeStyleSidebar } from "./stroke-style-sidebar"
+import { TemplatesSidebar } from "./templates-sidebar"
+import { TextSidebar } from "./textsidebar"
+import Toolbar from "./Toolbar"
 
+interface SaveCanvasContentResult {
+  project?: CanvasProject
+  conflictExpectedVersion?: number
+  error?: string
+}
 
+interface EditorProps {
+  project: CanvasProject
+  onBackToHub: () => void
+  onSaveContent: (
+    projectId: string,
+    contentJson: Record<string, unknown>,
+    contentVersion: number
+  ) => Promise<SaveCanvasContentResult>
+}
 
-
-
-export const Editor = () => {
-  const { init, editor, canUndo, canRedo } = useEditor()
+export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => {
+  const {
+    init,
+    editor,
+    canUndo,
+    canRedo,
+    loadDocument,
+    getDocumentSnapshot,
+    getDocumentSnapshotString,
+  } = useEditor()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const projectVersionRef = useRef(project.contentVersion)
+  const lastSavedSnapshotRef = useRef<string | null>(null)
+  const isHydratingRef = useRef(false)
+  const hydratedProjectRef = useRef<{ id: string; contentVersion: number } | null>(null)
+
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null)
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null)
   const [selectedObjects, setSelectedObjects] = useState<fabric.Object[]>([])
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle")
+  const [saveMessage, setSaveMessage] = useState<string | undefined>(undefined)
 
   useCanvasEvents({ canvas, setSelectedObjects, selectedObjects, editor })
   useAutoResize({ container: containerEl, canvas: canvas as fabric.Canvas })
@@ -55,7 +89,7 @@ export const Editor = () => {
     setContainerEl(containerRef.current)
 
     const cleanup = init({
-      containerRef: containerRef,
+      containerRef,
       canvasRef: nextCanvas,
     })
 
@@ -66,49 +100,223 @@ export const Editor = () => {
     }
   }, [init])
 
+  const performSave = useCallback(async () => {
+    if (!editor) return
+    if (isHydratingRef.current) return
+
+    const contentJson = getDocumentSnapshot()
+    if (!contentJson) {
+      return
+    }
+    const contentString = JSON.stringify(contentJson)
+
+    if (contentString === lastSavedSnapshotRef.current) {
+      setSaveState((current) => (current === "saving" ? current : "saved"))
+      return
+    }
+
+    setSaveState("saving")
+    setSaveMessage(undefined)
+
+    const result = await onSaveContent(project.id, contentJson, projectVersionRef.current)
+
+    if (result.project) {
+      projectVersionRef.current = result.project.contentVersion
+      lastSavedSnapshotRef.current = contentString
+      setSaveState("saved")
+      setSaveMessage(undefined)
+      return
+    }
+
+    if (result.conflictExpectedVersion !== undefined) {
+      projectVersionRef.current = result.conflictExpectedVersion
+      setSaveState("conflict")
+      setSaveMessage(`Version conflict (latest v${result.conflictExpectedVersion})`)
+      return
+    }
+
+    setSaveState("error")
+    setSaveMessage(result.error ?? "Save failed")
+  }, [editor, getDocumentSnapshot, onSaveContent, project.id])
+
+  const scheduleSave = useCallback(() => {
+    if (!editor || isHydratingRef.current) return
+
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current)
+    }
+
+    saveDebounceRef.current = setTimeout(() => {
+      void performSave()
+      saveDebounceRef.current = null
+    }, 1200)
+  }, [editor, performSave])
+
+  useEffect(() => {
+    if (!canvas) return
+
+    const shouldIgnore = (target?: fabric.Object) => {
+      const role = (target as fabric.Object & { data?: { role?: unknown } } | undefined)?.data?.role
+      return role === "workspace"
+    }
+
+    const handleCanvasMutation = (event?: { target?: fabric.Object }) => {
+      if (shouldIgnore(event?.target)) {
+        return
+      }
+      scheduleSave()
+    }
+
+    canvas.on("object:added", handleCanvasMutation)
+    canvas.on("object:removed", handleCanvasMutation)
+    canvas.on("object:modified", handleCanvasMutation)
+    canvas.on("text:changed", handleCanvasMutation)
+
+    return () => {
+      canvas.off("object:added", handleCanvasMutation)
+      canvas.off("object:removed", handleCanvasMutation)
+      canvas.off("object:modified", handleCanvasMutation)
+      canvas.off("text:changed", handleCanvasMutation)
+    }
+  }, [canvas, scheduleSave])
+
+  useEffect(() => {
+    if (!editor) return
+    if (
+      hydratedProjectRef.current &&
+      hydratedProjectRef.current.id === project.id &&
+      hydratedProjectRef.current.contentVersion === project.contentVersion
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    const hydrateProject = async () => {
+      isHydratingRef.current = true
+      projectVersionRef.current = project.contentVersion
+
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current)
+        saveDebounceRef.current = null
+      }
+
+      try {
+        const hasContent = project.contentJson && Object.keys(project.contentJson).length > 0
+        if (hasContent) {
+          await loadDocument(project.contentJson)
+        }
+
+        if (cancelled) return
+
+        const snapshot = getDocumentSnapshotString()
+        lastSavedSnapshotRef.current = snapshot
+        hydratedProjectRef.current = {
+          id: project.id,
+          contentVersion: project.contentVersion,
+        }
+        setSaveState("saved")
+        setSaveMessage(undefined)
+      } catch (error) {
+        console.error("Failed to hydrate canvas project", error)
+        if (cancelled) return
+        setSaveState("error")
+        setSaveMessage("Failed to load project content")
+      } finally {
+        if (!cancelled) {
+          isHydratingRef.current = false
+        }
+      }
+    }
+
+    void hydrateProject()
+
+    return () => {
+      cancelled = true
+      isHydratingRef.current = true
+    }
+  }, [editor, getDocumentSnapshotString, loadDocument, project.contentJson, project.contentVersion, project.id])
+
+  useEffect(() => {
+    return () => {
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current)
+        saveDebounceRef.current = null
+      }
+    }
+  }, [])
+
+  const handleBack = useCallback(() => {
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current)
+      saveDebounceRef.current = null
+    }
+
+    if (!editor) {
+      onBackToHub()
+      return
+    }
+
+    void performSave().finally(() => {
+      onBackToHub()
+    })
+  }, [editor, onBackToHub, performSave])
+
   return (
-        <div className="canvas-theme flex h-full min-h-0 flex-col bg-background text-foreground">
-            <Navbar
-                activeTool={activeTool}
-                onToolChange={onToolChange}
-                editor={editor}
-                canUndo={canUndo}
-                canRedo={canRedo}
-            />
-            <div className="flex flex-1 overflow-hidden">
-                <Sidebar activeTool={activeTool} onToolChange={onToolChange} />
-                <ShapesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-                <TextSidebar
-                    activeTool={activeTool}
-                    onToolChange={onToolChange}
-                    editor={editor}
-                    selectedObjects={selectedObjects}
-                />
-                <FillColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-                <StrokeColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-                <StrokeStyleSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-                <BackgroundColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-                <OpacitySidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-                <main className="flex flex-1 flex-col overflow-hidden border-l border-border bg-secondary/40">
-                    <Toolbar
-                        activeTool={activeTool}
-                        onToolChange={onToolChange}
-                        editor={editor}
-                        hasSelection={selectedObjects.length > 0}
-                    />
-                    <div className="flex flex-1 overflow-auto bg-secondary/50 p-6 min-h-0">
-                        <div className="flex h-full w-full items-center justify-center">
-                            <div
-                                ref={containerRef}
-                                className="relative h-full min-h-[360px] w-full max-w-6xl"
-                            >
-                                <canvas ref={canvasRef} className="block h-full w-full" />
-                            </div>
-                        </div>
-                    </div>
-                </main>
+    <div className="flex h-full min-h-0 flex-col bg-neutral-100/70 text-neutral-900">
+      <Navbar
+        activeTool={activeTool}
+        onToolChange={onToolChange}
+        editor={editor}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        projectTitle={project.title}
+        saveState={saveState}
+        saveMessage={saveMessage}
+        onBackToHub={handleBack}
+        onManualSave={() => {
+          void performSave()
+        }}
+      />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar activeTool={activeTool} onToolChange={onToolChange} />
+        <TemplatesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+        <ShapesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+        <ImageSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+        <TextSidebar
+          activeTool={activeTool}
+          onToolChange={onToolChange}
+          editor={editor}
+          selectedObjects={selectedObjects}
+        />
+        <FillColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+        <StrokeColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+        <StrokeStyleSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+        <BackgroundColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+        <OpacitySidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+        <CanvasSizeSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+        <AiSidebar activeTool={activeTool} onToolChange={onToolChange} />
+        <SettingsSidebar activeTool={activeTool} onToolChange={onToolChange} />
+        <main className="flex flex-1 flex-col overflow-hidden border-l border-black/5 bg-neutral-100/70">
+          <Toolbar
+            activeTool={activeTool}
+            onToolChange={onToolChange}
+            editor={editor}
+            hasSelection={selectedObjects.length > 0}
+          />
+          <div className="flex min-h-0 flex-1 overflow-auto bg-neutral-200/40 p-6">
+            <div className="flex h-full w-full items-center justify-center">
+              <div
+                ref={containerRef}
+                className="relative h-full min-h-[360px] w-full max-w-6xl"
+              >
+                <canvas ref={canvasRef} className="block h-full w-full" />
+              </div>
             </div>
-            <Footer />
-        </div>
+          </div>
+        </main>
+      </div>
+      <Footer />
+    </div>
   )
 }
