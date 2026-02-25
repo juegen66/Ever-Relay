@@ -187,6 +187,7 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
       hydratedProjectRef.current.id === project.id &&
       hydratedProjectRef.current.contentVersion === project.contentVersion
     ) {
+      isHydratingRef.current = false
       return
     }
 
@@ -233,7 +234,6 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
 
     return () => {
       cancelled = true
-      isHydratingRef.current = true
     }
   }, [editor, getDocumentSnapshotString, loadDocument, project.contentJson, project.contentVersion, project.id])
 
