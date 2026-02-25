@@ -5,6 +5,16 @@ import { Archive, Plus, RefreshCcw, Search } from "lucide-react"
 
 import { ProjectCard } from "@/components/canvas-manager/project-card"
 import { ProjectCreateDialog } from "@/components/canvas-manager/project-create-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -57,6 +67,7 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [trashDialogOpen, setTrashDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     void fetchTags()
@@ -83,11 +94,15 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
     }
   }
 
-  const handleDelete = async (projectId: string) => {
-    const confirmed = window.confirm("Move this project to trash?")
-    if (!confirmed) return
+  const handleDelete = (projectId: string) => {
+    setProjectToDelete(projectId)
+  }
 
-    await deleteProject(projectId)
+  const confirmDelete = async () => {
+    if (projectToDelete) {
+      await deleteProject(projectToDelete)
+      setProjectToDelete(null)
+    }
   }
 
   const handleOpenTrash = async () => {
@@ -225,6 +240,23 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={projectToDelete !== null} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <AlertDialogContent className="border-black/10 bg-white/95 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to move this project to the trash? You can restore it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={confirmDelete}>
+              Move to Trash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }
