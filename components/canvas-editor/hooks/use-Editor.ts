@@ -132,7 +132,7 @@ const createWorkspaceClipPath = (workspace: fabric.Rect) => {
         height: workspace.height ?? 0,
         left: workspace.left ?? 0,
         top: workspace.top ?? 0,
-        absolutePositioned: true,
+        absolutePositioned: false,
         evented: false,
         selectable: false,
     })
@@ -157,6 +157,20 @@ const createWorkspaceRect = (targetCanvas: fabric.Canvas) => {
 
 const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
     const getWorkspace = () => config.getWorkspace()
+    const withIdentityViewport = <T,>(callback: () => T): T => {
+        const currentViewport = (canvas.viewportTransform
+            ? [...canvas.viewportTransform]
+            : [1, 0, 0, 1, 0, 0]) as [number, number, number, number, number, number]
+
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0])
+        try {
+            return callback()
+        } finally {
+            canvas.setViewportTransform(currentViewport)
+            canvas.requestRenderAll()
+        }
+    }
+
     const getExportBounds = () => {
         const workspace = getWorkspace()
         if (!workspace) {
@@ -586,41 +600,47 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
         canUndo: config.canUndo,
         canRedo: config.canRedo,
         exportAsPng: () => {
-            const { left, top, width, height } = getExportBounds()
-            const dataUrl = canvas.toDataURL({
-                format: "png",
-                left,
-                top,
-                width,
-                height,
-                multiplier: 2,
+            const dataUrl = withIdentityViewport(() => {
+                const { left, top, width, height } = getExportBounds()
+                return canvas.toDataURL({
+                    format: "png",
+                    left,
+                    top,
+                    width,
+                    height,
+                    multiplier: 2,
+                })
             })
             downloadDataUrl(dataUrl, getExportFileName("png"))
         },
         exportAsJpeg: () => {
-            const { left, top, width, height } = getExportBounds()
-            const dataUrl = canvas.toDataURL({
-                format: "jpeg",
-                quality: 0.92,
-                left,
-                top,
-                width,
-                height,
-                multiplier: 2,
+            const dataUrl = withIdentityViewport(() => {
+                const { left, top, width, height } = getExportBounds()
+                return canvas.toDataURL({
+                    format: "jpeg",
+                    quality: 0.92,
+                    left,
+                    top,
+                    width,
+                    height,
+                    multiplier: 2,
+                })
             })
             downloadDataUrl(dataUrl, getExportFileName("jpg"))
         },
         exportAsSvg: () => {
-            const { left, top, width, height } = getExportBounds()
-            const svg = canvas.toSVG({
-                width: String(width),
-                height: String(height),
-                viewBox: {
-                    x: left,
-                    y: top,
-                    width,
-                    height,
-                },
+            const svg = withIdentityViewport(() => {
+                const { left, top, width, height } = getExportBounds()
+                return canvas.toSVG({
+                    width: String(width),
+                    height: String(height),
+                    viewBox: {
+                        x: left,
+                        y: top,
+                        width,
+                        height,
+                    },
+                })
             })
             downloadTextBlob(svg, "image/svg+xml;charset=utf-8", getExportFileName("svg"))
         },
@@ -851,13 +871,6 @@ export const useEditor = () => {
         canvasRef.on("object:modified", handleObjectModified)
         canvasRef.on("text:changed", handleTextChanged)
 
-        const handleResize = () => {
-            updateCanvasSize()
-            alignWorkspace()
-        }
-
-        window.addEventListener("resize", handleResize)
-
         return () => {
             canvasRef.off("object:moving", handleObjectMoving)
             canvasRef.off("object:modified", handleObjectModified)
@@ -866,7 +879,6 @@ export const useEditor = () => {
             canvasRef.remove(workspaceRect)
             workspaceRef.current = null
             setWorkspace(null)
-            window.removeEventListener("resize", handleResize)
         }
     }, [pushHistorySnapshot, syncHistoryFlags])
 

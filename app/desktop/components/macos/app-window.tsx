@@ -100,7 +100,8 @@ export function AppWindow({
   const isDragging = useRef(false)
   const isResizing = useRef<string | false>(false)
   const dragStart = useRef({ x: 0, y: 0 })
-  const [showBtns, setShowBtns] = useState(false)
+  const maximizeAnimationTimerRef = useRef<number | null>(null)
+  const [isTogglingMaximize, setIsTogglingMaximize] = useState(false)
   const { x, y, width, height, zIndex, maximized, appId } = windowState
   const isDark = DARK_TITLEBAR_APPS.has(appId)
   const isCanvasApp = appId === "canvas"
@@ -175,9 +176,30 @@ export function AppWindow({
     }
   }, [width, height, x, y, onMove, onResize])
 
+  useEffect(() => {
+    return () => {
+      if (maximizeAnimationTimerRef.current !== null) {
+        window.clearTimeout(maximizeAnimationTimerRef.current)
+      }
+    }
+  }, [])
+
+  const handleToggleMaximize = useCallback(() => {
+    setIsTogglingMaximize(true)
+    if (maximizeAnimationTimerRef.current !== null) {
+      window.clearTimeout(maximizeAnimationTimerRef.current)
+    }
+    onMaximize()
+    maximizeAnimationTimerRef.current = window.setTimeout(() => {
+      setIsTogglingMaximize(false)
+      maximizeAnimationTimerRef.current = null
+    }, 320)
+  }, [onMaximize])
+
   const isFolderViewer = appId === "finder" && windowState.folderId
   const isFileViewer = appId === "textedit" && windowState.fileId
   const AppContent = (isFolderViewer || isFileViewer) ? null : APP_COMPONENTS[appId]
+  const shouldAnimateWindowBounds = maximized || isTogglingMaximize
 
   const windowStyle = maximized
     ? {
@@ -235,7 +257,7 @@ export function AppWindow({
           : isCanvasApp
             ? "0 5px 20px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(0,0,0,0.05)"
             : "0 5px 20px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)",
-        transition: maximized
+        transition: shouldAnimateWindowBounds
           ? "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, box-shadow 0.2s ease"
           : "box-shadow 0.2s ease",
       }}
@@ -256,50 +278,40 @@ export function AppWindow({
               : "1px solid rgba(0,0,0,0.08)",
         }}
         onMouseDown={handleMouseDownTitle}
-        onDoubleClick={onMaximize}
+        onDoubleClick={handleToggleMaximize}
       >
         {/* Traffic Lights */}
-        <div
-          className="flex items-center gap-[7px] mr-3"
-          onMouseEnter={() => setShowBtns(true)}
-          onMouseLeave={() => setShowBtns(false)}
-        >
+        <div className="mr-3 flex items-center gap-[7px]">
           <button
             onClick={(e) => { e.stopPropagation(); onClose() }}
             className="group flex h-[12px] w-[12px] items-center justify-center rounded-full transition-all"
-            style={{ background: isActive ? "#ff5f57" : isDark ? "#555" : "#ddd" }}
+            style={{ background: "#ff5f57" }}
             aria-label="Close window"
           >
-            {showBtns && (
-              <svg width="6" height="6" viewBox="0 0 6 6" fill="none">
-                <path d="M0.5 0.5L5.5 5.5M5.5 0.5L0.5 5.5" stroke="rgba(80,0,0,0.6)" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-            )}
+            <svg className="opacity-0 transition-opacity group-hover:opacity-100" width="6" height="6" viewBox="0 0 6 6" fill="none">
+              <path d="M0.5 0.5L5.5 5.5M5.5 0.5L0.5 5.5" stroke="rgba(80,0,0,0.6)" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onMinimize() }}
             className="group flex h-[12px] w-[12px] items-center justify-center rounded-full transition-all"
-            style={{ background: isActive ? "#febc2e" : isDark ? "#555" : "#ddd" }}
+            style={{ background: "#febc2e" }}
             aria-label="Minimize window"
           >
-            {showBtns && (
-              <svg width="7" height="1" viewBox="0 0 7 1" fill="none">
-                <path d="M0.5 0.5H6.5" stroke="rgba(80,50,0,0.6)" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-            )}
+            <svg className="opacity-0 transition-opacity group-hover:opacity-100" width="7" height="1" viewBox="0 0 7 1" fill="none">
+              <path d="M0.5 0.5H6.5" stroke="rgba(80,50,0,0.6)" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onMaximize() }}
+            onClick={(e) => { e.stopPropagation(); handleToggleMaximize() }}
             className="group flex h-[12px] w-[12px] items-center justify-center rounded-full transition-all"
-            style={{ background: isActive ? "#28c840" : isDark ? "#555" : "#ddd" }}
+            style={{ background: "#28c840" }}
             aria-label="Maximize window"
           >
-            {showBtns && (
-              <svg width="7" height="7" viewBox="0 0 8 8" fill="none">
-                <path d="M1 4V1.5C1 1.22 1.22 1 1.5 1H4M7 4V6.5C7 6.78 6.78 7 6.5 7H4M4 1L1 4M4 7L7 4"
-                  stroke="rgba(0,60,0,0.6)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
+            <svg className="opacity-0 transition-opacity group-hover:opacity-100" width="7" height="7" viewBox="0 0 8 8" fill="none">
+              <path d="M1 4V1.5C1 1.22 1.22 1 1.5 1H4M7 4V6.5C7 6.78 6.78 7 6.5 7H4M4 1L1 4M4 7L7 4"
+                stroke="rgba(0,60,0,0.6)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
 

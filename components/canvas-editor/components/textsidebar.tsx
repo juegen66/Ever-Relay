@@ -253,7 +253,7 @@ export const TextSidebar = ({
     }
 
     return (
-        <aside className="relative flex h-full min-h-[calc(100vh-136px)] w-72 shrink-0 flex-col gap-y-4 border-r border-black/5 bg-white/80 shadow-sm backdrop-blur-xl saturate-150">
+        <aside className="relative z-20 flex h-full min-h-0 w-72 shrink-0 flex-col gap-y-4 border-r border-black/5 bg-white/80 shadow-sm backdrop-blur-xl saturate-150">
             <ScrollArea className="flex-1 p-4">
                 <div className="flex flex-col gap-y-6">
                     <section className="flex flex-col gap-y-3">

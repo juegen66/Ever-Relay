@@ -41,6 +41,10 @@ interface EditorProps {
   ) => Promise<SaveCanvasContentResult>
 }
 
+const COMPACT_WIDTH_BREAKPOINT = 980
+const COMPACT_HEIGHT_BREAKPOINT = 720
+const COMPACT_SIDEBAR_WIDTH = 80
+
 export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => {
   const {
     init,
@@ -53,6 +57,7 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
   } = useEditor()
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const editorRootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const projectVersionRef = useRef(project.contentVersion)
@@ -65,6 +70,8 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
   const [selectedObjects, setSelectedObjects] = useState<fabric.Object[]>([])
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle")
   const [saveMessage, setSaveMessage] = useState<string | undefined>(undefined)
+  const [isCompactWidth, setIsCompactWidth] = useState(false)
+  const [isCompactHeight, setIsCompactHeight] = useState(false)
 
   useCanvasEvents({ canvas, setSelectedObjects, selectedObjects, editor })
   useAutoResize({ container: containerEl, canvas: canvas as fabric.Canvas })
@@ -75,6 +82,35 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
       return setActiveTool("Select")
     }
     setActiveTool(tool)
+  }, [])
+
+  useEffect(() => {
+    const root = editorRootRef.current
+    if (!root) return
+
+    const updateLayoutMode = (width: number, height: number) => {
+      setIsCompactWidth(width < COMPACT_WIDTH_BREAKPOINT)
+      setIsCompactHeight(height < COMPACT_HEIGHT_BREAKPOINT)
+    }
+
+    const measure = () => {
+      updateLayoutMode(root.clientWidth, root.clientHeight)
+    }
+
+    measure()
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      updateLayoutMode(width, height)
+    })
+
+    resizeObserver.observe(root)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
   }, [])
 
   useEffect(() => {
@@ -262,8 +298,30 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
     })
   }, [editor, onBackToHub, performSave])
 
+  const renderToolPanels = () => (
+    <>
+      <TemplatesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+      <ShapesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+      <ImageSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+      <TextSidebar
+        activeTool={activeTool}
+        onToolChange={onToolChange}
+        editor={editor}
+        selectedObjects={selectedObjects}
+      />
+      <FillColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+      <StrokeColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+      <StrokeStyleSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+      <BackgroundColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+      <OpacitySidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
+      <CanvasSizeSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
+      <AiSidebar activeTool={activeTool} onToolChange={onToolChange} />
+      <SettingsSidebar activeTool={activeTool} onToolChange={onToolChange} />
+    </>
+  )
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-neutral-100/70 text-neutral-900">
+    <div ref={editorRootRef} className="flex h-full min-h-0 flex-col bg-neutral-100/70 text-neutral-900">
       <Navbar
         activeTool={activeTool}
         onToolChange={onToolChange}
@@ -277,46 +335,37 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
         onManualSave={() => {
           void performSave()
         }}
+        compact={isCompactHeight}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar activeTool={activeTool} onToolChange={onToolChange} />
-        <TemplatesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-        <ShapesSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-        <ImageSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-        <TextSidebar
-          activeTool={activeTool}
-          onToolChange={onToolChange}
-          editor={editor}
-          selectedObjects={selectedObjects}
-        />
-        <FillColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-        <StrokeColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-        <StrokeStyleSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-        <BackgroundColorSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-        <OpacitySidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} selectedObjects={selectedObjects} />
-        <CanvasSizeSidebar activeTool={activeTool} onToolChange={onToolChange} editor={editor} />
-        <AiSidebar activeTool={activeTool} onToolChange={onToolChange} />
-        <SettingsSidebar activeTool={activeTool} onToolChange={onToolChange} />
-        <main className="flex flex-1 flex-col overflow-hidden border-l border-black/5 bg-neutral-100/70">
+      <div className="relative flex flex-1 overflow-hidden">
+        <Sidebar activeTool={activeTool} onToolChange={onToolChange} compact={isCompactWidth} />
+        {!isCompactWidth && renderToolPanels()}
+        <main className="relative z-0 flex flex-1 flex-col overflow-hidden border-l border-black/5 bg-neutral-100/70">
           <Toolbar
             activeTool={activeTool}
             onToolChange={onToolChange}
             editor={editor}
             hasSelection={selectedObjects.length > 0}
+            compact={isCompactHeight}
           />
-          <div className="flex min-h-0 flex-1 overflow-auto bg-neutral-200/40 p-6">
+          <div className={`flex min-h-0 flex-1 overflow-auto bg-neutral-200/40 ${isCompactHeight ? "p-3" : "p-6"}`}>
             <div className="flex h-full w-full items-center justify-center">
               <div
                 ref={containerRef}
-                className="relative h-full min-h-[360px] w-full max-w-6xl"
+                className={`relative h-full w-full ${isCompactHeight ? "min-h-[220px]" : "min-h-[320px]"}`}
               >
                 <canvas ref={canvasRef} className="block h-full w-full" />
               </div>
             </div>
           </div>
         </main>
+        {isCompactWidth && (
+          <div className="pointer-events-none absolute inset-y-0 z-40 flex" style={{ left: COMPACT_SIDEBAR_WIDTH }}>
+            <div className="pointer-events-auto h-full min-h-0">{renderToolPanels()}</div>
+          </div>
+        )}
       </div>
-      <Footer />
+      {!isCompactHeight && <Footer />}
     </div>
   )
 }

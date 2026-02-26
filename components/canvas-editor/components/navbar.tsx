@@ -24,6 +24,7 @@ interface NavbarProps {
   saveMessage?: string
   onBackToHub: () => void
   onManualSave: () => void
+  compact?: boolean
 }
 
 function getSaveStateText(state: NavbarProps["saveState"], message?: string) {
@@ -55,6 +56,7 @@ export function Navbar({
   saveMessage,
   onBackToHub,
   onManualSave,
+  compact = false,
 }: NavbarProps) {
   const handleExportPng = () => {
     editor?.exportAsPng()
@@ -75,7 +77,7 @@ export function Navbar({
   const saveStateText = getSaveStateText(saveState, saveMessage)
 
   return (
-    <nav className="flex h-[68px] w-full items-center gap-x-3 border-b border-black/5 bg-white/80 px-4 text-neutral-900 shadow-sm backdrop-blur-xl saturate-150">
+    <nav className={`flex w-full items-center border-b border-black/5 bg-white/80 text-neutral-900 shadow-sm backdrop-blur-xl saturate-150 ${compact ? "h-14 gap-x-2 px-3" : "h-[68px] gap-x-3 px-4"}`}>
       <Button
         variant="outline"
         className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"

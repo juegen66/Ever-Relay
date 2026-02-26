@@ -18,6 +18,7 @@ interface ToolbarProps {
     onToolChange: (tool: ActiveTools) => void
     editor: EditorType | null
     hasSelection: boolean
+    compact?: boolean
 }
 
 type ToolbarTool = Extract<ActiveTools, "Fill" | "Stroke" | "StrokeStyle" | "Background" | "Opacity">
@@ -34,14 +35,14 @@ const TOOL_CONFIG: Array<{
         { id: "Opacity", label: "Opacity", Icon: Droplet },
     ]
 
-export default function Toolbar({ activeTool, onToolChange, editor, hasSelection }: ToolbarProps) {
+export default function Toolbar({ activeTool, onToolChange, editor, hasSelection, compact = false }: ToolbarProps) {
     const handleClearCanvas = () => {
         if (!editor) return
         editor.clearCanvas()
     }
 
     return (
-        <div className="flex h-[68px] shrink-0 items-center gap-x-4 overflow-x-auto border-b border-black/5 bg-white/80 px-4 shadow-sm backdrop-blur-xl saturate-150">
+        <div className={`flex shrink-0 items-center overflow-x-auto border-b border-black/5 bg-white/80 shadow-sm backdrop-blur-xl saturate-150 ${compact ? "h-14 gap-x-2 px-3" : "h-[68px] gap-x-4 px-4"}`}>
             <div className="flex items-center gap-x-3">
                 {TOOL_CONFIG.map(({ id, label, Icon }) => {
                     if (activeTool === "Text" && id === "Stroke") {
