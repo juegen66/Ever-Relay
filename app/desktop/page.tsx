@@ -1,10 +1,13 @@
-import { DesktopCopilotProvider } from "@/app/desktop/components/ai/desktop-copilot-provider"
-import { Desktop } from "@/app/desktop/components/macos/desktop"
+import { redirect } from "next/navigation"
 
-export default function DesktopPage() {
-  return (
-    <DesktopCopilotProvider>
-      <Desktop />
-    </DesktopCopilotProvider>
-  )
+import { DesktopAuthGate } from "@/app/desktop/components/macos/desktop-auth-gate"
+import { getServerDesktopUser } from "@/server/lib/auth/get-server-desktop-user"
+
+export default async function DesktopPage() {
+  const currentUser = await getServerDesktopUser()
+  if (!currentUser) {
+    redirect(`/login?callbackURL=${encodeURIComponent("/desktop")}`)
+  }
+
+  return <DesktopAuthGate user={currentUser}>{null}</DesktopAuthGate>
 }

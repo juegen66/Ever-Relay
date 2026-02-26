@@ -231,6 +231,61 @@
 .typing-dot-2 { animation: typing-dot 1.4s ease-in-out infinite 0.2s; }
 .typing-dot-3 { animation: typing-dot 1.4s ease-in-out infinite 0.4s; }
 
+@media (min-width: 640px) {
+  .copilotKitSidebarContentWrapper.sidebarExpanded {
+    margin-right: 25vw !important;
+  }
+
+  .copilotKitSidebar .copilotKitWindow {
+    width: 25vw !important;
+  }
+}
+
+.desktop-copilot-fullscreen.copilotKitChat {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 0.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(236, 236, 236, 0.88);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.25), 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(50px) saturate(180%);
+  -webkit-backdrop-filter: blur(50px) saturate(180%);
+}
+
+.desktop-copilot-fullscreen .copilotKitMessages {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.desktop-copilot-fullscreen .copilotKitMessagesContainer {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 0.75rem 16px;
+}
+
+.desktop-copilot-fullscreen .copilotKitMessagesFooter {
+  width: 100%;
+  max-width: none;
+  margin: 6px auto 0 auto;
+  padding: 0.25rem 0.5rem 0.75rem;
+}
+
+.desktop-copilot-fullscreen .copilotKitMessage {
+  max-width: min(85%, 720px);
+  margin-bottom: 0.3rem;
+}
+
+.desktop-copilot-fullscreen .copilotKitMessage.copilotKitAssistantMessage {
+  max-width: min(92%, 760px);
+}
+
+.desktop-copilot-fullscreen .copilotKitMessage.copilotKitAssistantMessage + .copilotKitMessage.copilotKitUserMessage {
+  margin-top: 0.5rem;
+}
+
 /* ========== Landing Page Animations ========== */
 @keyframes hero-fade-in {
   from { opacity: 0; transform: translateY(30px); }

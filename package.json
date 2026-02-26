@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "mastra:dev": "pnpm exec mastra dev -d server/mastra",
+    "mastra:studio": "pnpm exec mastra studio --server-port 4111 --port 4112",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"

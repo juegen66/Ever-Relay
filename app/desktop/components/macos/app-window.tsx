@@ -82,6 +82,7 @@ interface AppWindowProps {
     onDeleteItem: (id: string) => void
     onRenameItem: (id: string, name: string) => void
     onMoveItemOut: (id: string) => void
+    onMoveItemToFolder: (itemId: string, targetFolderId: string) => void
   }
 }
 
@@ -205,8 +206,8 @@ export function AppWindow({
     ? {
         top: 0,
         left: 0,
-        width: "100vw" as const,
-        height: "100vh" as const,
+        width: "100%" as const,
+        height: "100%" as const,
         zIndex,
       }
     : { top: y, left: x, width, height, zIndex }
@@ -334,6 +335,7 @@ export function AppWindow({
             onDeleteItem={folderViewerProps.onDeleteItem}
             onRenameItem={folderViewerProps.onRenameItem}
             onMoveItemOut={folderViewerProps.onMoveItemOut}
+            onMoveItemToFolder={folderViewerProps.onMoveItemToFolder}
           />
         ) : isFileViewer ? (
           <TextEditApp

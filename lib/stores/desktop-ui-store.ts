@@ -9,6 +9,7 @@ interface DesktopUIStore {
   showSpotlight: boolean
   showLaunchpad: boolean
   showAboutMac: boolean
+  copilotSidebarOpen: boolean
   setContextMenu: (menu: ContextMenuState) => void
   closeContextMenu: () => void
   toggleSpotlight: () => void
@@ -16,6 +17,7 @@ interface DesktopUIStore {
   setShowLaunchpad: (show: boolean) => void
   closeLaunchpad: () => void
   setShowAboutMac: (show: boolean) => void
+  setCopilotSidebarOpen: (open: boolean) => void
   closeTransientUi: () => void
 }
 
@@ -24,6 +26,7 @@ export const useDesktopUIStore = create<DesktopUIStore>((set) => ({
   showSpotlight: false,
   showLaunchpad: false,
   showAboutMac: false,
+  copilotSidebarOpen: false,
   setContextMenu: (menu) => set({ contextMenu: menu }),
   closeContextMenu: () => set({ contextMenu: null }),
   toggleSpotlight: () =>
@@ -39,6 +42,7 @@ export const useDesktopUIStore = create<DesktopUIStore>((set) => ({
     }),
   closeLaunchpad: () => set({ showLaunchpad: false }),
   setShowAboutMac: (show) => set({ showAboutMac: show }),
+  setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
   closeTransientUi: () =>
     set({
       contextMenu: null,

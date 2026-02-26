@@ -53,8 +53,10 @@ interface DesktopItemsStore {
   renameItem: (id: string, name: string) => Promise<void>
   moveItem: (id: string, x: number, y: number) => Promise<void>
   persistItemPosition: (id: string, x: number, y: number) => Promise<void>
+  moveItemToFolder: (itemId: string, targetFolderId: string) => Promise<void>
   moveIntoFolder: (itemId: string, targetFolderId: string) => Promise<void>
   moveItemToDesktop: (itemId: string) => Promise<void>
+  moveItemToDesktopAt: (itemId: string, x: number, y: number) => Promise<void>
   createItemInFolder: (parentId: string, itemType: DesktopItemType, name: string) => Promise<void>
 }
 
@@ -166,6 +168,10 @@ export const useDesktopItemsStore = create<DesktopItemsStore>((set, get) => ({
     }
   },
 
+  moveItemToFolder: async (itemId, targetFolderId) => {
+    await get().moveIntoFolder(itemId, targetFolderId)
+  },
+
   moveIntoFolder: async (itemId, targetFolderId) => {
     const state = get()
     const item = state.desktopFolders.find((f) => f.id === itemId)
@@ -207,6 +213,27 @@ export const useDesktopItemsStore = create<DesktopItemsStore>((set, get) => ({
       await filesApi.update(itemId, { parentId: null, x: baseX, y: baseY })
     } catch (err) {
       console.error("Failed to move item to desktop:", err)
+    }
+  },
+
+  moveItemToDesktopAt: async (itemId, x, y) => {
+    const state = get()
+    const item = state.desktopFolders.find((f) => f.id === itemId)
+    if (!item) return
+
+    const snapped = snapToViewport(x, y)
+
+    // Optimistic update
+    set((state) => ({
+      desktopFolders: state.desktopFolders.map((f) =>
+        f.id === itemId ? { ...f, parentId: null, x: snapped.x, y: snapped.y } : f
+      ),
+    }))
+
+    try {
+      await filesApi.update(itemId, { parentId: null, x: snapped.x, y: snapped.y })
+    } catch (err) {
+      console.error("Failed to move item to desktop at drop point:", err)
     }
   },
 

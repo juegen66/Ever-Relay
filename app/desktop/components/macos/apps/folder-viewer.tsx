@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import {
   Folder,
   File,
@@ -36,12 +36,29 @@ interface FolderViewerProps {
   onDeleteItem: (id: string) => void
   onRenameItem: (id: string, name: string) => void
   onMoveItemOut: (id: string) => void
+  onMoveItemToFolder: (itemId: string, targetFolderId: string) => void
 }
 
 interface BreadcrumbItem {
   id: string
   name: string
 }
+
+type DesktopDragMoveDetail = {
+  draggedId: string
+  x: number
+  y: number
+}
+
+type DesktopDragEndDetail = DesktopDragMoveDetail & {
+  dropHandled: boolean
+}
+
+type FolderNativeDragStartDetail = {
+  itemId: string
+}
+
+const DESKTOP_ITEM_MIME = "application/x-desktop-item-id"
 
 export function FolderViewer({
   folderId,
@@ -53,18 +70,23 @@ export function FolderViewer({
   onDeleteItem,
   onRenameItem,
   onMoveItemOut,
+  onMoveItemToFolder,
 }: FolderViewerProps) {
   const [currentFolderId, setCurrentFolderId] = useState(folderId)
-  const [currentFolderName, setCurrentFolderName] = useState(folderName)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null)
+  const [dragOverTarget, setDragOverTarget] = useState<string | "desktop" | null>(null)
+  const [isExternalDragOver, setIsExternalDragOver] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [history, setHistory] = useState<BreadcrumbItem[]>([{ id: folderId, name: folderName }])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const editRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const itemById = useMemo(() => new Map(allItems.map((item) => [item.id, item])), [allItems])
 
   const children = allItems.filter((item) => item.parentId === currentFolderId)
 
@@ -115,7 +137,6 @@ export function FolderViewer({
   const navigateTo = useCallback(
     (id: string, name: string) => {
       setCurrentFolderId(id)
-      setCurrentFolderName(name)
       setSelectedItemId(null)
       setEditingId(null)
       setContextMenu(null)
@@ -130,7 +151,6 @@ export function FolderViewer({
     if (historyIndex > 0) {
       const prev = history[historyIndex - 1]
       setCurrentFolderId(prev.id)
-      setCurrentFolderName(prev.name)
       setHistoryIndex(historyIndex - 1)
       setSelectedItemId(null)
       setEditingId(null)
@@ -141,7 +161,6 @@ export function FolderViewer({
     if (historyIndex < history.length - 1) {
       const next = history[historyIndex + 1]
       setCurrentFolderId(next.id)
-      setCurrentFolderName(next.name)
       setHistoryIndex(historyIndex + 1)
       setSelectedItemId(null)
       setEditingId(null)
@@ -181,6 +200,158 @@ export function FolderViewer({
     [currentFolderId, onCreateItem]
   )
 
+  const isDescendantOf = useCallback(
+    (possibleDescendantId: string, ancestorId: string) => {
+      let currentParentId = itemById.get(possibleDescendantId)?.parentId ?? null
+      while (currentParentId) {
+        if (currentParentId === ancestorId) return true
+        currentParentId = itemById.get(currentParentId)?.parentId ?? null
+      }
+      return false
+    },
+    [itemById]
+  )
+
+  const canMoveIntoFolder = useCallback(
+    (itemId: string, targetFolderId: string) => {
+      if (itemId === targetFolderId) return false
+      const item = itemById.get(itemId)
+      const target = itemById.get(targetFolderId)
+      if (!item || !target || target.itemType !== "folder") return false
+      if (item.parentId === targetFolderId) return false
+      if (item.itemType === "folder" && isDescendantOf(targetFolderId, itemId)) return false
+      return true
+    },
+    [itemById, isDescendantOf]
+  )
+
+  const getPointTargetInfo = useCallback((x: number, y: number) => {
+    const element = document.elementFromPoint(x, y) as HTMLElement | null
+    const dropzone = element?.closest<HTMLElement>("[data-folder-dropzone-id]")
+    const folderItem = element?.closest<HTMLElement>("[data-folder-item-id]")
+    return {
+      dropzoneId: dropzone?.dataset.folderDropzoneId ?? null,
+      overItem: Boolean(folderItem),
+    }
+  }, [])
+
+  const handleDesktopDragMove = useCallback(
+    (event: Event) => {
+      const detail = (event as CustomEvent<DesktopDragMoveDetail>).detail
+      if (!detail) return
+      const { dropzoneId, overItem } = getPointTargetInfo(detail.x, detail.y)
+      const canDropHere =
+        dropzoneId === currentFolderId &&
+        !overItem &&
+        canMoveIntoFolder(detail.draggedId, currentFolderId)
+      setIsExternalDragOver(canDropHere)
+    },
+    [canMoveIntoFolder, currentFolderId, getPointTargetInfo]
+  )
+
+  const handleDesktopDragEnd = useCallback(
+    (event: Event) => {
+      setIsExternalDragOver(false)
+      const detail = (event as CustomEvent<DesktopDragEndDetail>).detail
+      if (!detail || detail.dropHandled) return
+
+      const { dropzoneId, overItem } = getPointTargetInfo(detail.x, detail.y)
+      if (
+        dropzoneId === currentFolderId &&
+        !overItem &&
+        canMoveIntoFolder(detail.draggedId, currentFolderId)
+      ) {
+        detail.dropHandled = true
+        onMoveItemToFolder(detail.draggedId, currentFolderId)
+      }
+    },
+    [canMoveIntoFolder, currentFolderId, getPointTargetInfo, onMoveItemToFolder]
+  )
+
+  useEffect(() => {
+    window.addEventListener("desktop-drag-move", handleDesktopDragMove)
+    window.addEventListener("desktop-drag-end", handleDesktopDragEnd)
+    return () => {
+      window.removeEventListener("desktop-drag-move", handleDesktopDragMove)
+      window.removeEventListener("desktop-drag-end", handleDesktopDragEnd)
+    }
+  }, [handleDesktopDragEnd, handleDesktopDragMove])
+
+  const handleItemDragStart = useCallback(
+    (e: React.DragEvent, itemId: string) => {
+      if (editingId === itemId) {
+        e.preventDefault()
+        return
+      }
+      setDraggingItemId(itemId)
+      setSelectedItemId(itemId)
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.setData(DESKTOP_ITEM_MIME, itemId)
+      e.dataTransfer.setData("text/plain", itemId)
+      window.dispatchEvent(
+        new CustomEvent("folder-native-drag-start", {
+          detail: { itemId } as FolderNativeDragStartDetail,
+        })
+      )
+    },
+    [editingId]
+  )
+
+  const handleItemDragEnd = useCallback(() => {
+    setDraggingItemId(null)
+    setDragOverTarget(null)
+    window.dispatchEvent(new CustomEvent("folder-native-drag-end"))
+  }, [])
+
+  const getDraggedItemId = useCallback(
+    (e: React.DragEvent) => draggingItemId || e.dataTransfer.getData("text/plain") || null,
+    [draggingItemId]
+  )
+
+  const handleDropToDesktop = useCallback(
+    (e: React.DragEvent) => {
+      const draggedId = getDraggedItemId(e)
+      if (!draggedId) return
+      e.preventDefault()
+      setDragOverTarget(null)
+      onMoveItemOut(draggedId)
+    },
+    [getDraggedItemId, onMoveItemOut]
+  )
+
+  const handleDropToFolder = useCallback(
+    (e: React.DragEvent, targetFolderId: string) => {
+      const draggedId = getDraggedItemId(e)
+      if (!draggedId || !canMoveIntoFolder(draggedId, targetFolderId)) return
+      e.preventDefault()
+      setDragOverTarget(null)
+      onMoveItemToFolder(draggedId, targetFolderId)
+    },
+    [canMoveIntoFolder, getDraggedItemId, onMoveItemToFolder]
+  )
+
+  const handleDragOverDropTarget = useCallback(
+    (e: React.DragEvent, target: string | "desktop") => {
+      const draggedId = getDraggedItemId(e)
+      if (!draggedId) return
+
+      const canDrop =
+        target === "desktop"
+          ? Boolean(itemById.get(draggedId)?.parentId)
+          : canMoveIntoFolder(draggedId, target)
+      if (!canDrop) return
+
+      e.preventDefault()
+      e.dataTransfer.dropEffect = "move"
+      setDragOverTarget(target)
+    },
+    [canMoveIntoFolder, getDraggedItemId, itemById]
+  )
+
+  const handleDragLeaveDropTarget = useCallback(() => {
+    setDragOverTarget((prev) => (prev ? null : prev))
+  }, [])
+
   const iconConfig = (type: DesktopItemType) => FILE_ICON_MAP[type] || FILE_ICON_MAP.generic
   const Icon = (type: DesktopItemType) => iconConfig(type).icon
 
@@ -207,15 +378,35 @@ export function FolderViewer({
           <ChevronRight className="h-4 w-4 text-[#555]" />
         </button>
 
-        {/* Breadcrumbs */}
+        {/* Breadcrumbs + drop targets */}
         <div className="flex flex-1 items-center gap-1 overflow-hidden text-[12px] text-[#666]">
+          <button
+            onDragOver={(e) => handleDragOverDropTarget(e, "desktop")}
+            onDrop={handleDropToDesktop}
+            onDragLeave={handleDragLeaveDropTarget}
+            className={`truncate rounded px-1 py-0.5 transition-colors ${
+              dragOverTarget === "desktop"
+                ? "bg-[#0058d0]/15 text-[#0058d0]"
+                : "text-[#666] hover:bg-black/5"
+            }`}
+          >
+            Desktop
+          </button>
+          {breadcrumbs.length > 0 && <ChevronRight className="h-3 w-3 flex-shrink-0 text-[#999]" />}
           {breadcrumbs.map((crumb, i) => (
             <span key={crumb.id} className="flex items-center gap-1">
               {i > 0 && <ChevronRight className="h-3 w-3 flex-shrink-0 text-[#999]" />}
               <button
                 onClick={() => navigateTo(crumb.id, crumb.name)}
+                onDragOver={(e) => handleDragOverDropTarget(e, crumb.id)}
+                onDrop={(e) => handleDropToFolder(e, crumb.id)}
+                onDragLeave={handleDragLeaveDropTarget}
                 className={`truncate rounded px-1 py-0.5 transition-colors hover:bg-black/5 ${
-                  crumb.id === currentFolderId ? "font-medium text-[#333]" : "text-[#666]"
+                  dragOverTarget === crumb.id
+                    ? "bg-[#0058d0]/15 text-[#0058d0]"
+                    : crumb.id === currentFolderId
+                      ? "font-medium text-[#333]"
+                      : "text-[#666]"
                 }`}
               >
                 {crumb.name}
@@ -239,7 +430,13 @@ export function FolderViewer({
 
       {/* Content Area */}
       <div
+        ref={contentRef}
+        data-folder-dropzone-id={currentFolderId}
         className="flex-1 overflow-auto p-3"
+        style={{
+          boxShadow: isExternalDragOver ? "inset 0 0 0 2px rgba(0,88,208,0.35)" : undefined,
+          background: isExternalDragOver ? "rgba(0,88,208,0.06)" : undefined,
+        }}
         onClick={() => {
           setSelectedItemId(null)
           setEditingId(null)
@@ -259,11 +456,13 @@ export function FolderViewer({
               return (
                 <div
                   key={item.id}
+                  data-folder-item-id={item.id}
+                  draggable={editingId !== item.id}
                   className={`flex w-[90px] flex-col items-center gap-1 rounded-lg p-2 cursor-default transition-colors ${
                     selectedItemId === item.id
                       ? "bg-[#0058d0]/10"
                       : "hover:bg-black/[0.04]"
-                  }`}
+                  } ${draggingItemId === item.id ? "opacity-60" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation()
                     setSelectedItemId(item.id)
@@ -277,6 +476,8 @@ export function FolderViewer({
                     setSelectedItemId(item.id)
                     setContextMenu({ x: e.clientX, y: e.clientY })
                   }}
+                  onDragStart={(e) => handleItemDragStart(e, item.id)}
+                  onDragEnd={handleItemDragEnd}
                 >
                   <div className="flex h-[52px] w-[52px] items-center justify-center">
                     <IconComp
@@ -334,6 +535,8 @@ export function FolderViewer({
                 return (
                   <tr
                     key={item.id}
+                    data-folder-item-id={item.id}
+                    draggable={editingId !== item.id}
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedItemId(item.id)
@@ -346,7 +549,9 @@ export function FolderViewer({
                       selectedItemId === item.id
                         ? "bg-[#0058d0] text-white"
                         : "hover:bg-black/[0.04] text-[#333]"
-                    }`}
+                    } ${draggingItemId === item.id ? "opacity-60" : ""}`}
+                    onDragStart={(e) => handleItemDragStart(e, item.id)}
+                    onDragEnd={handleItemDragEnd}
                   >
                     <td className="flex items-center gap-2 py-1.5 pl-4">
                       <IconComp

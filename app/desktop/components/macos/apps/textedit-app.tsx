@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "reac
 import dynamic from "next/dynamic"
 import { Loader2 } from "lucide-react"
 import { filesApi } from "@/lib/api/modules/files"
+import {
+  clearTextEditorContentCache,
+  markTextEditorClosed,
+  markTextEditorReady,
+  setTextEditorContentCache,
+  TEXTEDIT_WRITE_EVENT,
+  type TextEditWriteEventDetail,
+} from "@/lib/textedit-content"
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false })
 
@@ -21,6 +29,7 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
   const latestContentRef = useRef("")
   const loadedRef = useRef(false)
   const dirtyRef = useRef(false)
+  const externalWriteDuringLoadRef = useRef(false)
 
   // Load file content
   useEffect(() => {
@@ -30,11 +39,15 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
       setError(null)
       loadedRef.current = false
       dirtyRef.current = false
+      externalWriteDuringLoadRef.current = false
       try {
         const data = await filesApi.getContent(fileId)
         if (!cancelled) {
-          setContent(data.content)
-          latestContentRef.current = data.content
+          if (!externalWriteDuringLoadRef.current) {
+            setContent(data.content)
+            latestContentRef.current = data.content
+            setTextEditorContentCache(fileId, data.content)
+          }
           loadedRef.current = true
         }
       } catch (err) {
@@ -56,6 +69,7 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     setSaving(true)
     try {
       await filesApi.updateContent(fileId, text)
+      setTextEditorContentCache(fileId, text)
       if (latestContentRef.current === text) {
         dirtyRef.current = false
       }
@@ -66,6 +80,17 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     }
   }, [fileId])
 
+  const scheduleSave = useCallback((text: string) => {
+    if (!loadedRef.current) return
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+    saveTimerRef.current = setTimeout(() => {
+      saveContent(text)
+    }, 1000)
+  }, [saveContent])
+
   const handleChange = useCallback((value?: string, event?: ChangeEvent<HTMLTextAreaElement>) => {
     if (value === undefined && !event) return
     const text = value ?? ""
@@ -74,16 +99,49 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
 
     setContent(text)
     latestContentRef.current = text
+    setTextEditorContentCache(fileId, text)
     dirtyRef.current = loadedRef.current
 
-    // Debounced save
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current)
+    scheduleSave(text)
+  }, [fileId, scheduleSave])
+
+  // Receive external writes from frontend tools
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleExternalWrite = (event: Event) => {
+      const customEvent = event as CustomEvent<TextEditWriteEventDetail>
+      const detail = customEvent.detail
+      if (!detail || detail.fileId !== fileId) {
+        return
+      }
+
+      const nextContent = detail.content ?? ""
+      if (nextContent === latestContentRef.current) {
+        return
+      }
+
+      externalWriteDuringLoadRef.current = true
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+
+      setContent(nextContent)
+      latestContentRef.current = nextContent
+      setTextEditorContentCache(fileId, nextContent)
+      loadedRef.current = true
+      dirtyRef.current = true
+      scheduleSave(nextContent)
     }
-    saveTimerRef.current = setTimeout(() => {
-      saveContent(text)
-    }, 1000)
-  }, [saveContent])
+
+    window.addEventListener(TEXTEDIT_WRITE_EVENT, handleExternalWrite)
+    markTextEditorReady(fileId)
+    return () => {
+      window.removeEventListener(TEXTEDIT_WRITE_EVENT, handleExternalWrite)
+      markTextEditorClosed(fileId)
+    }
+  }, [fileId, scheduleSave])
 
   // Save on unmount
   useEffect(() => {
@@ -95,6 +153,7 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
       if (loadedRef.current && dirtyRef.current) {
         filesApi.updateContent(fileId, latestContentRef.current).catch(() => {})
       }
+      clearTextEditorContentCache(fileId)
     }
   }, [fileId])
 

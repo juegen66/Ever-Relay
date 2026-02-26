@@ -1,36 +1,53 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import type { AppId } from "./types"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
-interface DockItem {
-  id: AppId
+interface DockItemBase {
   name: string
   iconLetter: string
   color: string
+  separatorBefore?: boolean
 }
 
+interface DockAppItem extends DockItemBase {
+  kind: "app"
+  id: AppId
+}
+
+interface DockRouteItem extends DockItemBase {
+  kind: "route"
+  id: "copilot-chat"
+  href: "/desktop/chat"
+}
+
+type DockItem = DockAppItem | DockRouteItem
+
 const DOCK_ITEMS: DockItem[] = [
-  { id: "finder", name: "Finder", iconLetter: "F", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
-  { id: "safari", name: "Safari", iconLetter: "S", color: "linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)" },
-  { id: "mail", name: "Mail", iconLetter: "M", color: "linear-gradient(135deg, #4da3ff 0%, #007aff 100%)" },
-  { id: "messages", name: "Messages", iconLetter: "M", color: "linear-gradient(135deg, #5ff05f 0%, #34c759 100%)" },
-  { id: "maps", name: "Maps", iconLetter: "M", color: "linear-gradient(135deg, #4cd964 0%, #30b050 100%)" },
-  { id: "photos", name: "Photos", iconLetter: "P", color: "linear-gradient(135deg, #ff6b6b 0%, #ee3a3a 100%)" },
-  { id: "music", name: "Music", iconLetter: "M", color: "linear-gradient(135deg, #fc3c44 0%, #d42030 100%)" },
-  { id: "notes", name: "Notes", iconLetter: "N", color: "linear-gradient(135deg, #fddb4a 0%, #e8b800 100%)" },
-  { id: "calendar", name: "Calendar", iconLetter: "", color: "#fff" },
-  { id: "weather", name: "Weather", iconLetter: "W", color: "linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%)" },
-  { id: "canvas", name: "Canvas", iconLetter: "C", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
-  { id: "clock", name: "Clock", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #222 100%)" },
-  { id: "calculator", name: "Calculator", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #333 100%)" },
-  { id: "terminal", name: "Terminal", iconLetter: ">_", color: "linear-gradient(135deg, #1a1a2e 0%, #000 100%)" },
-  { id: "appstore", name: "App Store", iconLetter: "A", color: "linear-gradient(135deg, #0d84ff 0%, #0055cc 100%)" },
-  { id: "settings", name: "System Settings", iconLetter: "S", color: "linear-gradient(135deg, #8e8e93 0%, #636366 100%)" },
+  { kind: "app", id: "finder", name: "Finder", iconLetter: "F", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
+  { kind: "app", id: "safari", name: "Safari", iconLetter: "S", color: "linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)" },
+  { kind: "app", id: "mail", name: "Mail", iconLetter: "M", color: "linear-gradient(135deg, #4da3ff 0%, #007aff 100%)" },
+  { kind: "app", id: "messages", name: "Messages", iconLetter: "M", color: "linear-gradient(135deg, #5ff05f 0%, #34c759 100%)" },
+  { kind: "app", id: "maps", name: "Maps", iconLetter: "M", color: "linear-gradient(135deg, #4cd964 0%, #30b050 100%)" },
+  { kind: "app", id: "photos", name: "Photos", iconLetter: "P", color: "linear-gradient(135deg, #ff6b6b 0%, #ee3a3a 100%)" },
+  { kind: "app", id: "music", name: "Music", iconLetter: "M", color: "linear-gradient(135deg, #fc3c44 0%, #d42030 100%)" },
+  { kind: "app", id: "notes", name: "Notes", iconLetter: "N", color: "linear-gradient(135deg, #fddb4a 0%, #e8b800 100%)" },
+  { kind: "app", id: "calendar", name: "Calendar", iconLetter: "", color: "#fff" },
+  { kind: "app", id: "weather", name: "Weather", iconLetter: "W", color: "linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%)" },
+  { kind: "app", id: "canvas", name: "Canvas", iconLetter: "C", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
+  { kind: "app", id: "clock", name: "Clock", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #222 100%)" },
+  { kind: "app", id: "calculator", name: "Calculator", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #333 100%)" },
+  { kind: "app", id: "terminal", name: "Terminal", iconLetter: ">_", color: "linear-gradient(135deg, #1a1a2e 0%, #000 100%)" },
+  { kind: "app", id: "appstore", name: "App Store", iconLetter: "A", color: "linear-gradient(135deg, #0d84ff 0%, #0055cc 100%)" },
+  { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", iconLetter: "AI", color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
+  { kind: "app", id: "settings", name: "System Settings", iconLetter: "S", color: "linear-gradient(135deg, #8e8e93 0%, #636366 100%)", separatorBefore: true },
 ]
 
 export function Dock() {
+  const router = useRouter()
+  const pathname = usePathname()
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const openWindows = useDesktopWindowStore((state) => state.windows)
   const bouncingApp = useDesktopWindowStore((state) => state.bouncingApp)
@@ -54,7 +71,7 @@ export function Dock() {
     if (mouseX === null || !dockRef.current) return 1
     const itemWidth = 52
     const padding = 10
-    const separatorsBefore = index > DOCK_ITEMS.length - 2 ? 1 : 0
+    const separatorsBefore = DOCK_ITEMS.slice(0, index + 1).filter((item) => item.separatorBefore).length
     const itemCenter = index * (itemWidth + 4) + itemWidth / 2 + padding + separatorsBefore * 12
     const distance = Math.abs(mouseX - itemCenter)
     const maxDist = 100
@@ -96,10 +113,11 @@ export function Dock() {
       >
         {DOCK_ITEMS.map((item, index) => {
           const scale = getScale(index)
-          const isOpen = openWindows.some((w) => w.appId === item.id)
+          const isOpen = item.kind === "app"
+            ? openWindows.some((w) => w.appId === item.id)
+            : pathname === item.href
 
-          // Separator before settings (last item)
-          const showSeparator = index === DOCK_ITEMS.length - 1
+          const showSeparator = Boolean(item.separatorBefore)
 
           return (
             <div key={item.id} className="flex items-end">
@@ -122,26 +140,32 @@ export function Dock() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (item.kind === "route") {
+                      router.push(pathname === item.href ? "/desktop" : item.href)
+                      return
+                    }
                     openApp(item.id)
                   }}
-                  className={`flex h-11 w-11 items-center justify-center rounded-[11px] shadow-lg active:brightness-90 ${bouncingApp === item.id ? "dock-bounce" : ""}`}
+                  className={`flex h-11 w-11 items-center justify-center rounded-[11px] shadow-lg active:brightness-90 ${
+                    item.kind === "app" && bouncingApp === item.id ? "dock-bounce" : ""
+                  }`}
                   style={{
-                    background: item.id === "calendar" ? "#fff" : item.color,
+                    background: item.kind === "app" && item.id === "calendar" ? "#fff" : item.color,
                     transform: `scale(${scale}) translateY(${(scale - 1) * -16}px)`,
                     transformOrigin: "bottom",
                     transition: mouseX !== null ? "none" : "transform 0.2s ease-out",
-                    border: item.id === "calendar" ? "0.5px solid rgba(0,0,0,0.1)" : undefined,
+                    border: item.kind === "app" && item.id === "calendar" ? "0.5px solid rgba(0,0,0,0.1)" : undefined,
                   }}
                   aria-label={`Open ${item.name}`}
                 >
-                  {item.id === "calendar" ? (
+                  {item.kind === "app" && item.id === "calendar" ? (
                     <div className="flex flex-col items-center leading-none">
                       <span className="text-[9px] font-bold text-[#ff3b30]">{dayOfWeek}</span>
                       <span className="text-[22px] font-light text-[#333] -mt-0.5">{dayOfMonth}</span>
                     </div>
-                  ) : item.id === "terminal" ? (
+                  ) : item.kind === "app" && item.id === "terminal" ? (
                     <span className="font-mono text-[14px] font-bold text-white">{">_"}</span>
-                  ) : item.id === "settings" ? (
+                  ) : item.kind === "app" && item.id === "settings" ? (
                     <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                       <circle cx="12" cy="12" r="3" />
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />

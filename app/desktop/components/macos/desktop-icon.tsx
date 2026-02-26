@@ -28,6 +28,19 @@ interface DesktopIconProps {
   allDesktopItems?: DesktopFolder[]
 }
 
+type DesktopDragMoveDetail = {
+  draggedId: string
+  x: number
+  y: number
+}
+
+type DesktopDragEndDetail = {
+  draggedId: string
+  x: number
+  y: number
+  dropHandled: boolean
+}
+
 const FILE_ICON_MAP: Record<DesktopItemType, { icon: typeof File; fillClass: string; textClass: string }> = {
   folder: { icon: Folder, fillClass: "fill-[#56a3f8]", textClass: "text-[#2d87f3]" },
   text: { icon: FileText, fillClass: "", textClass: "text-[#5ac8fa]" },
@@ -124,7 +137,7 @@ export function DesktopIcon({
       // Dispatch custom event so other icons can detect hover
       window.dispatchEvent(
         new CustomEvent("desktop-drag-move", {
-          detail: { draggedId: folder.id, x: ev.clientX, y: ev.clientY },
+          detail: { draggedId: folder.id, x: ev.clientX, y: ev.clientY } as DesktopDragMoveDetail,
         })
       )
     }
@@ -136,16 +149,22 @@ export function DesktopIcon({
 
       const finalX = ev.clientX - dragOffset.current.x
       const finalY = ev.clientY - dragOffset.current.y
-      if (didDrag) {
-        // Ensure UI and backend settle on the exact drop point.
-        onMove(folder.id, finalX, finalY)
-        onMoveEnd(folder.id, finalX, finalY)
+      if (!didDrag) {
+        window.dispatchEvent(new CustomEvent("desktop-drag-end"))
+        return
       }
 
-      // Check if dropped on a folder
-      if (didDrag && onMoveIntoFolder && allDesktopItems) {
-        const dropX = ev.clientX
-        const dropY = ev.clientY
+      // Allow folder viewer windows to consume this drop first.
+      const dragEndDetail: DesktopDragEndDetail = {
+        draggedId: folder.id,
+        x: ev.clientX,
+        y: ev.clientY,
+        dropHandled: false,
+      }
+      window.dispatchEvent(new CustomEvent("desktop-drag-end", { detail: dragEndDetail }))
+
+      // Check if dropped on a desktop folder icon when no window consumed the drop.
+      if (!dragEndDetail.dropHandled && onMoveIntoFolder && allDesktopItems) {
         const targetFolder = allDesktopItems.find((item) => {
           if (item.id === folder.id || item.itemType !== "folder") return false
           const rect = {
@@ -154,15 +173,19 @@ export function DesktopIcon({
             right: item.x + 90,
             bottom: item.y + 90,
           }
-          return dropX >= rect.left && dropX <= rect.right && dropY >= rect.top && dropY <= rect.bottom
+          return ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom
         })
         if (targetFolder) {
+          dragEndDetail.dropHandled = true
           onMoveIntoFolder(folder.id, targetFolder.id)
         }
       }
 
-      // Clear drop target on all icons
-      window.dispatchEvent(new CustomEvent("desktop-drag-end"))
+      if (!dragEndDetail.dropHandled) {
+        // Ensure UI and backend settle on the exact drop point only when item stays on desktop.
+        onMove(folder.id, finalX, finalY)
+        onMoveEnd(folder.id, finalX, finalY)
+      }
     }
 
     window.addEventListener("mousemove", handleMouseMove)
@@ -174,7 +197,8 @@ export function DesktopIcon({
     if (!isFolder) return
 
     const handleDragMove = (e: Event) => {
-      const detail = (e as CustomEvent).detail
+      const detail = (e as CustomEvent<DesktopDragMoveDetail>).detail
+      if (!detail) return
       if (detail.draggedId === folder.id) return
       const rect = {
         left: folder.x,

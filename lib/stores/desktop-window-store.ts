@@ -31,6 +31,31 @@ function getViewportSize() {
   return { width: window.innerWidth, height: window.innerHeight }
 }
 
+function getDesktopViewportSize() {
+  const { width, height } = getViewportSize()
+  const { copilotSidebarOpen } = useDesktopUIStore.getState()
+  const sidebarInset = copilotSidebarOpen && width >= 640 ? width * 0.25 : 0
+
+  return {
+    width: Math.max(320, width - sidebarInset),
+    height,
+  }
+}
+
+function getInitialWindowBounds(
+  desiredWidth: number,
+  desiredHeight: number,
+  offset: number
+) {
+  const { width: viewW, height: viewH } = getDesktopViewportSize()
+  const width = Math.min(desiredWidth, Math.max(300, viewW - 24))
+  const height = Math.min(desiredHeight, Math.max(200, viewH - 24))
+  const x = Math.max(0, Math.min((viewW - width) / 2 + offset, viewW - width))
+  const y = Math.max(0, Math.min((viewH - height) / 2 - 60 + offset, viewH - height))
+
+  return { x, y, width, height }
+}
+
 interface DesktopWindowStore {
   windows: WindowState[]
   nextZIndex: number
@@ -45,6 +70,7 @@ interface DesktopWindowStore {
   maximizeWindow: (id: string) => void
   updateWindowPosition: (id: string, x: number, y: number) => void
   updateWindowSize: (id: string, width: number, height: number) => void
+  fitWindowsToViewport: () => void
   clearActiveWindow: () => void
 }
 
@@ -83,14 +109,11 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     const size = DEFAULT_WINDOW_SIZE[appId] || { w: 600, h: 400 }
     const id = `${appId}-${Date.now()}`
     const offset = (windows.length % 6) * 28
-    const { width: viewW, height: viewH } = getViewportSize()
+    const bounds = getInitialWindowBounds(size.w, size.h, offset)
     const newWindow: WindowState = {
       id,
       appId,
-      x: Math.max(40, (viewW - size.w) / 2 + offset),
-      y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
-      width: size.w,
-      height: size.h,
+      ...bounds,
       zIndex: nextZIndex,
       minimized: false,
       maximized: false,
@@ -116,14 +139,11 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     const size = DEFAULT_WINDOW_SIZE.finder
     const id = `finder-folder-${Date.now()}`
     const offset = (windows.length % 6) * 28
-    const { width: viewW, height: viewH } = getViewportSize()
+    const bounds = getInitialWindowBounds(size.w, size.h, offset)
     const newWindow: WindowState = {
       id,
       appId: "finder",
-      x: Math.max(40, (viewW - size.w) / 2 + offset),
-      y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
-      width: size.w,
-      height: size.h,
+      ...bounds,
       zIndex: nextZIndex,
       minimized: false,
       maximized: false,
@@ -151,14 +171,11 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     const size = DEFAULT_WINDOW_SIZE.textedit
     const id = `textedit-file-${Date.now()}`
     const offset = (windows.length % 6) * 28
-    const { width: viewW, height: viewH } = getViewportSize()
+    const bounds = getInitialWindowBounds(size.w, size.h, offset)
     const newWindow: WindowState = {
       id,
       appId: "textedit",
-      x: Math.max(40, (viewW - size.w) / 2 + offset),
-      y: Math.max(40, (viewH - size.h) / 2 - 60 + offset),
-      width: size.w,
-      height: size.h,
+      ...bounds,
       zIndex: nextZIndex,
       minimized: false,
       maximized: false,
@@ -223,5 +240,34 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     set((state) => ({
       windows: state.windows.map((w) => (w.id === id ? { ...w, width, height } : w)),
     })),
+  fitWindowsToViewport: () =>
+    set((state) => {
+      const { width: viewW, height: viewH } = getDesktopViewportSize()
+
+      return {
+        windows: state.windows.map((w) => {
+          if (w.maximized) {
+            return w
+          }
+
+          const width = Math.min(w.width, Math.max(300, viewW - 24))
+          const height = Math.min(w.height, Math.max(200, viewH - 24))
+          const x = Math.max(0, Math.min(w.x, viewW - width))
+          const y = Math.max(0, Math.min(w.y, viewH - height))
+
+          if (x === w.x && y === w.y && width === w.width && height === w.height) {
+            return w
+          }
+
+          return {
+            ...w,
+            x,
+            y,
+            width,
+            height,
+          }
+        }),
+      }
+    }),
   clearActiveWindow: () => set({ activeWindowId: null }),
 }))

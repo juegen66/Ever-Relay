@@ -464,7 +464,7 @@ export default function RegisterPage() {
 
                   {/* Log in Button */}
                   <Link
-                    href="/desktop"
+                    href="/login"
                     className="flex w-full items-center justify-center rounded-xl border border-[#34c759] py-3.5 text-[15px] font-semibold text-[#34c759] transition-all hover:bg-[#34c759]/[0.04] active:scale-[0.99]"
                   >
                     Log in

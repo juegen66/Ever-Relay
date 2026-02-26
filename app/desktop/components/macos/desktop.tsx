@@ -1,19 +1,22 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
 import { Dock } from "./dock"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
 import { DesktopIcon } from "./desktop-icon"
 import { Spotlight } from "./spotlight"
-import { BootScreen } from "./boot-screen"
 import { Launchpad } from "./launchpad"
 import { AboutMac } from "./about-mac"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
-import { useUserStore } from "@/lib/stores/user-store"
+
+type FolderNativeDragStartDetail = {
+  itemId: string
+}
 
 const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
   { app: "Mail", title: "New Email", message: "Sarah Johnson: Q1 Report Review - I've attached the Q1 report for your review...", time: "now", iconColor: "#007aff" },
@@ -22,6 +25,8 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 ]
 
 export function Desktop() {
+  const pathname = usePathname()
+  const isFullscreenChatRoute = pathname === "/desktop/chat"
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
   const openApp = useDesktopWindowStore((state) => state.openApp)
@@ -34,6 +39,7 @@ export function Desktop() {
   const updateWindowPosition = useDesktopWindowStore((state) => state.updateWindowPosition)
   const updateWindowSize = useDesktopWindowStore((state) => state.updateWindowSize)
   const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
+  const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const selectedFolderId = useDesktopItemsStore((state) => state.selectedFolderId)
@@ -45,12 +51,12 @@ export function Desktop() {
   const renameItem = useDesktopItemsStore((state) => state.renameItem)
   const moveItem = useDesktopItemsStore((state) => state.moveItem)
   const persistItemPosition = useDesktopItemsStore((state) => state.persistItemPosition)
+  const moveItemToFolder = useDesktopItemsStore((state) => state.moveItemToFolder)
   const moveIntoFolder = useDesktopItemsStore((state) => state.moveIntoFolder)
   const moveItemToDesktop = useDesktopItemsStore((state) => state.moveItemToDesktop)
+  const moveItemToDesktopAt = useDesktopItemsStore((state) => state.moveItemToDesktopAt)
   const createItemInFolder = useDesktopItemsStore((state) => state.createItemInFolder)
   const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
-  const loading = useDesktopItemsStore((state) => state.loading)
-
   const contextMenu = useDesktopUIStore((state) => state.contextMenu)
   const setContextMenu = useDesktopUIStore((state) => state.setContextMenu)
   const closeContextMenu = useDesktopUIStore((state) => state.closeContextMenu)
@@ -61,42 +67,42 @@ export function Desktop() {
   const toggleSpotlight = useDesktopUIStore((state) => state.toggleSpotlight)
   const closeTransientUi = useDesktopUIStore((state) => state.closeTransientUi)
 
-  const setCurrentUser = useUserStore((state) => state.setCurrentUser)
-
-  const [booted, setBooted] = useState(false)
   const [desktopReady, setDesktopReady] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const desktopRef = useRef<HTMLDivElement>(null)
   const notificationQueueRef = useRef<Omit<NotificationItem, "id">[]>([])
+  const activeNativeDragItemIdRef = useRef<string | null>(null)
+  const desktopItemsRef = useRef(desktopFolders)
+  const moveItemToDesktopAtRef = useRef(moveItemToDesktopAt)
 
-  // Fetch desktop items when booted
+  // Fetch desktop items once desktop shell is mounted.
   useEffect(() => {
-    if (booted) {
-      fetchItems()
-    }
-  }, [booted, fetchItems])
+    fetchItems()
+  }, [fetchItems])
 
   useEffect(() => {
-    if (booted) {
-      setTimeout(() => setDesktopReady(true), 100)
-      notificationQueueRef.current = [...STARTUP_NOTIFICATIONS]
-      const showNext = (delay: number) => {
-        setTimeout(() => {
-          const next = notificationQueueRef.current.shift()
-          if (next) {
-            setNotifications((prev) => [...prev, { ...next, id: String(Date.now()) }])
-            if (notificationQueueRef.current.length > 0) {
-              showNext(6000)
-            }
+    setTimeout(() => setDesktopReady(true), 100)
+    notificationQueueRef.current = [...STARTUP_NOTIFICATIONS]
+    const showNext = (delay: number) => {
+      setTimeout(() => {
+        const next = notificationQueueRef.current.shift()
+        if (next) {
+          setNotifications((prev) => [...prev, { ...next, id: String(Date.now()) }])
+          if (notificationQueueRef.current.length > 0) {
+            showNext(6000)
           }
-        }, delay)
-      }
-      showNext(2000)
+        }
+      }, delay)
     }
-  }, [booted])
+    showNext(2000)
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isFullscreenChatRoute) {
+        return
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === " ") {
         e.preventDefault()
         toggleSpotlight()
@@ -108,7 +114,88 @@ export function Desktop() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSpotlight, closeTransientUi])
+  }, [toggleSpotlight, closeTransientUi, isFullscreenChatRoute])
+
+  useEffect(() => {
+    const handleResize = () => {
+      fitWindowsToViewport()
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [fitWindowsToViewport])
+
+  useEffect(() => {
+    const handleNativeDragStart = (event: Event) => {
+      const detail = (event as CustomEvent<FolderNativeDragStartDetail>).detail
+      activeNativeDragItemIdRef.current = detail?.itemId ?? null
+    }
+
+    const handleNativeDragEnd = () => {
+      activeNativeDragItemIdRef.current = null
+    }
+
+    window.addEventListener("folder-native-drag-start", handleNativeDragStart)
+    window.addEventListener("folder-native-drag-end", handleNativeDragEnd)
+    return () => {
+      window.removeEventListener("folder-native-drag-start", handleNativeDragStart)
+      window.removeEventListener("folder-native-drag-end", handleNativeDragEnd)
+    }
+  }, [])
+
+  useEffect(() => {
+    desktopItemsRef.current = desktopFolders
+    moveItemToDesktopAtRef.current = moveItemToDesktopAt
+  }, [desktopFolders, moveItemToDesktopAt])
+
+  useEffect(() => {
+    const isDesktopBackgroundTarget = (x: number, y: number) => {
+      const desktopEl = desktopRef.current
+      if (!desktopEl) return false
+
+      const element = document.elementFromPoint(x, y) as HTMLElement | null
+      if (!element) return false
+      if (!desktopEl.contains(element)) return false
+
+      // Ignore drops inside folder viewer content; those are handled by FolderViewer.
+      if (element.closest("[data-folder-dropzone-id]")) return false
+      // Ignore drops over any app window chrome/content.
+      if (element.closest(".animate-window-open")) return false
+      return true
+    }
+
+    const handleWindowDragOver = (event: DragEvent) => {
+      const itemId = activeNativeDragItemIdRef.current
+      if (!itemId || !isDesktopBackgroundTarget(event.clientX, event.clientY)) return
+
+      const item = desktopItemsRef.current.find((f) => f.id === itemId)
+      if (!item || !item.parentId) return
+
+      event.preventDefault()
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move"
+      }
+    }
+
+    const handleWindowDrop = (event: DragEvent) => {
+      const itemId = activeNativeDragItemIdRef.current
+      if (!itemId || !isDesktopBackgroundTarget(event.clientX, event.clientY)) return
+
+      const item = desktopItemsRef.current.find((f) => f.id === itemId)
+      if (!item || !item.parentId) return
+
+      event.preventDefault()
+      moveItemToDesktopAtRef.current(itemId, event.clientX, event.clientY)
+      activeNativeDragItemIdRef.current = null
+    }
+
+    window.addEventListener("dragover", handleWindowDragOver)
+    window.addEventListener("drop", handleWindowDrop)
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver)
+      window.removeEventListener("drop", handleWindowDrop)
+    }
+  }, [])
 
   const dismissNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
@@ -122,6 +209,7 @@ export function Desktop() {
     onDeleteItem: deleteItem,
     onRenameItem: renameItem,
     onMoveItemOut: moveItemToDesktop,
+    onMoveItemToFolder: moveItemToFolder,
   }
 
   const rootDesktopItems = desktopFolders.filter((item) => !item.parentId)
@@ -137,14 +225,11 @@ export function Desktop() {
     clearSelection()
   }, [closeContextMenu, clearActiveWindow, clearSelection])
 
-  if (!booted) {
-    return <BootScreen onComplete={(user) => { setCurrentUser(user); setBooted(true) }} />
-  }
-
   return (
     <div
       ref={desktopRef}
-      className="desktop-container relative h-screen w-screen overflow-hidden select-none"
+      data-desktop-root
+      className="desktop-container relative h-screen w-full overflow-hidden select-none"
       style={{
         backgroundImage: "url(/images/wallpaper.jpg)",
         backgroundSize: "cover",

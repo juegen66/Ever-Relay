@@ -29,9 +29,10 @@ type BootPhase = "boot" | "login" | "logging-in"
 
 interface BootScreenProps {
   onComplete: (user: DesktopUser) => void
+  callbackURL?: string
 }
 
-export function BootScreen({ onComplete }: BootScreenProps) {
+export function BootScreen({ onComplete, callbackURL = "/desktop" }: BootScreenProps) {
   const router = useRouter()
   const [phase, setPhase] = useState<BootPhase>("boot")
   const [progress, setProgress] = useState(0)
@@ -151,7 +152,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
         email: normalizedEmail,
         password,
         rememberMe: true,
-        callbackURL: "/desktop",
+        callbackURL,
       })
 
       if (signInError) {
@@ -182,7 +183,7 @@ export function BootScreen({ onComplete }: BootScreenProps) {
     try {
       const { error: socialError } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/desktop",
+        callbackURL,
       })
 
       if (socialError) {

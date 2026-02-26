@@ -10,6 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Lint Code**: `pnpm lint`
 - **Install Dependencies**: `pnpm install`
 
+### Mastra Commands
+- **Start Mastra API (Dev Server)**: `pnpm mastra:dev` (serves Mastra API on port `4111`)
+- **Start Mastra Studio**: `pnpm mastra:studio` (Studio UI on port `4112`, connected to API port `4111`)
+- **Startup Order**: run `pnpm mastra:dev` first, then `pnpm mastra:studio`
+
 ### Database Commands (Drizzle & PostgreSQL)
 - **Generate Migrations**: `pnpm db:generate`
 - **Apply Migrations**: `pnpm db:migrate`
