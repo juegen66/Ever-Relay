@@ -4,6 +4,7 @@ import { loggerMiddleware } from "@/server/middlewares/logger"
 import { requestIdMiddleware } from "@/server/middlewares/request-id"
 import { registerAuthRoutes } from "@/server/modules/auth/auth.route"
 import { registerCanvasRoutes } from "@/server/modules/canvas/canvas.route"
+import { registerCopilotRoutes } from "@/server/modules/copilot/copilot.route"
 import { registerFilesRoutes } from "@/server/modules/files/files.route"
 import { registerHealthRoutes } from "@/server/modules/health/health.route"
 import { registerImageProcessingRoutes } from "@/server/modules/image-processing/image-processing.route"
@@ -17,6 +18,7 @@ serverApp.use("*", loggerMiddleware)
 
 registerAuthRoutes(serverApp)
 registerCanvasRoutes(serverApp)
+registerCopilotRoutes(serverApp)
 registerFilesRoutes(serverApp)
 registerHealthRoutes(serverApp)
 registerImageProcessingRoutes(serverApp)
