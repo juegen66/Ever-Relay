@@ -18,6 +18,7 @@ import { MapsApp } from "./apps/maps-app"
 import { AppStoreApp } from "./apps/appstore-app"
 import { MessagesApp } from "./apps/messages-app"
 import { CanvasApp } from "./apps/canvas-app"
+import { VibecodingApp } from "./apps/vibecoding-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { TextEditApp } from "./apps/textedit-app"
 import type { DesktopFolder, DesktopItemType } from "./desktop-icon"
@@ -39,6 +40,7 @@ const APP_TITLES: Record<string, string> = {
   appstore: "App Store",
   messages: "Messages",
   canvas: "Canvas",
+  vibecoding: "vibecoding",
   textedit: "TextEdit",
 }
 
@@ -59,6 +61,7 @@ const APP_COMPONENTS: Record<string, React.ComponentType> = {
   appstore: AppStoreApp,
   messages: MessagesApp,
   canvas: CanvasApp,
+  vibecoding: VibecodingApp,
 }
 
 // Dark title bar apps

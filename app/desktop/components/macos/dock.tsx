@@ -19,8 +19,8 @@ interface DockAppItem extends DockItemBase {
 
 interface DockRouteItem extends DockItemBase {
   kind: "route"
-  id: "copilot-chat"
-  href: "/desktop/chat"
+  id: "copilot-chat" | "workflow-dashboard"
+  href: "/desktop/chat" | "/desktop/workflow"
 }
 
 type DockItem = DockAppItem | DockRouteItem
@@ -37,11 +37,13 @@ const DOCK_ITEMS: DockItem[] = [
   { kind: "app", id: "calendar", name: "Calendar", iconLetter: "", color: "#fff" },
   { kind: "app", id: "weather", name: "Weather", iconLetter: "W", color: "linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%)" },
   { kind: "app", id: "canvas", name: "Canvas", iconLetter: "C", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
+  { kind: "app", id: "vibecoding", name: "vibecoding", iconLetter: "V", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
   { kind: "app", id: "clock", name: "Clock", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #222 100%)" },
   { kind: "app", id: "calculator", name: "Calculator", iconLetter: "C", color: "linear-gradient(135deg, #555 0%, #333 100%)" },
   { kind: "app", id: "terminal", name: "Terminal", iconLetter: ">_", color: "linear-gradient(135deg, #1a1a2e 0%, #000 100%)" },
   { kind: "app", id: "appstore", name: "App Store", iconLetter: "A", color: "linear-gradient(135deg, #0d84ff 0%, #0055cc 100%)" },
   { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", iconLetter: "AI", color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
+  { kind: "route", id: "workflow-dashboard", href: "/desktop/workflow", name: "Workflow", iconLetter: "WF", color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
   { kind: "app", id: "settings", name: "System Settings", iconLetter: "S", color: "linear-gradient(135deg, #8e8e93 0%, #636366 100%)", separatorBefore: true },
 ]
 

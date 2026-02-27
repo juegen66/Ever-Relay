@@ -21,6 +21,7 @@ const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   appstore: { w: 820, h: 560 },
   messages: { w: 700, h: 500 },
   canvas: { w: 1160, h: 760 },
+  vibecoding: { w: 980, h: 640 },
   textedit: { w: 720, h: 520 },
 }
 

@@ -39,6 +39,7 @@ const APP_NAMES: Record<AppId, string> = {
   maps: "Maps",
   appstore: "App Store",
   messages: "Messages",
+  vibecoding: "vibecoding",
   textedit: "TextEdit",
 }
 

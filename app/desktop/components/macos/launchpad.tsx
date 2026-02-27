@@ -16,6 +16,7 @@ const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }
   { id: "calendar", name: "Calendar", color: "linear-gradient(135deg, #ff3b30 0%, #cc2d26 100%)", letter: "C" },
   { id: "weather", name: "Weather", color: "linear-gradient(135deg, #4fc3f7 0%, #0288d1 100%)", letter: "W" },
   { id: "canvas", name: "Canvas", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)", letter: "C" },
+  { id: "vibecoding", name: "vibecoding", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "V" },
   { id: "clock", name: "Clock", color: "linear-gradient(135deg, #555 0%, #222 100%)", letter: "C" },
   { id: "calculator", name: "Calculator", color: "linear-gradient(135deg, #555 0%, #333 100%)", letter: "C" },
   { id: "terminal", name: "Terminal", color: "linear-gradient(135deg, #1a1a2e 0%, #000 100%)", letter: ">_" },

@@ -29,7 +29,7 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 
 export function Desktop() {
   const pathname = usePathname()
-  const isFullscreenChatRoute = pathname === "/desktop/chat"
+  const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/workflow"
 
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
@@ -105,7 +105,7 @@ export function Desktop() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isFullscreenChatRoute) {
+      if (isFullscreenOverlayRoute) {
         return
       }
 
@@ -120,7 +120,7 @@ export function Desktop() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSpotlight, closeTransientUi, isFullscreenChatRoute])
+  }, [toggleSpotlight, closeTransientUi, isFullscreenOverlayRoute])
 
   useEffect(() => {
     const handleResize = () => {

@@ -15,6 +15,7 @@ export type AppId =
   | "appstore"
   | "messages"
   | "canvas"
+  | "vibecoding"
   | "textedit"
 
 export interface WindowState {
