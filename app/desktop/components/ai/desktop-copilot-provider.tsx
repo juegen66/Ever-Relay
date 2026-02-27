@@ -16,6 +16,7 @@ import { useDesktopCopilotTools } from "@/features/desktop-copilot/hooks/use-des
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
+import { BuildProgressPanel } from "./build-progress-panel"
 
 function DesktopCopilotHeader() {
   const { setOpen, labels } = useChatContext()
@@ -112,6 +113,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
       >
         {desktop}
       </CopilotSidebar>
+      <BuildProgressPanel />
       {children}
     </>
   )

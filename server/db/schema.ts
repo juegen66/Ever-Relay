@@ -140,3 +140,60 @@ export const canvasProjectActivityLogs = pgTable(
     projectCreatedIdx: index("canvas_project_activity_logs_project_created_idx").on(table.projectId, table.createdAt),
   })
 )
+
+export const WORKFLOW_RUN_STAGES = [
+  "queued",
+  "plan",
+  "generate",
+  "validate",
+  "complete",
+  "failed",
+] as const
+
+export type WorkflowRunStage = (typeof WORKFLOW_RUN_STAGES)[number]
+
+export const WORKFLOW_RUN_STATUSES = [
+  "queued",
+  "running",
+  "completed",
+  "failed",
+] as const
+
+export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
+
+export const workflowRuns = pgTable(
+  "workflow_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    projectId: text("project_id"),
+    prompt: text("prompt").notNull(),
+    stage: text("stage").$type<WorkflowRunStage>().notNull().default("queued"),
+    status: text("status").$type<WorkflowRunStatus>().notNull().default("queued"),
+    planJson: jsonb("plan_json").$type<Record<string, unknown>>(),
+    resultJson: jsonb("result_json").$type<Record<string, unknown>>(),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userStatusIdx: index("workflow_runs_user_status_idx").on(table.userId, table.status),
+    userCreatedIdx: index("workflow_runs_user_created_idx").on(table.userId, table.createdAt),
+  })
+)
+
+// Persistent one-to-one binding between a CloudOS user and an E2B sandbox ID.
+export const userSandboxes = pgTable(
+  "user_sandboxes",
+  {
+    userId: text("user_id").primaryKey(),
+    sandboxId: text("sandbox_id").notNull(),
+    provider: text("provider").notNull().default("e2b"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sandboxIdUniqueIdx: uniqueIndex("user_sandboxes_sandbox_id_unique_idx").on(table.sandboxId),
+  })
+)

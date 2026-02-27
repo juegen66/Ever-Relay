@@ -10,6 +10,7 @@ node_modules/
 .DS_Store
 data/*.db
 data/*.db-*
+agentvibecoding420-main/
 # next-agents-md
 .next-docs/
 

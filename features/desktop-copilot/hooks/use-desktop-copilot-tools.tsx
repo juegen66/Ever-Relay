@@ -6,8 +6,10 @@ import { useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core"
 import type { ActionRenderPropsWait } from "@copilotkit/react-core"
 
 import type { DesktopFolder } from "@/app/desktop/components/macos/desktop-icon"
+import { buildsApi } from "@/lib/api/modules/builds"
 import { canvasApi } from "@/lib/api/modules/canvas"
 import { toDesktopItemType } from "@/lib/desktop-items"
+import { useBuildProgressStore } from "@/lib/stores/build-progress-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
@@ -173,6 +175,21 @@ const WRITE_TEXT_FILE_CONTENT_PARAMS: ToolParameter[] = [
   },
 ]
 
+const TRIGGER_BUILD_PARAMS: ToolParameter[] = [
+  {
+    name: "prompt",
+    type: "string",
+    description: "Natural language build request.",
+    required: true,
+  },
+  {
+    name: "projectId",
+    type: "string",
+    description: "Optional project id for scoped build context.",
+    required: false,
+  },
+]
+
 export function useDesktopCopilotTools() {
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
@@ -182,6 +199,7 @@ export function useDesktopCopilotTools() {
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const openFileWindow = useDesktopWindowStore((state) => state.openFileWindow)
   const windows = useDesktopWindowStore((state) => state.windows)
+  const openBuildProgress = useBuildProgressStore((state) => state.openForRun)
 
   const readDesktopFoldersFromCache = useCallback(() => {
     return useDesktopItemsStore.getState().desktopFolders
@@ -519,6 +537,38 @@ export function useDesktopCopilotTools() {
     }
   }, [openApp, readWindowsFromCache])
 
+  const triggerBuild = useCallback(async (args: { prompt?: string; projectId?: string }) => {
+    const prompt = typeof args.prompt === "string" ? args.prompt.trim() : ""
+    const projectId = typeof args.projectId === "string" ? args.projectId.trim() : ""
+
+    if (!prompt) {
+      return {
+        ok: false,
+        error: "prompt is required",
+      }
+    }
+
+    try {
+      const response = await buildsApi.triggerBuild({
+        prompt,
+        projectId: projectId || undefined,
+      })
+
+      openBuildProgress(response.runId)
+      return {
+        ok: true,
+        runId: response.runId,
+        stage: response.stage,
+        status: response.status,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: toErrorMessage(error),
+      }
+    }
+  }, [openBuildProgress])
+
   useFrontendTool({
     name: "open_app",
     description: "Open an app window in the CloudOS desktop.",
@@ -600,6 +650,18 @@ export function useDesktopCopilotTools() {
       })
     },
   }, [writeTextFileContent])
+
+  useFrontendTool({
+    name: "trigger_build",
+    description: "Trigger backend multi-agent build workflow and open progress panel.",
+    parameters: TRIGGER_BUILD_PARAMS,
+    handler: async (args) => {
+      return triggerBuild({
+        prompt: typeof args.prompt === "string" ? args.prompt : undefined,
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+      })
+    },
+  }, [triggerBuild])
 
   useFrontendTool({
     name: "list_open_windows",

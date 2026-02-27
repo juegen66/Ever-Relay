@@ -36,6 +36,20 @@
       "when": 1772000000000,
       "tag": "0004_desktop_content_version",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772200000000,
+      "tag": "0005_workflow_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772300000000,
+      "tag": "0006_user_sandboxes",
+      "breakpoints": true
     }
   ]
 }

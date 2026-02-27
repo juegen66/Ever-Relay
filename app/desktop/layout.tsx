@@ -6,13 +6,15 @@ import { Desktop } from "@/app/desktop/components/macos/desktop"
 interface DesktopLayoutProps {
   children: ReactNode
   chat: ReactNode
+  silent: ReactNode
 }
 
-export default function DesktopLayout({ children, chat }: DesktopLayoutProps) {
+export default function DesktopLayout({ children, chat, silent }: DesktopLayoutProps) {
   return (
     <DesktopCopilotProvider desktop={<Desktop />}>
       {children}
       {chat}
+      {silent}
     </DesktopCopilotProvider>
   )
 }
