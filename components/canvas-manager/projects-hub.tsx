@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Archive, Plus, RefreshCcw, Search } from "lucide-react"
 
 import { ProjectCard } from "@/components/canvas-manager/project-card"
@@ -31,11 +31,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useCanvasProjectsStore } from "@/lib/stores/canvas-projects-store"
+import type { CanvasProject, CanvasProjectStatus } from "@/lib/api/modules/canvas"
+import {
+  useCanvasProjectsQuery,
+  useCanvasTrashProjectsQuery,
+  useCanvasTagsQuery,
+  useCreateCanvasProjectMutation,
+  useDeleteCanvasProjectMutation,
+  useDuplicateCanvasProjectMutation,
+  useRestoreCanvasProjectMutation,
+  useUpdateCanvasProjectMutation,
+} from "@/lib/query/canvas"
 
 interface ProjectsHubProps {
   onOpenProject: (projectId: string) => void | Promise<void>
 }
+
+type ProjectStatusFilter = CanvasProjectStatus | "all"
 
 const STATUS_OPTIONS = [
   { label: "All", value: "all" },
@@ -44,38 +56,42 @@ const STATUS_OPTIONS = [
   { label: "Archived", value: "archived" },
 ] as const
 
-export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
-  const {
-    projects,
-    trashProjects,
-    loading,
-    loadingTrash,
-    error,
-    query,
-    statusFilter,
-    setQuery,
-    setStatusFilter,
-    fetchProjects,
-    fetchTrashProjects,
-    fetchTags,
-    createProject,
-    updateProject,
-    deleteProject,
-    restoreProject,
-    duplicateProject,
-  } = useCanvasProjectsStore()
+function toErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim()
+    ? error.message
+    : fallback
+}
 
+export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
+  const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("all")
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [trashDialogOpen, setTrashDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  useEffect(() => {
-    void fetchTags()
-  }, [fetchTags])
+  const projectsQuery = useCanvasProjectsQuery({ query, statusFilter })
+  const trashProjectsQuery = useCanvasTrashProjectsQuery({ enabled: trashDialogOpen })
+  useCanvasTagsQuery()
 
-  useEffect(() => {
-    void fetchProjects()
-  }, [query, statusFilter, fetchProjects])
+  const createProjectMutation = useCreateCanvasProjectMutation()
+  const updateProjectMutation = useUpdateCanvasProjectMutation()
+  const deleteProjectMutation = useDeleteCanvasProjectMutation()
+  const restoreProjectMutation = useRestoreCanvasProjectMutation()
+  const duplicateProjectMutation = useDuplicateCanvasProjectMutation()
+
+  const projects = projectsQuery.data?.items ?? []
+  const trashProjects = trashProjectsQuery.data?.items ?? []
+  const loading = projectsQuery.isPending
+  const loadingTrash = trashProjectsQuery.isPending || trashProjectsQuery.isFetching
+
+  const projectsError = projectsQuery.error
+    ? toErrorMessage(projectsQuery.error, "Failed to fetch projects")
+    : null
+  const trashError = trashProjectsQuery.error
+    ? toErrorMessage(trashProjectsQuery.error, "Failed to fetch trash projects")
+    : null
+  const error = actionError ?? projectsError
 
   const projectCountLabel = useMemo(() => {
     if (loading) {
@@ -85,12 +101,17 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
   }, [loading, projects.length])
 
   const handleCreate = async ({ title, description }: { title: string; description?: string }) => {
-    const created = await createProject({
-      title,
-      description,
-    })
-    if (created) {
+    setActionError(null)
+
+    try {
+      const created = await createProjectMutation.mutateAsync({
+        title,
+        description,
+      })
       await onOpenProject(created.id)
+    } catch (err) {
+      setActionError(toErrorMessage(err, "Failed to create project"))
+      throw err
     }
   }
 
@@ -100,14 +121,48 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
 
   const confirmDelete = async () => {
     if (projectToDelete) {
-      await deleteProject(projectToDelete)
-      setProjectToDelete(null)
+      setActionError(null)
+      try {
+        await deleteProjectMutation.mutateAsync(projectToDelete)
+        setProjectToDelete(null)
+      } catch (err) {
+        setActionError(toErrorMessage(err, "Failed to delete project"))
+      }
     }
   }
 
-  const handleOpenTrash = async () => {
+  const handleOpenTrash = () => {
     setTrashDialogOpen(true)
-    await fetchTrashProjects()
+  }
+
+  const handleDuplicate = async (projectId: string) => {
+    setActionError(null)
+    try {
+      await duplicateProjectMutation.mutateAsync(projectId)
+    } catch (err) {
+      setActionError(toErrorMessage(err, "Failed to duplicate project"))
+    }
+  }
+
+  const handleStatusChange = async (projectId: string, status: CanvasProject["status"]) => {
+    setActionError(null)
+    try {
+      await updateProjectMutation.mutateAsync({
+        id: projectId,
+        params: { status },
+      })
+    } catch (err) {
+      setActionError(toErrorMessage(err, "Failed to update project"))
+    }
+  }
+
+  const handleRestore = async (projectId: string) => {
+    setActionError(null)
+    try {
+      await restoreProjectMutation.mutateAsync(projectId)
+    } catch (err) {
+      setActionError(toErrorMessage(err, "Failed to restore project"))
+    }
   }
 
   return (
@@ -123,7 +178,7 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
             <Button
               variant="outline"
               className="border-black/10 bg-white/70 text-neutral-900 hover:bg-black/5"
-              onClick={() => void fetchProjects()}
+              onClick={() => void projectsQuery.refetch()}
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
@@ -194,9 +249,9 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
                 key={project.id}
                 project={project}
                 onOpen={(projectId) => void onOpenProject(projectId)}
-                onDuplicate={(projectId) => void duplicateProject(projectId)}
+                onDuplicate={(projectId) => void handleDuplicate(projectId)}
                 onDelete={(projectId) => void handleDelete(projectId)}
-                onChangeStatus={(projectId, status) => void updateProject(projectId, { status })}
+                onChangeStatus={(projectId, status) => void handleStatusChange(projectId, status)}
               />
             ))}
           </div>
@@ -219,6 +274,8 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
           <div className="min-h-0 flex-1 overflow-auto">
             {loadingTrash ? (
               <div className="py-10 text-center text-sm text-neutral-500">Loading trash...</div>
+            ) : trashError ? (
+              <div className="py-10 text-center text-sm text-red-600">{trashError}</div>
             ) : trashProjects.length === 0 ? (
               <div className="py-10 text-center text-sm text-neutral-500">Trash is empty</div>
             ) : (
@@ -231,7 +288,7 @@ export function ProjectsHub({ onOpenProject }: ProjectsHubProps) {
                     onOpen={() => undefined}
                     onDuplicate={() => undefined}
                     onDelete={() => undefined}
-                    onRestore={(projectId) => void restoreProject(projectId)}
+                    onRestore={(projectId) => void handleRestore(projectId)}
                     onChangeStatus={() => undefined}
                   />
                 ))}

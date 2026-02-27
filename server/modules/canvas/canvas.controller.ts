@@ -5,6 +5,7 @@ import type {
   CanvasProjectListParams,
   CreateCanvasProjectParams,
   CreateCanvasTagParams,
+  GenerateCanvasSvgParams,
   GetCanvasProjectQuery,
   UpdateCanvasProjectContentParams,
   UpdateCanvasProjectParams,
@@ -12,7 +13,7 @@ import type {
 import { requireUserId } from "@/server/lib/http/auth"
 import { fail, ok } from "@/server/lib/http/response"
 import type { ServerBindings } from "@/server/types"
-import { canvasService } from "./canvas.service"
+import { CanvasSvgValidationError, canvasService } from "./canvas.service"
 
 export async function listProjects(
   context: Context<ServerBindings>,
@@ -108,6 +109,21 @@ export async function updateProjectContent(
   }
 
   return ok(context, result.project)
+}
+
+export async function generateSvg(
+  context: Context<ServerBindings>,
+  body: GenerateCanvasSvgParams
+) {
+  try {
+    const result = await canvasService.generateSvgCode(body)
+    return ok(context, result)
+  } catch (error) {
+    if (error instanceof CanvasSvgValidationError) {
+      return fail(context, 400, error.message)
+    }
+    throw error
+  }
 }
 
 export async function duplicateProject(

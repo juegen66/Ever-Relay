@@ -24,6 +24,7 @@ export const fileItemSchema = z.object({
   x: z.number(),
   y: z.number(),
   content: z.string().nullable(),
+  contentVersion: z.number().int().min(1),
   fileSize: z.number().nullable(),
   mimeType: z.string().nullable(),
   createdAt: z.string(),
@@ -73,18 +74,21 @@ export type FileIdParams = z.infer<typeof fileIdParamsSchema>
 
 export const fileContentResponseDataSchema = z.object({
   content: z.string(),
+  contentVersion: z.number().int().min(1),
 })
 
 export type FileContentResponseData = z.infer<typeof fileContentResponseDataSchema>
 
 export const updateFileContentBodySchema = z.object({
   content: z.string(),
+  contentVersion: z.number().int().min(1),
 })
 
 export type UpdateFileContentBody = z.infer<typeof updateFileContentBodySchema>
 
 export const updateFileContentResponseDataSchema = z.object({
   updated: z.literal(true),
+  contentVersion: z.number().int().min(1),
 })
 
 export type UpdateFileContentResponseData = z.infer<typeof updateFileContentResponseDataSchema>

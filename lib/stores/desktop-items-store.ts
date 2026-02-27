@@ -1,42 +1,27 @@
 "use client"
 
 import { create } from "zustand"
+
 import type { DesktopFolder, DesktopItemType } from "@/app/desktop/components/macos/desktop-icon"
-import { filesApi, type FileItem } from "@/lib/api/modules/files"
+import {
+  buildCreateFileParams,
+  getDefaultDesktopPosition,
+  resolveFileTypeDefaults,
+  snapToViewport,
+  toDesktopFolder,
+} from "@/lib/desktop-items"
+import { getQueryClient } from "@/lib/query/client"
+import { getCachedFileItems } from "@/lib/query/files"
+import {
+  createDesktopItem,
+  deleteDesktopItem,
+  fetchDesktopItems,
+  moveDesktopItemInCache,
+  updateDesktopItem,
+} from "@/lib/services/desktop-items-service"
 
-const FILE_TYPE_DEFAULTS: Record<string, { name: string; itemType: DesktopItemType; mimeType: string }> = {
-  text: { name: "untitled.txt", itemType: "text", mimeType: "text/plain" },
-  image: { name: "untitled.png", itemType: "image", mimeType: "image/png" },
-  code: { name: "untitled.js", itemType: "code", mimeType: "text/javascript" },
-  spreadsheet: { name: "untitled.csv", itemType: "spreadsheet", mimeType: "text/csv" },
-  generic: { name: "untitled", itemType: "generic", mimeType: "application/octet-stream" },
-}
-
-function getViewportSize() {
-  if (typeof window === "undefined") {
-    return { width: 1440, height: 900 }
-  }
-  return { width: window.innerWidth, height: window.innerHeight }
-}
-
-function toDesktopFolder(item: FileItem, isNew = false): DesktopFolder {
-  return {
-    id: item.id,
-    name: item.name,
-    x: item.x,
-    y: item.y,
-    itemType: item.itemType as DesktopItemType,
-    parentId: item.parentId,
-    isNew,
-  }
-}
-
-function snapToViewport(x: number, y: number) {
-  const { width, height } = getViewportSize()
-  return {
-    x: Math.min(Math.max(x - 45, 20), width - 110),
-    y: Math.min(Math.max(y - 40, 36), height - 140),
-  }
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Request failed"
 }
 
 interface DesktopItemsStore {
@@ -44,9 +29,19 @@ interface DesktopItemsStore {
   selectedFolderId: string | null
   loading: boolean
   error: string | null
+  pendingRenameItemIds: Record<string, true>
   setSelectedFolderId: (id: string | null) => void
   clearSelection: () => void
+  markItemForRename: (id: string) => void
+  clearItemRenameState: (id: string) => void
   fetchItems: () => Promise<void>
+  createItem: (params: {
+    name: string
+    itemType: DesktopItemType
+    parentId?: string
+    x?: number
+    y?: number
+  }) => Promise<DesktopFolder | null>
   createFolder: (x: number, y: number) => Promise<void>
   createFile: (x: number, y: number, fileType: string) => Promise<void>
   deleteItem: (id: string) => Promise<void>
@@ -60,203 +55,256 @@ interface DesktopItemsStore {
   createItemInFolder: (parentId: string, itemType: DesktopItemType, name: string) => Promise<void>
 }
 
-export const useDesktopItemsStore = create<DesktopItemsStore>((set, get) => ({
-  desktopFolders: [],
-  selectedFolderId: null,
-  loading: false,
-  error: null,
+export const useDesktopItemsStore = create<DesktopItemsStore>((set, get) => {
+  const queryClient = getQueryClient()
 
-  setSelectedFolderId: (id) => set({ selectedFolderId: id }),
-  clearSelection: () => set({ selectedFolderId: null }),
+  const toFolders = (pendingRenameItemIds: Record<string, true>) => {
+    return getCachedFileItems(queryClient).map((item) => {
+      return toDesktopFolder(item, Boolean(pendingRenameItemIds[item.id]))
+    })
+  }
 
-  fetchItems: async () => {
-    set({ loading: true, error: null })
-    try {
-      const items = await filesApi.list()
-      set({ desktopFolders: items.map((i) => toDesktopFolder(i)), loading: false })
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false })
-    }
-  },
+  const syncStoreWithCache = (overrides?: Partial<DesktopItemsStore>) => {
+    set((state) => ({
+      desktopFolders: toFolders(state.pendingRenameItemIds),
+      ...(overrides ?? {}),
+    }))
+  }
 
-  createFolder: async (x, y) => {
-    const snapped = snapToViewport(x, y)
-    try {
-      const item = await filesApi.create({
+  return {
+    desktopFolders: [],
+    selectedFolderId: null,
+    loading: false,
+    error: null,
+    pendingRenameItemIds: {},
+
+    setSelectedFolderId: (id) => set({ selectedFolderId: id }),
+    clearSelection: () => set({ selectedFolderId: null }),
+
+    markItemForRename: (id) =>
+      set((state) => {
+        const nextPendingRenameItemIds: Record<string, true> = {
+          ...state.pendingRenameItemIds,
+          [id]: true,
+        }
+
+        return {
+          pendingRenameItemIds: nextPendingRenameItemIds,
+          desktopFolders: toFolders(nextPendingRenameItemIds),
+        }
+      }),
+
+    clearItemRenameState: (id) =>
+      set((state) => {
+        if (!state.pendingRenameItemIds[id]) {
+          return state
+        }
+
+        const nextPendingRenameItemIds: Record<string, true> = {
+          ...state.pendingRenameItemIds,
+        }
+        delete nextPendingRenameItemIds[id]
+
+        return {
+          pendingRenameItemIds: nextPendingRenameItemIds,
+          desktopFolders: toFolders(nextPendingRenameItemIds),
+        }
+      }),
+
+    fetchItems: async () => {
+      set({ loading: true, error: null })
+      try {
+        await fetchDesktopItems(queryClient)
+        syncStoreWithCache({ loading: false, error: null })
+      } catch (error) {
+        set({
+          loading: false,
+          error: toErrorMessage(error),
+        })
+      }
+    },
+
+    createItem: async ({ name, itemType, parentId, x, y }) => {
+      const trimmedName = name.trim()
+      if (!trimmedName) {
+        set({ error: "Item name cannot be empty" })
+        return null
+      }
+
+      const defaultPosition = getDefaultDesktopPosition()
+      const nextX = x ?? (parentId ? 0 : defaultPosition.x)
+      const nextY = y ?? (parentId ? 0 : defaultPosition.y)
+
+      try {
+        const item = await createDesktopItem(
+          queryClient,
+          buildCreateFileParams({
+            name: trimmedName,
+            itemType,
+            parentId,
+            x: nextX,
+            y: nextY,
+          })
+        )
+        syncStoreWithCache({ error: null })
+        return toDesktopFolder(item)
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+        return null
+      }
+    },
+
+    createFolder: async (x, y) => {
+      const snapped = snapToViewport(x, y)
+
+      const item = await get().createItem({
         name: "untitled folder",
         itemType: "folder",
         x: snapped.x,
         y: snapped.y,
       })
-      const newItem = toDesktopFolder(item, true)
-      set((state) => ({
-        desktopFolders: [...state.desktopFolders, newItem],
-        selectedFolderId: newItem.id,
-      }))
-    } catch (err) {
-      console.error("Failed to create folder:", err)
-    }
-  },
+      if (item) {
+        get().markItemForRename(item.id)
+        syncStoreWithCache({
+          selectedFolderId: item.id,
+          error: null,
+        })
+      }
+    },
 
-  createFile: async (x, y, fileType) => {
-    const snapped = snapToViewport(x, y)
-    const defaults = FILE_TYPE_DEFAULTS[fileType] || FILE_TYPE_DEFAULTS.generic
+    createFile: async (x, y, fileType) => {
+      const snapped = snapToViewport(x, y)
+      const defaults = resolveFileTypeDefaults(fileType)
 
-    try {
-      const item = await filesApi.create({
+      const item = await get().createItem({
         name: defaults.name,
         itemType: defaults.itemType,
         x: snapped.x,
         y: snapped.y,
-        content: "",
-        fileSize: 0,
-        mimeType: defaults.mimeType,
       })
-      const newItem = toDesktopFolder(item, true)
-      set((state) => ({
-        desktopFolders: [...state.desktopFolders, newItem],
-        selectedFolderId: newItem.id,
-      }))
-    } catch (err) {
-      console.error("Failed to create file:", err)
-    }
-  },
+      if (item) {
+        get().markItemForRename(item.id)
+        syncStoreWithCache({
+          selectedFolderId: item.id,
+          error: null,
+        })
+      }
+    },
 
-  deleteItem: async (id) => {
-    try {
-      await filesApi.remove(id)
-      set((state) => ({
-        desktopFolders: state.desktopFolders.filter((f) => f.id !== id && f.parentId !== id),
-        selectedFolderId: state.selectedFolderId === id ? null : state.selectedFolderId,
-      }))
-    } catch (err) {
-      console.error("Failed to delete item:", err)
-    }
-  },
+    deleteItem: async (id) => {
+      try {
+        await deleteDesktopItem(queryClient, id)
+        const selectedFolderId = get().selectedFolderId === id ? null : get().selectedFolderId
+        syncStoreWithCache({ selectedFolderId, error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-  renameItem: async (id, name) => {
-    // Optimistic update
-    set((state) => ({
-      desktopFolders: state.desktopFolders.map((f) =>
-        f.id === id ? { ...f, name, isNew: false } : f
-      ),
-    }))
+    renameItem: async (id, name) => {
+      const trimmedName = name.trim()
+      if (!trimmedName) return
 
-    try {
-      await filesApi.update(id, { name })
-    } catch (err) {
-      console.error("Failed to rename item:", err)
-    }
-  },
+      get().clearItemRenameState(id)
+      try {
+        await updateDesktopItem(queryClient, id, { name: trimmedName })
+        syncStoreWithCache({ error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-  moveItem: async (id, x, y) => {
-    // Optimistic local update for smooth dragging.
-    set((state) => ({
-      desktopFolders: state.desktopFolders.map((f) => (f.id === id ? { ...f, x, y } : f)),
-    }))
-  },
+    moveItem: async (id, x, y) => {
+      moveDesktopItemInCache(queryClient, id, x, y)
+      syncStoreWithCache()
+    },
 
-  persistItemPosition: async (id, x, y) => {
-    if (get().error === "Session expired. Please sign in again.") {
-      return
-    }
+    persistItemPosition: async (id, x, y) => {
+      try {
+        await updateDesktopItem(queryClient, id, { x, y })
+        syncStoreWithCache({ error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-    try {
-      await filesApi.update(id, { x, y })
-    } catch (err) {
-      console.error("Failed to persist item position:", err)
-    }
-  },
+    moveItemToFolder: async (itemId, targetFolderId) => {
+      await get().moveIntoFolder(itemId, targetFolderId)
+    },
 
-  moveItemToFolder: async (itemId, targetFolderId) => {
-    await get().moveIntoFolder(itemId, targetFolderId)
-  },
+    moveIntoFolder: async (itemId, targetFolderId) => {
+      const items = getCachedFileItems(queryClient)
+      const item = items.find((entry) => entry.id === itemId)
+      const target = items.find((entry) => entry.id === targetFolderId)
+      if (!item || !target || target.itemType !== "folder" || itemId === targetFolderId) {
+        return
+      }
 
-  moveIntoFolder: async (itemId, targetFolderId) => {
-    const state = get()
-    const item = state.desktopFolders.find((f) => f.id === itemId)
-    const target = state.desktopFolders.find((f) => f.id === targetFolderId)
-    if (!item || !target || target.itemType !== "folder" || itemId === targetFolderId) {
-      return
-    }
+      if (item.itemType === "folder") {
+        let currentParentId = target.parentId
+        while (currentParentId) {
+          if (currentParentId === itemId) {
+            return
+          }
+          currentParentId = items.find((entry) => entry.id === currentParentId)?.parentId ?? null
+        }
+      }
 
-    // Optimistic update
-    set((state) => ({
-      desktopFolders: state.desktopFolders.map((f) =>
-        f.id === itemId ? { ...f, parentId: targetFolderId } : f
-      ),
-    }))
+      try {
+        await updateDesktopItem(queryClient, itemId, { parentId: targetFolderId })
+        syncStoreWithCache({ error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-    try {
-      await filesApi.update(itemId, { parentId: targetFolderId })
-    } catch (err) {
-      console.error("Failed to move item into folder:", err)
-    }
-  },
+    moveItemToDesktop: async (itemId) => {
+      const items = getCachedFileItems(queryClient)
+      const item = items.find((entry) => entry.id === itemId)
+      if (!item) return
 
-  moveItemToDesktop: async (itemId) => {
-    const state = get()
-    const item = state.desktopFolders.find((f) => f.id === itemId)
-    if (!item) return
+      const baseX = 100 + Math.random() * 200
+      const baseY = 100 + Math.random() * 200
 
-    const baseX = 100 + Math.random() * 200
-    const baseY = 100 + Math.random() * 200
+      try {
+        await updateDesktopItem(queryClient, itemId, {
+          parentId: null,
+          x: baseX,
+          y: baseY,
+        })
+        syncStoreWithCache({ error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-    // Optimistic update
-    set((state) => ({
-      desktopFolders: state.desktopFolders.map((f) =>
-        f.id === itemId ? { ...f, parentId: null, x: baseX, y: baseY } : f
-      ),
-    }))
+    moveItemToDesktopAt: async (itemId, x, y) => {
+      const items = getCachedFileItems(queryClient)
+      const item = items.find((entry) => entry.id === itemId)
+      if (!item) return
 
-    try {
-      await filesApi.update(itemId, { parentId: null, x: baseX, y: baseY })
-    } catch (err) {
-      console.error("Failed to move item to desktop:", err)
-    }
-  },
+      const snapped = snapToViewport(x, y)
 
-  moveItemToDesktopAt: async (itemId, x, y) => {
-    const state = get()
-    const item = state.desktopFolders.find((f) => f.id === itemId)
-    if (!item) return
+      try {
+        await updateDesktopItem(queryClient, itemId, {
+          parentId: null,
+          x: snapped.x,
+          y: snapped.y,
+        })
+        syncStoreWithCache({ error: null })
+      } catch (error) {
+        set({ error: toErrorMessage(error) })
+      }
+    },
 
-    const snapped = snapToViewport(x, y)
-
-    // Optimistic update
-    set((state) => ({
-      desktopFolders: state.desktopFolders.map((f) =>
-        f.id === itemId ? { ...f, parentId: null, x: snapped.x, y: snapped.y } : f
-      ),
-    }))
-
-    try {
-      await filesApi.update(itemId, { parentId: null, x: snapped.x, y: snapped.y })
-    } catch (err) {
-      console.error("Failed to move item to desktop at drop point:", err)
-    }
-  },
-
-  createItemInFolder: async (parentId, itemType, name) => {
-    try {
-      const defaults = FILE_TYPE_DEFAULTS[itemType] || FILE_TYPE_DEFAULTS.generic
-
-      const item = await filesApi.create({
+    createItemInFolder: async (parentId, itemType, name) => {
+      await get().createItem({
         name,
         itemType,
         parentId,
         x: 0,
         y: 0,
-        content: itemType !== "folder" ? "" : undefined,
-        fileSize: itemType !== "folder" ? 0 : undefined,
-        mimeType: itemType !== "folder" ? defaults.mimeType : undefined,
       })
-      const newItem = toDesktopFolder(item, true)
-      set((state) => ({
-        desktopFolders: [...state.desktopFolders, newItem],
-      }))
-    } catch (err) {
-      console.error("Failed to create item in folder:", err)
-    }
-  },
-}))
+    },
+  }
+})

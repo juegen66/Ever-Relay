@@ -154,6 +154,24 @@ export const updateCanvasProjectContentParamsSchema = z.object({
 
 export type UpdateCanvasProjectContentParams = z.infer<typeof updateCanvasProjectContentParamsSchema>
 
+export const generateCanvasSvgParamsSchema = z.object({
+  prompt: z.string().trim().min(1),
+  width: z.number().int().min(120).max(2400).optional(),
+  height: z.number().int().min(120).max(2400).optional(),
+})
+
+export type GenerateCanvasSvgParams = z.infer<typeof generateCanvasSvgParamsSchema>
+
+export const generateCanvasSvgResponseDataSchema = z.object({
+  prompt: z.string(),
+  width: z.number().int(),
+  height: z.number().int(),
+  svg: z.string(),
+  generatedAt: z.string(),
+})
+
+export type GenerateCanvasSvgResponseData = z.infer<typeof generateCanvasSvgResponseDataSchema>
+
 export const canvasProjectDeleteResponseDataSchema = z.object({
   deleted: z.literal(true),
 })
@@ -178,6 +196,7 @@ export const getCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectSche
 export const createCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectSchema)
 export const updateCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectSchema)
 export const updateCanvasProjectContentResponseSchema = apiSuccessSchema(canvasProjectSchema)
+export const generateCanvasSvgResponseSchema = apiSuccessSchema(generateCanvasSvgResponseDataSchema)
 export const duplicateCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectSchema)
 export const restoreCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectSchema)
 export const deleteCanvasProjectResponseSchema = apiSuccessSchema(canvasProjectDeleteResponseDataSchema)
@@ -207,6 +226,10 @@ export const canvasContracts = {
     paramsSchema: canvasProjectIdParamsSchema,
     bodySchema: updateCanvasProjectContentParamsSchema,
     responseSchema: updateCanvasProjectContentResponseSchema,
+  },
+  generateSvg: {
+    bodySchema: generateCanvasSvgParamsSchema,
+    responseSchema: generateCanvasSvgResponseSchema,
   },
   duplicateProject: {
     paramsSchema: canvasProjectIdParamsSchema,

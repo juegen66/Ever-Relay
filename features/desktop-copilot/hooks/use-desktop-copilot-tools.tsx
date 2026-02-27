@@ -1,12 +1,13 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 
 import { useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core"
 import type { ActionRenderPropsWait } from "@copilotkit/react-core"
 
-import type { DesktopFolder, DesktopItemType } from "@/app/desktop/components/macos/desktop-icon"
-import { filesApi } from "@/lib/api/modules/files"
+import type { DesktopFolder } from "@/app/desktop/components/macos/desktop-icon"
+import { canvasApi } from "@/lib/api/modules/canvas"
+import { toDesktopItemType } from "@/lib/desktop-items"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
@@ -14,34 +15,20 @@ import {
   waitForTextEditorReady,
   writeTextEditorContent,
 } from "@/lib/textedit-content"
-import { ApprovalCard } from "./approval-card"
-import { toAppId } from "./types"
-
-const DESKTOP_ITEM_TYPES: DesktopItemType[] = ["folder", "text", "image", "code", "spreadsheet", "generic"]
+import {
+  getActiveCanvasProjectId,
+  insertSvgIntoActiveCanvasSession,
+  openCanvasProjectInSession,
+  waitForCanvasSessionReady,
+} from "@/lib/canvas-session"
+import { ApprovalCard } from "../components/approval-card"
+import { toAppId } from "../types"
 
 type ToolParameter = {
   name: string
   type?: "string" | "number" | "boolean" | "object" | "string[]" | "number[]" | "boolean[]" | "object[]"
   description?: string
   required?: boolean
-}
-
-function toDesktopItemType(value: string | undefined): DesktopItemType {
-  if (value && (DESKTOP_ITEM_TYPES as string[]).includes(value)) {
-    return value as DesktopItemType
-  }
-  return "generic"
-}
-
-function getDefaultPosition() {
-  if (typeof window === "undefined") {
-    return { x: 180, y: 140 }
-  }
-
-  return {
-    x: Math.max(80, Math.round(window.innerWidth * 0.22)),
-    y: Math.max(90, Math.round(window.innerHeight * 0.22)),
-  }
 }
 
 function toErrorMessage(error: unknown) {
@@ -71,6 +58,48 @@ const OPEN_TEXT_FILE_PARAMS: ToolParameter[] = [
     name: "name",
     type: "string",
     description: "Text file name to open (case-insensitive)",
+    required: false,
+  },
+]
+
+const OPEN_CANVAS_PROJECT_PARAMS: ToolParameter[] = [
+  {
+    name: "projectId",
+    type: "string",
+    description: "Canvas project id to open (preferred when known).",
+    required: false,
+  },
+  {
+    name: "projectName",
+    type: "string",
+    description: "Canvas project title to resolve and open when id is unknown.",
+    required: false,
+  },
+]
+
+const ADD_SVG_TO_CANVAS_PARAMS: ToolParameter[] = [
+  {
+    name: "prompt",
+    type: "string",
+    description: "Describe what SVG should be generated, for example: 'A blue rounded badge with text HI'.",
+    required: true,
+  },
+  {
+    name: "scale",
+    type: "number",
+    description: "Optional scale multiplier between 0.1 and 4. Default is 1.",
+    required: false,
+  },
+  {
+    name: "width",
+    type: "number",
+    description: "Optional generated SVG width (120-2400).",
+    required: false,
+  },
+  {
+    name: "height",
+    type: "number",
+    description: "Optional generated SVG height (120-2400).",
     required: false,
   },
 ]
@@ -145,14 +174,26 @@ const WRITE_TEXT_FILE_CONTENT_PARAMS: ToolParameter[] = [
 ]
 
 export function useDesktopCopilotTools() {
+  const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
+  const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
+  const createItem = useDesktopItemsStore((state) => state.createItem)
+  const renameItem = useDesktopItemsStore((state) => state.renameItem)
+  const deleteItem = useDesktopItemsStore((state) => state.deleteItem)
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const openFileWindow = useDesktopWindowStore((state) => state.openFileWindow)
   const windows = useDesktopWindowStore((state) => state.windows)
 
-  const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
-  const renameItem = useDesktopItemsStore((state) => state.renameItem)
-  const deleteItem = useDesktopItemsStore((state) => state.deleteItem)
-  const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
+  const readDesktopFoldersFromCache = useCallback(() => {
+    return useDesktopItemsStore.getState().desktopFolders
+  }, [])
+
+  const readWindowsFromCache = useCallback(() => {
+    return useDesktopWindowStore.getState().windows
+  }, [])
+
+  const refreshDesktopItems = useCallback(async () => {
+    await fetchItems()
+  }, [fetchItems])
 
   const createDesktopItem = useCallback(async (args: { name: string; itemType?: string; parentId?: string }) => {
     const normalizedType = toDesktopItemType(args.itemType)
@@ -165,46 +206,19 @@ export function useDesktopCopilotTools() {
       }
     }
 
-    const { x, y } = getDefaultPosition()
-
-    const basePayload = {
+    const item = await createItem({
       name,
       itemType: normalizedType,
       parentId: args.parentId || undefined,
-      x,
-      y,
-    }
-
-    if (normalizedType === "folder") {
-      const item = await filesApi.create(basePayload)
-      await fetchItems()
+    })
+    if (!item) {
       return {
-        ok: true,
-        item: {
-          id: item.id,
-          name: item.name,
-          itemType: item.itemType,
-        },
+        ok: false,
+        error: "Failed to create item",
       }
     }
 
-    const defaultMimeType: Record<DesktopItemType, string> = {
-      folder: "application/octet-stream",
-      text: "text/plain",
-      image: "image/png",
-      code: "text/javascript",
-      spreadsheet: "text/csv",
-      generic: "application/octet-stream",
-    }
-
-    const item = await filesApi.create({
-      ...basePayload,
-      content: "",
-      fileSize: 0,
-      mimeType: defaultMimeType[normalizedType],
-    })
-
-    await fetchItems()
+    await refreshDesktopItems()
 
     return {
       ok: true,
@@ -214,7 +228,11 @@ export function useDesktopCopilotTools() {
         itemType: item.itemType,
       },
     }
-  }, [fetchItems])
+  }, [createItem, refreshDesktopItems])
+
+  useEffect(() => {
+    void refreshDesktopItems()
+  }, [refreshDesktopItems])
 
   const openTextFile = useCallback(async (args: { id?: string; name?: string }) => {
     const rawId = typeof args.id === "string" ? args.id.trim() : ""
@@ -228,7 +246,7 @@ export function useDesktopCopilotTools() {
     }
 
     const findTarget = () => {
-      const items = useDesktopItemsStore.getState().desktopFolders
+      const items = readDesktopFoldersFromCache()
       const textItems = items.filter((item) => item.itemType === "text")
 
       if (rawId) {
@@ -244,7 +262,7 @@ export function useDesktopCopilotTools() {
 
     let target = findTarget()
     if (!target) {
-      await fetchItems()
+      await refreshDesktopItems()
       target = findTarget()
     }
 
@@ -264,17 +282,17 @@ export function useDesktopCopilotTools() {
         name: target.name,
       },
     }
-  }, [fetchItems, openFileWindow])
+  }, [openFileWindow, readDesktopFoldersFromCache, refreshDesktopItems])
 
   const resolveTextFileById = useCallback(async (fileId: string) => {
     const findTarget = () => {
-      const items = useDesktopItemsStore.getState().desktopFolders
+      const items = readDesktopFoldersFromCache()
       return items.find((item) => item.id === fileId) ?? null
     }
 
     let target = findTarget()
     if (!target) {
-      await fetchItems()
+      await refreshDesktopItems()
       target = findTarget()
     }
 
@@ -296,7 +314,7 @@ export function useDesktopCopilotTools() {
       ok: true as const,
       item: target as DesktopFolder,
     }
-  }, [fetchItems])
+  }, [readDesktopFoldersFromCache, refreshDesktopItems])
 
   const readTextFileContent = useCallback(async (args: { fileId?: string }) => {
     const fileId = typeof args.fileId === "string" ? args.fileId.trim() : ""
@@ -359,6 +377,148 @@ export function useDesktopCopilotTools() {
     }
   }, [openFileWindow, resolveTextFileById])
 
+  const openCanvasProject = useCallback(async (args: { projectId?: string; projectName?: string }) => {
+    const projectId = typeof args.projectId === "string" ? args.projectId.trim() : ""
+    const projectName = typeof args.projectName === "string" ? args.projectName.trim() : ""
+
+    if (!projectId && !projectName) {
+      return {
+        ok: false,
+        error: "projectId or projectName is required",
+      }
+    }
+
+    const hasVisibleCanvasWindow = readWindowsFromCache().some((windowState) => {
+      return windowState.appId === "canvas" && !windowState.minimized
+    })
+
+    if (!hasVisibleCanvasWindow) {
+      openApp("canvas")
+    }
+
+    const ready = await waitForCanvasSessionReady(hasVisibleCanvasWindow ? 1200 : 3500)
+    if (!ready) {
+      return {
+        ok: false,
+        error: hasVisibleCanvasWindow
+          ? "Canvas app is not ready yet. Please retry shortly."
+          : "Canvas app opened. Please wait for it to load, then retry open_canvas_project.",
+      }
+    }
+
+    const result = await openCanvasProjectInSession({
+      projectId: projectId || undefined,
+      projectName: projectName || undefined,
+    })
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error,
+        candidates: result.candidates,
+      }
+    }
+
+    return {
+      ok: true,
+      projectId: result.projectId,
+      mode: "editor",
+    }
+  }, [openApp, readWindowsFromCache])
+
+  const addSvgToCanvas = useCallback(async (args: { prompt?: string; scale?: number; width?: number; height?: number }) => {
+    const prompt = typeof args.prompt === "string" ? args.prompt.trim() : ""
+    const scale = typeof args.scale === "number" ? args.scale : undefined
+    const width = typeof args.width === "number" ? Math.trunc(args.width) : undefined
+    const height = typeof args.height === "number" ? Math.trunc(args.height) : undefined
+
+    if (!prompt) {
+      return {
+        ok: false,
+        error: "prompt is required",
+      }
+    }
+
+    if (scale !== undefined && (!Number.isFinite(scale) || scale < 0.1 || scale > 4)) {
+      return {
+        ok: false,
+        error: "scale must be a number between 0.1 and 4",
+      }
+    }
+
+    const hasVisibleCanvasWindow = readWindowsFromCache().some((windowState) => {
+      return windowState.appId === "canvas" && !windowState.minimized
+    })
+
+    if (!hasVisibleCanvasWindow) {
+      openApp("canvas")
+    }
+
+    const ready = await waitForCanvasSessionReady(hasVisibleCanvasWindow ? 1200 : 3500)
+    if (!ready) {
+      return {
+        ok: false,
+        error: hasVisibleCanvasWindow
+          ? "Canvas app is not ready yet. Please retry shortly."
+          : "Canvas app opened. Please wait for it to load, then call open_canvas_project before add_svg_to_canvas.",
+      }
+    }
+
+    const activeProjectId = getActiveCanvasProjectId()
+    if (!activeProjectId) {
+      return {
+        ok: false,
+        error: "No active canvas project. Call open_canvas_project first.",
+      }
+    }
+
+    if (width !== undefined && (width < 120 || width > 2400)) {
+      return {
+        ok: false,
+        error: "width must be between 120 and 2400",
+      }
+    }
+
+    if (height !== undefined && (height < 120 || height > 2400)) {
+      return {
+        ok: false,
+        error: "height must be between 120 and 2400",
+      }
+    }
+
+    let preparedSvg: Awaited<ReturnType<typeof canvasApi.generateSvg>>
+    try {
+      preparedSvg = await canvasApi.generateSvg({
+        prompt,
+        width,
+        height,
+      })
+    } catch (error) {
+      return {
+        ok: false,
+        error: toErrorMessage(error),
+      }
+    }
+
+    const inserted = await insertSvgIntoActiveCanvasSession({
+      svg: preparedSvg.svg,
+      scale,
+    })
+
+    if (!inserted.ok) {
+      return inserted
+    }
+
+    return {
+      ok: true,
+      projectId: inserted.projectId,
+      insertedObjectCount: inserted.insertedObjectCount,
+      generatedWidth: preparedSvg.width,
+      generatedHeight: preparedSvg.height,
+      generatedAt: preparedSvg.generatedAt,
+    }
+  }, [openApp, readWindowsFromCache])
+
   useFrontendTool({
     name: "open_app",
     description: "Open an app window in the CloudOS desktop.",
@@ -379,6 +539,32 @@ export function useDesktopCopilotTools() {
       }
     },
   }, [openApp])
+
+  useFrontendTool({
+    name: "open_canvas_project",
+    description: "Open Canvas app and navigate to a specific project by id or name.",
+    parameters: OPEN_CANVAS_PROJECT_PARAMS,
+    handler: async (args) => {
+      return openCanvasProject({
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        projectName: typeof args.projectName === "string" ? args.projectName : undefined,
+      })
+    },
+  }, [openCanvasProject])
+
+  useFrontendTool({
+    name: "add_svg_to_canvas",
+    description: "Generate SVG via backend and insert it into the currently opened canvas project.",
+    parameters: ADD_SVG_TO_CANVAS_PARAMS,
+    handler: async (args) => {
+      return addSvgToCanvas({
+        prompt: typeof args.prompt === "string" ? args.prompt : undefined,
+        scale: typeof args.scale === "number" ? args.scale : undefined,
+        width: typeof args.width === "number" ? args.width : undefined,
+        height: typeof args.height === "number" ? args.height : undefined,
+      })
+    },
+  }, [addSvgToCanvas])
 
   useFrontendTool({
     name: "open_text_file",
@@ -454,13 +640,13 @@ export function useDesktopCopilotTools() {
     name: "refresh_desktop_items",
     description: "Reload desktop items from backend.",
     handler: async () => {
-      await fetchItems()
+      await refreshDesktopItems()
       return {
         ok: true,
-        count: useDesktopItemsStore.getState().desktopFolders.length,
+        count: readDesktopFoldersFromCache().length,
       }
     },
-  }, [fetchItems])
+  }, [readDesktopFoldersFromCache, refreshDesktopItems])
 
   useHumanInTheLoop({
     name: "create_desktop_item",
@@ -520,8 +706,14 @@ export function useDesktopCopilotTools() {
             }
 
             await renameItem(id, name)
-            await fetchItems()
-            respond({ approved: true, ok: true, id, name })
+            await refreshDesktopItems()
+            const renamed = readDesktopFoldersFromCache().find((item) => item.id === id)
+            if (!renamed || renamed.name !== name) {
+              respond({ approved: false, ok: false, error: "Failed to rename item" })
+              return
+            }
+
+            respond({ approved: true, ok: true, id: renamed.id, name: renamed.name })
           } catch (error) {
             respond({
               approved: false,
@@ -536,7 +728,7 @@ export function useDesktopCopilotTools() {
         }}
       />
     ),
-  }, [fetchItems, renameItem])
+  }, [readDesktopFoldersFromCache, refreshDesktopItems, renameItem])
 
   useHumanInTheLoop({
     name: "delete_desktop_item",
@@ -559,7 +751,12 @@ export function useDesktopCopilotTools() {
             }
 
             await deleteItem(id)
-            await fetchItems()
+            await refreshDesktopItems()
+            const deleted = !readDesktopFoldersFromCache().some((item) => item.id === id)
+            if (!deleted) {
+              respond({ approved: false, ok: false, error: "Failed to delete item" })
+              return
+            }
             respond({ approved: true, ok: true, id })
           } catch (error) {
             respond({
@@ -575,5 +772,5 @@ export function useDesktopCopilotTools() {
         }}
       />
     ),
-  }, [deleteItem, fetchItems])
+  }, [deleteItem, readDesktopFoldersFromCache, refreshDesktopItems])
 }

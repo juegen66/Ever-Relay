@@ -29,6 +29,13 @@
       "when": 1771800000000,
       "tag": "0003_canvas_work_management",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772000000000,
+      "tag": "0004_desktop_content_version",
+      "breakpoints": true
     }
   ]
 }

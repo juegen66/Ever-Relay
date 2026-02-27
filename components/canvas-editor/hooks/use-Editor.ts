@@ -392,6 +392,95 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
             canvas.requestRenderAll()
             config.recordHistory()
         },
+        addSvgFromString: async (svg: string, options?: { scale?: number }) => {
+            const workspace = getWorkspace()
+            if (!workspace) {
+                return {
+                    ok: false as const,
+                    error: "Workspace is not ready yet.",
+                }
+            }
+
+            const svgMarkup = svg.trim()
+            if (!svgMarkup) {
+                return {
+                    ok: false as const,
+                    error: "svg is required",
+                }
+            }
+
+            if (!svgMarkup.toLowerCase().startsWith("<svg")) {
+                return {
+                    ok: false as const,
+                    error: "SVG payload must be a full <svg>...</svg> document",
+                }
+            }
+
+            try {
+                const loaded = await fabric.loadSVGFromString(svgMarkup)
+                const svgObjects = loaded.objects
+                    .filter((object): object is fabric.Object => Boolean(object))
+                    .filter((object) => getObjectRole(object) !== "workspace")
+
+                if (svgObjects.length === 0) {
+                    return {
+                        ok: false as const,
+                        error: "No drawable objects found in SVG",
+                    }
+                }
+
+                const groupSvgElements = (fabric.util as {
+                    groupSVGElements?: (elements: fabric.Object[], groupOptions?: Record<string, unknown>) => fabric.Object
+                }).groupSVGElements
+
+                const svgObject = groupSvgElements
+                    ? groupSvgElements(svgObjects, loaded.options as Record<string, unknown>)
+                    : svgObjects[0]
+
+                const bounds = svgObject.getBoundingRect()
+                const objectWidth = Math.max(1, bounds.width)
+                const objectHeight = Math.max(1, bounds.height)
+                const workspaceWidth = workspace.width ?? 1
+                const workspaceHeight = workspace.height ?? 1
+
+                const maxDisplayWidth = workspaceWidth * 0.9
+                const maxDisplayHeight = workspaceHeight * 0.9
+                const fitScale = Math.min(
+                    maxDisplayWidth / objectWidth,
+                    maxDisplayHeight / objectHeight,
+                    1,
+                )
+
+                const requestedScale = typeof options?.scale === "number" && Number.isFinite(options.scale)
+                    ? options.scale
+                    : 1
+                const finalScale = Math.max(0.01, fitScale * requestedScale)
+
+                svgObject.set({
+                    originX: "center",
+                    originY: "center",
+                })
+                svgObject.scale(finalScale)
+                centerObjectInWorkspace(svgObject, workspace)
+
+                canvas.add(svgObject)
+                canvas.setActiveObject(svgObject)
+                canvas.requestRenderAll()
+                config.recordHistory()
+
+                return {
+                    ok: true as const,
+                    insertedObjectCount: svgObjects.length,
+                }
+            } catch (error) {
+                return {
+                    ok: false as const,
+                    error: error instanceof Error && error.message.trim()
+                        ? error.message
+                        : "Failed to parse SVG",
+                }
+            }
+        },
         setFillColor: (color: string) => {
             applyToTargets((object) => {
                 object.set("fill", color)

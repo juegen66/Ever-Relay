@@ -76,7 +76,7 @@ export async function getFileContent(
     return fail(context, 404, "File not found or has no content")
   }
 
-  return ok(context, { content })
+  return ok(context, content)
 }
 
 /**
@@ -89,12 +89,21 @@ export async function updateFileContent(
 ) {
   const userId = requireUserId(context)
 
-  const updated = await filesService.updateFileContent(params.id, userId, body.content)
-  if (!updated) {
+  const result = await filesService.updateFileContent(params.id, userId, body)
+  if (!result.ok) {
+    if (result.reason === "version_conflict") {
+      return fail(context, 409, "File content version conflict", {
+        expectedVersion: result.expectedVersion,
+      })
+    }
+
     return fail(context, 404, "File not found")
   }
 
-  return ok(context, { updated: true as const })
+  return ok(context, {
+    updated: true as const,
+    contentVersion: result.contentVersion,
+  })
 }
 
 /**

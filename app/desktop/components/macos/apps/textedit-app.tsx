@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from "react"
 import dynamic from "next/dynamic"
 import { Loader2 } from "lucide-react"
+import { ApiError } from "@/lib/api"
 import { filesApi } from "@/lib/api/modules/files"
 import {
   clearTextEditorContentCache,
@@ -20,16 +21,36 @@ interface TextEditAppProps {
   fileName: string
 }
 
+function parseConflictExpectedVersion(error: ApiError): number | undefined {
+  if (error.status !== 409 || !error.details || typeof error.details !== "object") {
+    return undefined
+  }
+
+  const payload = error.details as {
+    data?: {
+      expectedVersion?: unknown
+    }
+  }
+
+  return typeof payload?.data?.expectedVersion === "number"
+    ? payload.data.expectedVersion
+    : undefined
+}
+
 export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
   const [content, setContent] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestContentRef = useRef("")
   const loadedRef = useRef(false)
   const dirtyRef = useRef(false)
   const externalWriteDuringLoadRef = useRef(false)
+  const contentVersionRef = useRef(1)
+  const inFlightSaveRef = useRef(false)
+  const pendingSaveTextRef = useRef<string | null>(null)
 
   // Load file content
   useEffect(() => {
@@ -37,12 +58,17 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     async function load() {
       setLoading(true)
       setError(null)
+      setSaveError(null)
       loadedRef.current = false
       dirtyRef.current = false
       externalWriteDuringLoadRef.current = false
+      contentVersionRef.current = 1
+      inFlightSaveRef.current = false
+      pendingSaveTextRef.current = null
       try {
         const data = await filesApi.getContent(fileId)
         if (!cancelled) {
+          contentVersionRef.current = data.contentVersion
           if (!externalWriteDuringLoadRef.current) {
             setContent(data.content)
             latestContentRef.current = data.content
@@ -63,20 +89,65 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     return () => { cancelled = true }
   }, [fileId])
 
-  // Auto-save with debounce
-  const saveContent = useCallback(async (text: string) => {
+  const runSaveLoop = useCallback(async () => {
     if (!loadedRef.current) return
+
+    if (inFlightSaveRef.current) {
+      return
+    }
+
+    inFlightSaveRef.current = true
     setSaving(true)
+
     try {
-      await filesApi.updateContent(fileId, text)
-      setTextEditorContentCache(fileId, text)
-      if (latestContentRef.current === text) {
-        dirtyRef.current = false
+      while (pendingSaveTextRef.current !== null) {
+        const textToSave = pendingSaveTextRef.current
+        pendingSaveTextRef.current = null
+
+        try {
+          const result = await filesApi.updateContent(
+            fileId,
+            textToSave,
+            contentVersionRef.current
+          )
+          contentVersionRef.current = result.contentVersion
+          setTextEditorContentCache(fileId, textToSave)
+          setSaveError(null)
+
+          if (latestContentRef.current === textToSave) {
+            dirtyRef.current = false
+          }
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409) {
+            const expectedVersion = parseConflictExpectedVersion(err)
+            if (expectedVersion !== undefined) {
+              contentVersionRef.current = expectedVersion
+            }
+
+            try {
+              const latest = await filesApi.getContent(fileId)
+              setContent(latest.content)
+              latestContentRef.current = latest.content
+              contentVersionRef.current = latest.contentVersion
+              dirtyRef.current = false
+              setTextEditorContentCache(fileId, latest.content)
+            } catch {
+              // no-op, keep existing UI state and only report conflict
+            }
+
+            setSaveError("Conflict detected. Loaded the latest content from server.")
+          } else {
+            setSaveError("Failed to save file content")
+          }
+          break
+        }
       }
-    } catch (err) {
-      console.error("Failed to save file content:", err)
     } finally {
+      inFlightSaveRef.current = false
       setSaving(false)
+      if (pendingSaveTextRef.current !== null) {
+        void runSaveLoop()
+      }
     }
   }, [fileId])
 
@@ -87,9 +158,10 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
       clearTimeout(saveTimerRef.current)
     }
     saveTimerRef.current = setTimeout(() => {
-      saveContent(text)
+      pendingSaveTextRef.current = text
+      void runSaveLoop()
     }, 1000)
-  }, [saveContent])
+  }, [runSaveLoop])
 
   const handleChange = useCallback((value?: string, event?: ChangeEvent<HTMLTextAreaElement>) => {
     if (value === undefined && !event) return
@@ -101,6 +173,7 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     latestContentRef.current = text
     setTextEditorContentCache(fileId, text)
     dirtyRef.current = loadedRef.current
+    setSaveError(null)
 
     scheduleSave(text)
   }, [fileId, scheduleSave])
@@ -132,6 +205,7 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
       setTextEditorContentCache(fileId, nextContent)
       loadedRef.current = true
       dirtyRef.current = true
+      setSaveError(null)
       scheduleSave(nextContent)
     }
 
@@ -150,8 +224,10 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
         clearTimeout(saveTimerRef.current)
       }
       // Fire final save
-      if (loadedRef.current && dirtyRef.current) {
-        filesApi.updateContent(fileId, latestContentRef.current).catch(() => {})
+      if (loadedRef.current && dirtyRef.current && !inFlightSaveRef.current) {
+        void filesApi
+          .updateContent(fileId, latestContentRef.current, contentVersionRef.current)
+          .catch(() => {})
       }
       clearTextEditorContentCache(fileId)
     }
@@ -190,9 +266,14 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
       >
         <span className="text-[11px] text-[#999]">{fileName}</span>
         <span className="text-[11px] text-[#999]">
-          {saving ? "Saving..." : "Saved"}
+          {saving ? "Saving..." : saveError ? "Conflict" : "Saved"}
         </span>
       </div>
+      {saveError ? (
+        <div className="border-b border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-600">
+          {saveError}
+        </div>
+      ) : null}
 
       {/* Editor */}
       <div className="flex-1 overflow-hidden">

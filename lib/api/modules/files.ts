@@ -40,12 +40,11 @@ export const filesApi = {
     return request.get<FileContentResponseData>(`/files/${id}/content`)
   },
 
-  updateContent(id: string, content: string) {
-    const body: UpdateFileContentBody = { content }
+  updateContent(id: string, content: string, contentVersion: number) {
+    const body: UpdateFileContentBody = { content, contentVersion }
     return request.put<UpdateFileContentResponseData, UpdateFileContentBody>(
       `/files/${id}/content`,
       body
     )
   },
 }
-

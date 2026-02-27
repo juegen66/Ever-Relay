@@ -6,7 +6,7 @@ import * as fabric from "fabric"
 import type { CanvasProject } from "@/lib/api/modules/canvas"
 import { useAutoResize } from "../hooks/use-auto-resize"
 import { useCanvasEvents } from "../hooks/use-canvas-events"
-import { useEditor } from "../hooks/use-Editor"
+import { useEditor, type EditorType } from "../hooks/use-Editor"
 import type { ActiveTools } from "../types"
 import { BackgroundColorSidebar } from "./backgroundcolor-sidebar"
 import { AiSidebar } from "./ai-sidebar"
@@ -39,13 +39,14 @@ interface EditorProps {
     contentJson: Record<string, unknown>,
     contentVersion: number
   ) => Promise<SaveCanvasContentResult>
+  onEditorApiChange?: (projectId: string, editor: EditorType | null) => void
 }
 
 const COMPACT_WIDTH_BREAKPOINT = 980
 const COMPACT_HEIGHT_BREAKPOINT = 720
 const COMPACT_SIDEBAR_WIDTH = 80
 
-export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => {
+export const Editor = ({ project, onBackToHub, onSaveContent, onEditorApiChange }: EditorProps) => {
   const {
     init,
     editor,
@@ -272,6 +273,17 @@ export const Editor = ({ project, onBackToHub, onSaveContent }: EditorProps) => 
       cancelled = true
     }
   }, [editor, getDocumentSnapshotString, loadDocument, project.contentJson, project.contentVersion, project.id])
+
+  useEffect(() => {
+    if (!onEditorApiChange) {
+      return
+    }
+
+    onEditorApiChange(project.id, editor)
+    return () => {
+      onEditorApiChange(project.id, null)
+    }
+  }, [editor, onEditorApiChange, project.id])
 
   useEffect(() => {
     return () => {

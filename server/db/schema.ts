@@ -29,6 +29,7 @@ export const desktopItems = pgTable("desktop_items", {
   x: integer("x").notNull().default(100),
   y: integer("y").notNull().default(100),
   content: text("content"), // file content stored directly in DB, null for folders
+  contentVersion: integer("content_version").notNull().default(1),
   fileSize: integer("file_size"),
   mimeType: text("mime_type"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

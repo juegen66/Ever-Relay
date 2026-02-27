@@ -14,6 +14,7 @@ import {
 import type {
   CanvasProjectListParams,
   CreateCanvasProjectParams,
+  GenerateCanvasSvgParams,
   UpdateCanvasProjectContentParams,
   UpdateCanvasProjectParams,
 } from "@/shared/contracts/canvas"
@@ -27,6 +28,10 @@ import {
 
 const DEFAULT_LIST_LIMIT = 40
 const MAX_LIST_LIMIT = 100
+const MAX_SVG_LENGTH = 200_000
+const SVG_BLOCKED_TAG_PATTERN = /<\s*(script|foreignObject|iframe|object|embed|audio|video)\b/i
+const SVG_EVENT_HANDLER_PATTERN = /\son[a-z]+\s*=/i
+const SVG_JAVASCRIPT_HREF_PATTERN = /\b(?:href|xlink:href)\s*=\s*['"]?\s*javascript:/i
 
 type CanvasProjectRecord = typeof canvasProjects.$inferSelect
 type CanvasTagRecord = typeof canvasTags.$inferSelect
@@ -57,6 +62,21 @@ interface UpdateContentSuccessResult {
 
 export type UpdateContentResult = UpdateContentConflictResult | UpdateContentSuccessResult
 
+interface GenerateSvgResult {
+  prompt: string
+  width: number
+  height: number
+  svg: string
+  generatedAt: string
+}
+
+export class CanvasSvgValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "CanvasSvgValidationError"
+  }
+}
+
 function normalizeLimit(limit?: number) {
   if (!limit || Number.isNaN(limit)) {
     return DEFAULT_LIST_LIMIT
@@ -78,6 +98,63 @@ function trimCopySuffixTitle(title: string) {
     return title
   }
   return title.slice(0, 240)
+}
+
+function validateSvgMarkup(markup: string) {
+  const normalized = markup.trim()
+  if (!normalized) {
+    throw new CanvasSvgValidationError("svg is required")
+  }
+
+  if (normalized.length > MAX_SVG_LENGTH) {
+    throw new CanvasSvgValidationError("SVG payload is too large")
+  }
+
+  const lower = normalized.toLowerCase()
+  if (!lower.startsWith("<svg") || !lower.includes("</svg>")) {
+    throw new CanvasSvgValidationError("SVG payload must be a full <svg>...</svg> document")
+  }
+
+  if (SVG_BLOCKED_TAG_PATTERN.test(normalized)) {
+    throw new CanvasSvgValidationError("SVG contains blocked tags")
+  }
+
+  if (SVG_EVENT_HANDLER_PATTERN.test(normalized)) {
+    throw new CanvasSvgValidationError("SVG contains blocked event handler attributes")
+  }
+
+  if (SVG_JAVASCRIPT_HREF_PATTERN.test(normalized)) {
+    throw new CanvasSvgValidationError("SVG contains blocked javascript href")
+  }
+
+  return normalized
+}
+
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+function pickAccentFromPrompt(prompt: string) {
+  const palette = [
+    ["#38bdf8", "#0ea5e9"],
+    ["#34d399", "#10b981"],
+    ["#f59e0b", "#f97316"],
+    ["#f472b6", "#ec4899"],
+    ["#a78bfa", "#8b5cf6"],
+    ["#22d3ee", "#06b6d4"],
+  ] as const
+
+  let hash = 0
+  for (let i = 0; i < prompt.length; i += 1) {
+    hash = (hash * 31 + prompt.charCodeAt(i)) >>> 0
+  }
+  const index = hash % palette.length
+  return palette[index]
 }
 
 export class CanvasService {
@@ -369,6 +446,49 @@ export class CanvasService {
     }
 
     return { ok: true, project: fullProject }
+  }
+
+  async generateSvgCode(input: GenerateCanvasSvgParams): Promise<GenerateSvgResult> {
+    const prompt = input.prompt.trim()
+    if (!prompt) {
+      throw new CanvasSvgValidationError("prompt is required")
+    }
+
+    const width = Math.max(120, Math.min(2400, Math.trunc(input.width ?? 720)))
+    const height = Math.max(120, Math.min(2400, Math.trunc(input.height ?? 480)))
+    const [accentFrom, accentTo] = pickAccentFromPrompt(prompt)
+
+    const content = prompt.replace(/\s+/g, " ").trim().slice(0, 72)
+    const lines = content.length <= 26
+      ? [content]
+      : [content.slice(0, 26).trim(), content.slice(26).trim()]
+    const lineHeight = Math.max(24, Math.floor(height * 0.08))
+    const baseY = Math.floor(height * 0.58)
+    const firstLineY = lines.length === 1 ? baseY : baseY - Math.floor(lineHeight * 0.55)
+    const textLines = lines.map((line, index) => {
+      const y = firstLineY + index * lineHeight
+      return `<text x="50%" y="${y}" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="${Math.max(20, Math.floor(height * 0.08))}" font-weight="700" fill="#0f172a">${escapeXml(line)}</text>`
+    }).join("")
+
+    const svg = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none">`,
+      `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${accentFrom}"/><stop offset="100%" stop-color="${accentTo}"/></linearGradient></defs>`,
+      `<rect x="0" y="0" width="${width}" height="${height}" rx="${Math.max(12, Math.floor(Math.min(width, height) * 0.08))}" fill="url(#bg)"/>`,
+      `<circle cx="${Math.floor(width * 0.18)}" cy="${Math.floor(height * 0.22)}" r="${Math.max(14, Math.floor(Math.min(width, height) * 0.09))}" fill="rgba(255,255,255,0.38)"/>`,
+      `<circle cx="${Math.floor(width * 0.82)}" cy="${Math.floor(height * 0.72)}" r="${Math.max(12, Math.floor(Math.min(width, height) * 0.07))}" fill="rgba(255,255,255,0.28)"/>`,
+      `<rect x="${Math.floor(width * 0.08)}" y="${Math.floor(height * 0.12)}" width="${Math.floor(width * 0.84)}" height="${Math.floor(height * 0.76)}" rx="${Math.max(10, Math.floor(Math.min(width, height) * 0.06))}" fill="rgba(255,255,255,0.72)"/>`,
+      textLines,
+      `</svg>`,
+    ].join("")
+
+    const normalizedSvg = validateSvgMarkup(svg)
+    return {
+      prompt,
+      width,
+      height,
+      svg: normalizedSvg,
+      generatedAt: new Date().toISOString(),
+    }
   }
 
   async markProjectOpened(id: string, userId: string) {

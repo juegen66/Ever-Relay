@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm"
 import type {
   CreateFileParams,
   FileItemType,
+  UpdateFileContentBody,
   UpdateFileParams,
 } from "@/shared/contracts/files"
 import { db } from "@/server/core/database"
@@ -11,6 +12,12 @@ import { desktopItems } from "@/server/db/schema"
 export type DesktopItemType = FileItemType
 export type CreateItemInput = CreateFileParams & { userId: string }
 export type UpdateItemInput = UpdateFileParams
+export type UpdateFileContentInput = UpdateFileContentBody
+
+type UpdateFileContentResult =
+  | { ok: true; contentVersion: number }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "version_conflict"; expectedVersion?: number }
 
 export class FilesService {
   /**
@@ -73,29 +80,70 @@ export class FilesService {
   /**
    * Get file content from database
    */
-  async getFileContent(id: string, userId: string): Promise<string | null> {
+  async getFileContent(
+    id: string,
+    userId: string
+  ): Promise<{ content: string; contentVersion: number } | null> {
     const item = await this.getItemById(id, userId)
     if (!item) return null
 
-    return item.content ?? ""
+    return {
+      content: item.content ?? "",
+      contentVersion: item.contentVersion,
+    }
   }
 
   /**
    * Update file content in database
    */
-  async updateFileContent(id: string, userId: string, content: string): Promise<boolean> {
+  async updateFileContent(
+    id: string,
+    userId: string,
+    input: UpdateFileContentInput
+  ): Promise<UpdateFileContentResult> {
     const item = await this.getItemById(id, userId)
-    if (!item) return false
+    if (!item) {
+      return { ok: false, reason: "not_found" }
+    }
+
+    if (item.contentVersion !== input.contentVersion) {
+      return {
+        ok: false,
+        reason: "version_conflict",
+        expectedVersion: item.contentVersion,
+      }
+    }
 
     const encoder = new TextEncoder()
-    const size = encoder.encode(content).byteLength
+    const size = encoder.encode(input.content).byteLength
 
-    await db
+    const [updated] = await db
       .update(desktopItems)
-      .set({ content, fileSize: size, updatedAt: new Date() })
-      .where(and(eq(desktopItems.id, id), eq(desktopItems.userId, userId)))
+      .set({
+        content: input.content,
+        fileSize: size,
+        contentVersion: item.contentVersion + 1,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(desktopItems.id, id),
+          eq(desktopItems.userId, userId),
+          eq(desktopItems.contentVersion, input.contentVersion)
+        )
+      )
+      .returning({ contentVersion: desktopItems.contentVersion })
 
-    return true
+    if (!updated) {
+      const latest = await this.getItemById(id, userId)
+      return {
+        ok: false,
+        reason: "version_conflict",
+        expectedVersion: latest?.contentVersion,
+      }
+    }
+
+    return { ok: true, contentVersion: updated.contentVersion }
   }
 
   /**

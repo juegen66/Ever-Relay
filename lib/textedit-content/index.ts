@@ -1,13 +1,11 @@
 "use client"
 
 import { filesApi } from "@/lib/api/modules/files"
+import type { TextEditWriteEventDetail } from "./types"
+
+export { type TextEditWriteEventDetail } from "./types"
 
 export const TEXTEDIT_WRITE_EVENT = "desktop:textedit-write"
-
-export interface TextEditWriteEventDetail {
-  fileId: string
-  content: string
-}
 
 const textEditorContentCache = new Map<string, string>()
 const readyEditors = new Set<string>()

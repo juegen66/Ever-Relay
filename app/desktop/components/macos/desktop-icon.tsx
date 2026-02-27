@@ -74,6 +74,16 @@ export function DesktopIcon({
   const isFolder = itemType === "folder"
 
   useEffect(() => {
+    setName(folder.name)
+  }, [folder.name])
+
+  useEffect(() => {
+    if (folder.isNew && !editing) {
+      setEditing(true)
+    }
+  }, [editing, folder.isNew])
+
+  useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus()
       inputRef.current.select()

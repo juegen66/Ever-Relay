@@ -6,6 +6,8 @@ import type {
   CanvasProjectStatus,
   CanvasTag,
   CanvasVisibility,
+  GenerateCanvasSvgParams,
+  GenerateCanvasSvgResponseData,
   CreateCanvasProjectParams,
   CreateCanvasTagParams,
   UpdateCanvasProjectContentParams,
@@ -19,6 +21,8 @@ export type {
   CanvasProjectStatus,
   CanvasTag,
   CanvasVisibility,
+  GenerateCanvasSvgParams,
+  GenerateCanvasSvgResponseData,
   CreateCanvasProjectParams,
   CreateCanvasTagParams,
   UpdateCanvasProjectContentParams,
@@ -62,6 +66,13 @@ export const canvasApi = {
     )
   },
 
+  generateSvg(params: GenerateCanvasSvgParams) {
+    return request.post<GenerateCanvasSvgResponseData, GenerateCanvasSvgParams>(
+      "/canvas/svg/generate",
+      params
+    )
+  },
+
   duplicateProject(id: string) {
     return request.post<CanvasProject, Record<string, never>>(
       `/canvas/projects/${id}/duplicate`,
@@ -92,4 +103,3 @@ export const canvasApi = {
     return request.post<CanvasTag, CreateCanvasTagParams>("/canvas/tags", body)
   },
 }
-

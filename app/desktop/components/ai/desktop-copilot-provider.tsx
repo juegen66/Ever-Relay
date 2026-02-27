@@ -12,9 +12,9 @@ import {
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
 } from "@/shared/copilot/constants"
+import { useDesktopCopilotTools } from "@/features/desktop-copilot/hooks/use-desktop-copilot-tools"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
-import { useDesktopCopilotTools } from "./use-desktop-copilot-tools"
 import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
 
 function DesktopCopilotHeader() {

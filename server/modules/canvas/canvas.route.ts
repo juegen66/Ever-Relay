@@ -5,6 +5,7 @@ import type {
   CanvasProjectListParams,
   CreateCanvasProjectParams,
   CreateCanvasTagParams,
+  GenerateCanvasSvgParams,
   GetCanvasProjectQuery,
   UpdateCanvasProjectContentParams,
   UpdateCanvasProjectParams,
@@ -27,6 +28,7 @@ import {
   createTag,
   deleteProject,
   duplicateProject,
+  generateSvg,
   getProjectById,
   listProjects,
   listTags,
@@ -84,6 +86,13 @@ export function registerCanvasRoutes(app: Hono<ServerBindings>) {
         getValidatedParams<CanvasProjectIdParams>(context),
         getValidatedBody<UpdateCanvasProjectContentParams>(context)
       )
+  )
+  app.post(
+    "/api/canvas/svg/generate",
+    authMiddleware,
+    validateJsonBody(canvasContracts.generateSvg.bodySchema),
+    (context) =>
+      generateSvg(context, getValidatedBody<GenerateCanvasSvgParams>(context))
   )
   app.post(
     "/api/canvas/projects/:id/duplicate",

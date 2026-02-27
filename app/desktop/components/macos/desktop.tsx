@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { usePathname } from "next/navigation"
+
 import { Dock } from "./dock"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
@@ -10,8 +11,10 @@ import { Spotlight } from "./spotlight"
 import { Launchpad } from "./launchpad"
 import { AboutMac } from "./about-mac"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { toDesktopFolder } from "@/lib/desktop-items"
+import { useDesktopItemsQuery } from "@/lib/query/files"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 type FolderNativeDragStartDetail = {
@@ -27,6 +30,7 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 export function Desktop() {
   const pathname = usePathname()
   const isFullscreenChatRoute = pathname === "/desktop/chat"
+
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
   const openApp = useDesktopWindowStore((state) => state.openApp)
@@ -41,7 +45,8 @@ export function Desktop() {
   const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
-  const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
+  const desktopItemsQuery = useDesktopItemsQuery()
+  const pendingRenameItemIds = useDesktopItemsStore((state) => state.pendingRenameItemIds)
   const selectedFolderId = useDesktopItemsStore((state) => state.selectedFolderId)
   const setSelectedFolderId = useDesktopItemsStore((state) => state.setSelectedFolderId)
   const clearSelection = useDesktopItemsStore((state) => state.clearSelection)
@@ -56,7 +61,13 @@ export function Desktop() {
   const moveItemToDesktop = useDesktopItemsStore((state) => state.moveItemToDesktop)
   const moveItemToDesktopAt = useDesktopItemsStore((state) => state.moveItemToDesktopAt)
   const createItemInFolder = useDesktopItemsStore((state) => state.createItemInFolder)
-  const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
+
+  const desktopFolders = useMemo(() => {
+    return (desktopItemsQuery.data ?? []).map((item) => {
+      return toDesktopFolder(item, Boolean(pendingRenameItemIds[item.id]))
+    })
+  }, [desktopItemsQuery.data, pendingRenameItemIds])
+
   const contextMenu = useDesktopUIStore((state) => state.contextMenu)
   const setContextMenu = useDesktopUIStore((state) => state.setContextMenu)
   const closeContextMenu = useDesktopUIStore((state) => state.closeContextMenu)
@@ -74,11 +85,6 @@ export function Desktop() {
   const activeNativeDragItemIdRef = useRef<string | null>(null)
   const desktopItemsRef = useRef(desktopFolders)
   const moveItemToDesktopAtRef = useRef(moveItemToDesktopAt)
-
-  // Fetch desktop items once desktop shell is mounted.
-  useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
 
   useEffect(() => {
     setTimeout(() => setDesktopReady(true), 100)
@@ -157,9 +163,7 @@ export function Desktop() {
       if (!element) return false
       if (!desktopEl.contains(element)) return false
 
-      // Ignore drops inside folder viewer content; those are handled by FolderViewer.
       if (element.closest("[data-folder-dropzone-id]")) return false
-      // Ignore drops over any app window chrome/content.
       if (element.closest(".animate-window-open")) return false
       return true
     }
@@ -185,7 +189,7 @@ export function Desktop() {
       if (!item || !item.parentId) return
 
       event.preventDefault()
-      moveItemToDesktopAtRef.current(itemId, event.clientX, event.clientY)
+      void moveItemToDesktopAtRef.current(itemId, event.clientX, event.clientY)
       activeNativeDragItemIdRef.current = null
     }
 
@@ -272,11 +276,21 @@ export function Desktop() {
               openApp("notes")
             }
           }}
-          onRename={renameItem}
-          onDelete={deleteItem}
-          onMove={moveItem}
-          onMoveEnd={persistItemPosition}
-          onMoveIntoFolder={moveIntoFolder}
+          onRename={(id, name) => {
+            void renameItem(id, name)
+          }}
+          onDelete={(id) => {
+            void deleteItem(id)
+          }}
+          onMove={(id, x, y) => {
+            void moveItem(id, x, y)
+          }}
+          onMoveEnd={(id, x, y) => {
+            void persistItemPosition(id, x, y)
+          }}
+          onMoveIntoFolder={(itemId, targetFolderId) => {
+            void moveIntoFolder(itemId, targetFolderId)
+          }}
           allDesktopItems={rootDesktopItems}
         />
       ))}
@@ -288,12 +302,12 @@ export function Desktop() {
           onClose={closeContextMenu}
           onAction={(action) => {
             const { x, y } = contextMenu
-            if (action === "new-folder") createFolder(x, y)
-            if (action === "new-file-text") createFile(x, y, "text")
-            if (action === "new-file-image") createFile(x, y, "image")
-            if (action === "new-file-code") createFile(x, y, "code")
-            if (action === "new-file-spreadsheet") createFile(x, y, "spreadsheet")
-            if (action === "new-file-generic") createFile(x, y, "generic")
+            if (action === "new-folder") void createFolder(x, y)
+            if (action === "new-file-text") void createFile(x, y, "text")
+            if (action === "new-file-image") void createFile(x, y, "image")
+            if (action === "new-file-code") void createFile(x, y, "code")
+            if (action === "new-file-spreadsheet") void createFile(x, y, "spreadsheet")
+            if (action === "new-file-generic") void createFile(x, y, "generic")
             if (action === "finder") openApp("finder")
             if (action === "terminal") openApp("terminal")
             if (action === "settings") openApp("settings")
