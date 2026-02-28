@@ -25,16 +25,16 @@
     "paths": {
       "@/*": [
         "./*",
-        "./fronted/*"
+        "../*"
       ]
     }
   },
   "include": [
-    "fronted/next-env.d.ts",
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "fronted/.next/types/**/*.ts",
-    "fronted/.next/dev/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -5,6 +5,7 @@ import { ApiError, normalizeAxiosError } from './error'
 import type { ApiCode, ApiResponse } from './types'
 
 const SUCCESS_CODES = new Set<ApiCode>([0, '0'])
+let loginRedirecting = false
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -32,6 +33,19 @@ function toBusinessError(payload: ApiResponse<unknown>, status?: number): ApiErr
     status,
     details: payload,
   })
+}
+
+function redirectToLoginIfUnauthorized(error: ApiError) {
+  if (error.status !== 401) return
+  if (typeof window === 'undefined') return
+  if (loginRedirecting) return
+
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  if (window.location.pathname === '/login') return
+
+  loginRedirecting = true
+  const callbackURL = currentPath || '/desktop'
+  window.location.replace(`/login?callbackURL=${encodeURIComponent(callbackURL)}`)
 }
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api'
@@ -67,5 +81,9 @@ apiClient.interceptors.response.use(
 
     return response
   },
-  (error) => Promise.reject(normalizeAxiosError(error))
+  (error) => {
+    const normalizedError = normalizeAxiosError(error)
+    redirectToLoginIfUnauthorized(normalizedError)
+    return Promise.reject(normalizedError)
+  }
 )

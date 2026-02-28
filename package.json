@@ -3,16 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "dev": "next dev ./fronted --turbo",
+    "build": "next build ./fronted",
+    "start": "next start ./fronted",
+    "lint": "next lint ./fronted",
     "mastra:dev": "pnpm exec mastra dev -d server/mastra",
     "mastra:studio": "pnpm exec mastra studio --server-port 4111 --port 4112",
     "inngest:dev": "pnpm exec inngest-cli dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "article:assemble": "node scripts/assemble-article.mjs"
   },
   "dependencies": {
     "@ag-ui/client": "0.0.44",

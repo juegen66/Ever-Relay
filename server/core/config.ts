@@ -1,3 +1,10 @@
+import { config } from "dotenv"
+import path from "path"
+
+// Ensure .env is loaded from project root (next dev ./fronted uses fronted/ as root, so .env may be missed)
+config({ path: path.resolve(process.cwd(), ".env") })
+config({ path: path.resolve(process.cwd(), "..", ".env") })
+
 export const serverConfig = {
   database: {
     url:
