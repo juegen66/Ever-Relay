@@ -24,21 +24,7 @@ import { useUserStore } from "@/lib/stores/user-store"
 
 const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",
-  calculator: "Calculator",
-  notes: "Notes",
-  terminal: "Terminal",
-  safari: "Safari",
-  settings: "System Settings",
-  photos: "Photos",
-  music: "Music",
-  calendar: "Calendar",
-  mail: "Mail",
-  weather: "Weather",
   canvas: "Canvas",
-  clock: "Clock",
-  maps: "Maps",
-  appstore: "App Store",
-  messages: "Messages",
   vibecoding: "vibecoding",
   textedit: "TextEdit",
 }
@@ -56,9 +42,6 @@ type MenuItem = { type: "separator" } | MenuActionItem
 
 const APPLE_MENU: MenuItem[] = [
   { label: "About This Mac", action: "about" },
-  { type: "separator" as const },
-  { label: "System Settings...", action: "settings" },
-  { label: "App Store...", action: "appstore" },
   { type: "separator" as const },
   { label: "Recent Items", action: "recent", hasSubmenu: true },
   { type: "separator" as const },
@@ -114,7 +97,6 @@ export function MenuBar() {
   const currentUser = useUserStore((state) => state.currentUser)
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
-  const openApp = useDesktopWindowStore((state) => state.openApp)
   const setShowAboutMac = useDesktopUIStore((state) => state.setShowAboutMac)
   const [time, setTime] = useState("")
   const [date, setDate] = useState("")
@@ -154,14 +136,12 @@ export function MenuBar() {
   const handleMenuAction = useCallback(async (action?: string) => {
     setOpenMenu(null)
     if (action === "about") setShowAboutMac(true)
-    if (action === "settings") openApp("settings")
-    if (action === "appstore") openApp("appstore")
     if (action === "logout") {
       await authClient.signOut()
       useUserStore.getState().clearCurrentUser()
       router.push("/")
     }
-  }, [setShowAboutMac, openApp, router])
+  }, [setShowAboutMac, router])
 
   const userName = currentUser?.username || "User"
 
@@ -483,7 +463,7 @@ function ControlCenter() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[12px] font-medium text-[#333]">Not Playing</div>
-            <div className="text-[10px] text-[#999]">Music</div>
+            <div className="text-[10px] text-[#999]">Media</div>
           </div>
           <div className="flex items-center gap-2">
             <button className="text-[#666] hover:text-[#333]">

@@ -2,20 +2,8 @@ import type { AppId } from "@/app/desktop/components/macos/types"
 
 export const APP_IDS: AppId[] = [
   "finder",
-  "calculator",
-  "notes",
-  "terminal",
-  "safari",
-  "settings",
-  "photos",
-  "music",
-  "calendar",
-  "mail",
-  "weather",
-  "clock",  
-  "appstore",
-  "messages",
   "canvas",
+  "vibecoding",
   "textedit",
 ]
 

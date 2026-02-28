@@ -3,20 +3,6 @@
 import { useRef, useCallback, useEffect, useState } from "react"
 import type { WindowState } from "./types"
 import { FinderApp } from "./apps/finder-app"
-import { CalculatorApp } from "./apps/calculator-app"
-import { NotesApp } from "./apps/notes-app"
-import { TerminalApp } from "./apps/terminal-app"
-import { SafariApp } from "./apps/safari-app"
-import { SettingsApp } from "./apps/settings-app"
-import { PhotosApp } from "./apps/photos-app"
-import { MusicApp } from "./apps/music-app"
-import { CalendarApp } from "./apps/calendar-app"
-import { MailApp } from "./apps/mail-app"
-import { WeatherApp } from "./apps/weather-app"
-import { ClockApp } from "./apps/clock-app"
-import { MapsApp } from "./apps/maps-app"
-import { AppStoreApp } from "./apps/appstore-app"
-import { MessagesApp } from "./apps/messages-app"
 import { CanvasApp } from "./apps/canvas-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
 import { FolderViewer } from "./apps/folder-viewer"
@@ -25,20 +11,6 @@ import type { DesktopFolder, DesktopItemType } from "./desktop-icon"
 
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",
-  calculator: "Calculator",
-  notes: "Notes",
-  terminal: "Terminal",
-  safari: "Safari",
-  settings: "System Settings",
-  photos: "Photos",
-  music: "Music",
-  calendar: "Calendar",
-  mail: "Mail",
-  weather: "Weather",
-  clock: "Clock",
-  maps: "Maps",
-  appstore: "App Store",
-  messages: "Messages",
   canvas: "Canvas",
   vibecoding: "vibecoding",
   textedit: "TextEdit",
@@ -46,26 +18,12 @@ const APP_TITLES: Record<string, string> = {
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
   finder: FinderApp,
-  calculator: CalculatorApp,
-  notes: NotesApp,
-  terminal: TerminalApp,
-  safari: SafariApp,
-  settings: SettingsApp,
-  photos: PhotosApp,
-  music: MusicApp,
-  calendar: CalendarApp,
-  mail: MailApp,
-  weather: WeatherApp,
-  clock: ClockApp,
-  maps: MapsApp,
-  appstore: AppStoreApp,
-  messages: MessagesApp,
   canvas: CanvasApp,
   vibecoding: VibecodingApp,
 }
 
 // Dark title bar apps
-const DARK_TITLEBAR_APPS = new Set(["terminal", "calculator", "music", "maps"])
+const DARK_TITLEBAR_APPS = new Set<string>()
 
 interface AppWindowProps {
   windowState: WindowState

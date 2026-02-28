@@ -22,9 +22,9 @@ type FolderNativeDragStartDetail = {
 }
 
 const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
-  { app: "Mail", title: "New Email", message: "Sarah Johnson: Q1 Report Review - I've attached the Q1 report for your review...", time: "now", iconColor: "#007aff" },
-  { app: "Messages", title: "Sarah", message: "See you tomorrow!", time: "2m ago", iconColor: "#34c759" },
-  { app: "Calendar", title: "Upcoming Event", message: "Team Standup in 30 minutes", time: "5m ago", iconColor: "#ff3b30" },
+  { app: "vibecoding", title: "Build Complete", message: "Landing page draft generated and ready for review.", time: "now", iconColor: "#22c55e" },
+  { app: "Canvas", title: "Project Synced", message: "Latest edits are saved to your active canvas project.", time: "2m ago", iconColor: "#ff7a00" },
+  { app: "Finder", title: "Desktop Ready", message: "Your workspace files are available from Finder.", time: "5m ago", iconColor: "#1e90ff" },
 ]
 
 export function Desktop() {
@@ -273,7 +273,7 @@ export function Desktop() {
             } else if (folder.itemType === "text") {
               openFileWindow(folder.id, folder.name)
             } else {
-              openApp("notes")
+              openApp("finder")
             }
           }}
           onRename={(id, name) => {
@@ -309,8 +309,6 @@ export function Desktop() {
             if (action === "new-file-spreadsheet") void createFile(x, y, "spreadsheet")
             if (action === "new-file-generic") void createFile(x, y, "generic")
             if (action === "finder") openApp("finder")
-            if (action === "terminal") openApp("terminal")
-            if (action === "settings") openApp("settings")
             closeContextMenu()
           }}
         />

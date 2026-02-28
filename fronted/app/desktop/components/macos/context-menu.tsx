@@ -10,13 +10,11 @@ import {
   FileSpreadsheet,
   File,
   Info,
-  Image,
   LayoutGrid,
   Layers,
   ArrowUpDown,
   Sparkles,
   Eye,
-  Terminal as TerminalIcon,
   FolderOpen,
   ChevronRight,
 } from "lucide-react"
@@ -51,7 +49,6 @@ const MENU_ITEMS: MenuItem[] = [
   },
   { label: "Get Info", action: "info", icon: Info },
   { type: "separator" },
-  { label: "Change Wallpaper...", action: "settings", icon: Image },
   { label: "Edit Widgets...", action: "widgets", icon: LayoutGrid },
   { type: "separator" },
   { label: "Use Stacks", action: "stacks", icon: Layers },
@@ -59,7 +56,6 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "Clean Up", action: "cleanup", icon: Sparkles },
   { type: "separator" },
   { label: "Show View Options", action: "view-options", icon: Eye },
-  { label: "Open Terminal Here", action: "terminal", icon: TerminalIcon },
   { label: "Open in Finder", action: "finder", icon: FolderOpen },
 ]
 

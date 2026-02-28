@@ -44,7 +44,7 @@ const OPEN_APP_PARAMS: ToolParameter[] = [
   {
     name: "appId",
     type: "string",
-    description: "App id to open: finder|calculator|notes|terminal|safari|settings|photos|music|calendar|mail|weather|clock|maps|appstore|messages|canvas|textedit. To open a specific text file, use open_text_file.",
+    description: "App id to open: finder|canvas|vibecoding|textedit. To open a specific text file, use open_text_file.",
     required: true,
   },
 ]

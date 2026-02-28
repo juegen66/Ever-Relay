@@ -8,22 +8,8 @@ import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
-  { id: "safari", name: "Safari", category: "Applications" },
-  { id: "notes", name: "Notes", category: "Applications" },
-  { id: "calculator", name: "Calculator", category: "Applications" },
-  { id: "terminal", name: "Terminal", category: "Applications" },
-  { id: "photos", name: "Photos", category: "Applications" },
-  { id: "settings", name: "System Settings", category: "System" },
-  { id: "music", name: "Music", category: "Applications" },
-  { id: "calendar", name: "Calendar", category: "Applications" },
-  { id: "mail", name: "Mail", category: "Applications" },
-  { id: "weather", name: "Weather", category: "Applications" },
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "vibecoding", name: "vibecoding", category: "Applications" },
-  { id: "clock", name: "Clock", category: "Applications" },
-  { id: "maps", name: "Maps", category: "Applications" },
-  { id: "messages", name: "Messages", category: "Applications" },
-  { id: "appstore", name: "App Store", category: "Applications" },
 ]
 
 export function Spotlight() {
@@ -65,22 +51,8 @@ export function Spotlight() {
 
   const APP_ICONS: Record<string, string> = {
     finder: "#1e90ff",
-    safari: "#0077b6",
-    notes: "#f9c74f",
-    calculator: "#444",
-    terminal: "#1a1a2e",
-    photos: "#ff6b6b",
-    settings: "#636e72",
-    music: "#fc3c44",
-    calendar: "#ff3b30",
-    mail: "#007aff",
-    weather: "#4fc3f7",
     canvas: "#ff7a00",
     vibecoding: "#16a34a",
-    clock: "#333",
-    maps: "#34c759",
-    messages: "#34c759",
-    appstore: "#0d84ff",
   }
 
   return (
