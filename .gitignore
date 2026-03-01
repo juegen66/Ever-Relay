@@ -16,6 +16,9 @@ agentvibecoding420-main/
 # next-agents-md
 .next-docs/
 
+# Mastra build output
+.mastra/
+
 # Cursor and docs (local/planning)
 .cursor/
 docs/

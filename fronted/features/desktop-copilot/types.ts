@@ -1,8 +1,9 @@
-import type { AppId } from "@/app/desktop/components/macos/types"
+import type { AppId } from "@/lib/desktop/types"
 
 export const APP_IDS: AppId[] = [
   "finder",
   "canvas",
+  "logo",
   "vibecoding",
   "textedit",
 ]

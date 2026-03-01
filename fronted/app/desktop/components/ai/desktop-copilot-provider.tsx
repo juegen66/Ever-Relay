@@ -3,7 +3,7 @@
 import { useCallback, useEffect, type ReactNode } from "react"
 import { MessageSquare, X } from "lucide-react"
 
-import { useCopilotChat, CopilotKit } from "@copilotkit/react-core"
+import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
 import { usePathname } from "next/navigation"
 
@@ -11,38 +11,43 @@ import { Button } from "@/components/ui/button"
 import {
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
+  LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
+import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
 import { useDesktopCopilotTools } from "@/features/desktop-copilot/hooks/use-desktop-copilot-tools"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
 import { BuildProgressPanel } from "./build-progress-panel"
+import { useStartNewCopilotChat } from "./use-start-new-copilot-chat"
 
 function DesktopCopilotHeader() {
-  const { setOpen, labels } = useChatContext()
-  const { reset, stopGeneration, isLoading } = useCopilotChat()
+  const { labels } = useChatContext()
+  const startNewChat = useStartNewCopilotChat()
+  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
 
-  const handleClearCurrentChat = () => {
-    const shouldClear = window.confirm("Clear current chat history?")
-    if (!shouldClear) {
+  const handleStartNewChat = () => {
+    const shouldStartNewChat = window.confirm("Start a new chat? This clears the current conversation view.")
+    if (!shouldStartNewChat) {
       return
     }
 
-    if (isLoading) {
-      stopGeneration()
-    }
-
-    reset()
+    startNewChat()
   }
 
   return (
     <div className="copilotKitHeader">
       <div>{labels.title}</div>
       <div className="copilotKitHeaderControls">
-        <Button size="sm" variant="outline" onClick={handleClearCurrentChat}>
-          Clear
+        <Button size="sm" variant="outline" onClick={handleStartNewChat}>
+          New Chat
         </Button>
-        <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Close Copilot sidebar">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setCopilotSidebarOpen(false)}
+          aria-label="Close Copilot sidebar"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -50,10 +55,23 @@ function DesktopCopilotHeader() {
   )
 }
 
-function DesktopCopilotOpenButton() {
+function SidebarOpenStateSync() {
   const { open, setOpen } = useChatContext()
+  const desiredOpen = useDesktopUIStore((state) => state.copilotSidebarOpen)
+
+  useEffect(() => {
+    if (open === desiredOpen) return
+    setOpen(desiredOpen)
+  }, [desiredOpen, open, setOpen])
+
+  return null
+}
+
+function DesktopCopilotOpenButton() {
+  const { open } = useChatContext()
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
+  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
 
   if (open || !isDesktopRootRoute) {
     return null
@@ -61,7 +79,7 @@ function DesktopCopilotOpenButton() {
 
   return (
     <div className="fixed right-4 top-8 z-[10006]">
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button size="sm" onClick={() => setCopilotSidebarOpen(true)}>
         <MessageSquare className="h-4 w-4" />
         Copilot
       </Button>
@@ -78,25 +96,42 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
   useDesktopCopilotTools()
+  const copilotSidebarOpen = useDesktopUIStore((state) => state.copilotSidebarOpen)
   const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   useEffect(() => {
-    setCopilotSidebarOpen(false)
-    return () => setCopilotSidebarOpen(false)
+    if (useDesktopUIStore.getState().copilotSidebarOpen) {
+      setCopilotSidebarOpen(false)
+    }
+
+    return () => {
+      if (useDesktopUIStore.getState().copilotSidebarOpen) {
+        setCopilotSidebarOpen(false)
+      }
+    }
   }, [setCopilotSidebarOpen])
 
   useEffect(() => {
     if (!isDesktopRootRoute) {
-      setCopilotSidebarOpen(false)
+      if (useDesktopUIStore.getState().copilotSidebarOpen) {
+        setCopilotSidebarOpen(false)
+      }
       fitWindowsToViewport()
     }
   }, [fitWindowsToViewport, isDesktopRootRoute, setCopilotSidebarOpen])
 
-  const handleSidebarOpenChange = useCallback((open: boolean) => {
-    setCopilotSidebarOpen(open)
+  useEffect(() => {
     fitWindowsToViewport()
-  }, [fitWindowsToViewport, setCopilotSidebarOpen])
+  }, [copilotSidebarOpen, fitWindowsToViewport])
+
+  const handleSidebarOpenChange = useCallback((open: boolean) => {
+    if (useDesktopUIStore.getState().copilotSidebarOpen === open) {
+      return
+    }
+
+    setCopilotSidebarOpen(open)
+  }, [setCopilotSidebarOpen])
 
   return (
     <>
@@ -111,6 +146,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
         Header={DesktopCopilotHeader}
         instructions={DESKTOP_COPILOT_INSTRUCTIONS}
       >
+        <SidebarOpenStateSync />
         {desktop}
       </CopilotSidebar>
       <BuildProgressPanel />
@@ -120,13 +156,19 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 }
 
 export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProviderProps) {
+  const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
+  const copilotThreadId = useDesktopUIStore((state) => state.copilotThreadId)
+  const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
+
   return (
     <CopilotKit
       runtimeUrl={DESKTOP_COPILOT_ENDPOINT}
       credentials="include"
-      agent={DESKTOP_COPILOT_AGENT}
+      agent={activeAgent}
+      threadId={copilotThreadId}
       showDevConsole={process.env.NODE_ENV !== "production"}
     >
+      <BrandBriefInjector />
       <DesktopCopilotBridge desktop={desktop}>{children}</DesktopCopilotBridge>
     </CopilotKit>
   )

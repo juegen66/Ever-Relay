@@ -10,6 +10,7 @@ import { registerFilesRoutes } from "@/server/modules/files/files.route"
 import { registerHealthRoutes } from "@/server/modules/health/health.route"
 import { registerImageProcessingRoutes } from "@/server/modules/image-processing/image-processing.route"
 import { registerInngestRoutes } from "@/server/modules/inngest/inngest.route"
+import { registerLogoDesignRoutes } from "@/server/modules/logo-design/logo-design.route"
 import type { ServerBindings } from "@/server/types"
 import { fail } from "@/server/lib/http/response"
 
@@ -26,6 +27,7 @@ registerFilesRoutes(serverApp)
 registerHealthRoutes(serverApp)
 registerImageProcessingRoutes(serverApp)
 registerInngestRoutes(serverApp)
+registerLogoDesignRoutes(serverApp)
 
 serverApp.notFound((context) => {
   return fail(context, 404, `Route not found: ${context.req.path}`)

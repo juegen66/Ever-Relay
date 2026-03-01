@@ -9,6 +9,7 @@ import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
   { id: "canvas", name: "Canvas", category: "Applications" },
+  { id: "logo", name: "Logo Studio", category: "Applications" },
   { id: "vibecoding", name: "vibecoding", category: "Applications" },
 ]
 
@@ -52,6 +53,7 @@ export function Spotlight() {
   const APP_ICONS: Record<string, string> = {
     finder: "#1e90ff",
     canvas: "#ff7a00",
+    logo: "#d946ef",
     vibecoding: "#16a34a",
   }
 

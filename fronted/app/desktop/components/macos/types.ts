@@ -1,6 +1,7 @@
 export type AppId =
   | "finder"
   | "canvas"
+  | "logo"
   | "vibecoding"
   | "textedit"
 

@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect } from "react"
 
-import { useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core"
+import { useCopilotChat, useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core"
 import type { ActionRenderPropsWait } from "@copilotkit/react-core"
 
-import type { DesktopFolder } from "@/app/desktop/components/macos/desktop-icon"
+import type { DesktopFolder } from "@/lib/desktop/types"
 import { buildsApi } from "@/lib/api/modules/builds"
 import { canvasApi } from "@/lib/api/modules/canvas"
+import { logoDesignApi } from "@/lib/api/modules/logo-design"
 import { toDesktopItemType } from "@/lib/desktop-items"
 import { useBuildProgressStore } from "@/lib/stores/build-progress-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
   readTextEditorContent,
@@ -44,7 +46,7 @@ const OPEN_APP_PARAMS: ToolParameter[] = [
   {
     name: "appId",
     type: "string",
-    description: "App id to open: finder|canvas|vibecoding|textedit. To open a specific text file, use open_text_file.",
+    description: "App id to open: finder|canvas|logo|vibecoding|textedit. To open a specific text file, use open_text_file.",
     required: true,
   },
 ]
@@ -190,7 +192,41 @@ const TRIGGER_BUILD_PARAMS: ToolParameter[] = [
   },
 ]
 
+const CONFIRM_LOGO_BRIEF_PARAMS: ToolParameter[] = [
+  {
+    name: "fullPrompt",
+    type: "string",
+    description: "Final prompt for logo design workflow.",
+    required: true,
+  },
+  {
+    name: "brandBrief",
+    type: "object",
+    description: "Structured brand brief object collected from conversation.",
+    required: false,
+  },
+]
+
+const OPEN_LOGO_SIDEBAR_PARAMS: ToolParameter[] = [
+  {
+    name: "reason",
+    type: "string",
+    description: "Optional reason shown in tool result for why clarification is needed.",
+    required: false,
+  },
+]
+
+const START_NEW_CHAT_THREAD_PARAMS: ToolParameter[] = [
+  {
+    name: "reason",
+    type: "string",
+    description: "Optional reason for isolating the next task into a new chat thread.",
+    required: false,
+  },
+]
+
 export function useDesktopCopilotTools() {
+  const { reset, stopGeneration, isLoading } = useCopilotChat()
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const fetchItems = useDesktopItemsStore((state) => state.fetchItems)
   const createItem = useDesktopItemsStore((state) => state.createItem)
@@ -200,6 +236,9 @@ export function useDesktopCopilotTools() {
   const openFileWindow = useDesktopWindowStore((state) => state.openFileWindow)
   const windows = useDesktopWindowStore((state) => state.windows)
   const openBuildProgress = useBuildProgressStore((state) => state.openForRun)
+  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
+  const setCopilotAgentMode = useDesktopUIStore((state) => state.setCopilotAgentMode)
+  const startNewCopilotThread = useDesktopUIStore((state) => state.startNewCopilotThread)
 
   const readDesktopFoldersFromCache = useCallback(() => {
     return useDesktopItemsStore.getState().desktopFolders
@@ -569,6 +608,76 @@ export function useDesktopCopilotTools() {
     }
   }, [openBuildProgress])
 
+  const confirmLogoBrief = useCallback(async (args: {
+    fullPrompt?: string
+    brandBrief?: Record<string, unknown>
+  }) => {
+    const fullPrompt = typeof args.fullPrompt === "string" ? args.fullPrompt.trim() : ""
+    if (!fullPrompt) {
+      return {
+        ok: false,
+        error: "fullPrompt is required",
+      }
+    }
+
+    const brandBrief =
+      typeof args.brandBrief === "object" && args.brandBrief !== null
+        ? args.brandBrief
+        : undefined
+
+    try {
+      const response = await logoDesignApi.triggerDesign({
+        prompt: fullPrompt,
+        brandBrief,
+      })
+
+      return {
+        ok: true,
+        runId: response.runId,
+        stage: response.stage,
+        status: response.status,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: toErrorMessage(error),
+      }
+    }
+  }, [])
+
+  const openLogoSidebar = useCallback(async (args: { reason?: string }) => {
+    setCopilotAgentMode("logo")
+    setCopilotSidebarOpen(true)
+
+    const reason = typeof args.reason === "string" ? args.reason.trim() : ""
+    return {
+      ok: true,
+      opened: true,
+      reason: reason || null,
+    }
+  }, [setCopilotAgentMode, setCopilotSidebarOpen])
+
+  const startNewChatThread = useCallback(async (args: { reason?: string }) => {
+    const { copilotAgentMode: previousAgentMode } = useDesktopUIStore.getState()
+
+    if (isLoading) {
+      stopGeneration()
+    }
+
+    reset()
+    startNewCopilotThread()
+
+    const { copilotThreadId: newThreadId } = useDesktopUIStore.getState()
+    const reason = typeof args.reason === "string" ? args.reason.trim() : ""
+
+    return {
+      ok: true,
+      newThreadId,
+      previousAgentMode,
+      reason: reason || null,
+    }
+  }, [isLoading, reset, startNewCopilotThread, stopGeneration])
+
   useFrontendTool({
     name: "open_app",
     description: "Open an app window in the CloudOS desktop.",
@@ -662,6 +771,43 @@ export function useDesktopCopilotTools() {
       })
     },
   }, [triggerBuild])
+
+  useFrontendTool({
+    name: "confirm_logo_brief",
+    description: "Confirm finalized logo brief and trigger backend logo workflow.",
+    parameters: CONFIRM_LOGO_BRIEF_PARAMS,
+    handler: async (args) => {
+      return confirmLogoBrief({
+        fullPrompt: typeof args.fullPrompt === "string" ? args.fullPrompt : undefined,
+        brandBrief:
+          typeof args.brandBrief === "object" && args.brandBrief !== null
+            ? (args.brandBrief as Record<string, unknown>)
+            : undefined,
+      })
+    },
+  }, [confirmLogoBrief])
+
+  useFrontendTool({
+    name: "open_logo_sidebar",
+    description: "Open logo copilot sidebar for follow-up clarification questions.",
+    parameters: OPEN_LOGO_SIDEBAR_PARAMS,
+    handler: async (args) => {
+      return openLogoSidebar({
+        reason: typeof args.reason === "string" ? args.reason : undefined,
+      })
+    },
+  }, [openLogoSidebar])
+
+  useFrontendTool({
+    name: "start_new_chat_thread",
+    description: "Create a fresh Copilot chat thread to isolate a new, unrelated task context.",
+    parameters: START_NEW_CHAT_THREAD_PARAMS,
+    handler: async (args) => {
+      return startNewChatThread({
+        reason: typeof args.reason === "string" ? args.reason : undefined,
+      })
+    },
+  }, [startNewChatThread])
 
   useFrontendTool({
     name: "list_open_windows",

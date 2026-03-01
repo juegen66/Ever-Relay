@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
 import model from "@/server/mastra/model"
+import { createAgentMemory } from "@/server/mastra/memory"
 import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
@@ -18,6 +19,7 @@ export const plannerAgent = new Agent({
   id: PLANNER_AGENT_ID,
   name: "Planner Agent",
   model: model.lzmodel4oMini,
+  memory: createAgentMemory(),
   requestContextSchema: plannerRequestContextSchema,
   instructions: [
     "You are the planning agent for CloudOS app builds.",
@@ -30,4 +32,3 @@ export const plannerAgent = new Agent({
     listCanvasProjects: listCanvasProjectsTool,
   },
 })
-

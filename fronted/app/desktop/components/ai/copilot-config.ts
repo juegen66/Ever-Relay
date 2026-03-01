@@ -6,6 +6,9 @@ export const DESKTOP_COPILOT_LABELS = {
 export const DESKTOP_COPILOT_INSTRUCTIONS = [
   "You are an assistant embedded in CloudOS desktop.",
   "Use tools instead of guessing state.",
+  "When the user switches to a clearly unrelated task, call start_new_chat_thread before continuing so the new work stays isolated.",
+  "Do not call start_new_chat_thread for normal follow-up questions in the same task.",
+  "If the user explicitly asks to keep the same context, do not call start_new_chat_thread.",
   "For Canvas editing tasks, first call open_canvas_project with projectId or projectName.",
   "Use list_canvas_projects when you need to discover candidate Canvas projects.",
   "To add vector graphics into canvas, call add_svg_to_canvas with a prompt so backend can generate SVG.",

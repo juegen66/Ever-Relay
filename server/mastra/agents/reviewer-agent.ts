@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
 import model from "@/server/mastra/model"
+import { createAgentMemory } from "@/server/mastra/memory"
 import { createBuildWorkspace } from "@/server/mastra/workspace"
 import {
   executeSandboxCommandTool,
@@ -20,6 +21,7 @@ export const reviewerAgent = new Agent({
   id: REVIEWER_AGENT_ID,
   name: "Reviewer Agent",
   model: model.lzmodel4oMini,
+  memory: createAgentMemory(),
   requestContextSchema: reviewerRequestContextSchema,
   workspace: ({ requestContext }) => {
     const userId = String(requestContext.get("userId") ?? "")
@@ -45,4 +47,3 @@ export const reviewerAgent = new Agent({
     executeSandboxCommand: executeSandboxCommandTool,
   },
 })
-

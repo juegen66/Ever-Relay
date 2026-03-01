@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
 import model from "@/server/mastra/model"
+import { createAgentMemory } from "@/server/mastra/memory"
 import { createBuildWorkspace } from "@/server/mastra/workspace"
 import {
   createCanvasProjectTool,
@@ -25,6 +26,7 @@ export const builderAgent = new Agent({
   id: BUILDER_AGENT_ID,
   name: "Builder Agent",
   model: model.lzmodel4oMini,
+  memory: createAgentMemory(),
   requestContextSchema: builderRequestContextSchema,
   workspace: ({ requestContext }) => {
     const userId = String(requestContext.get("userId") ?? "")
@@ -55,4 +57,3 @@ export const builderAgent = new Agent({
     executeSandboxCommand: executeSandboxCommandTool,
   },
 })
-

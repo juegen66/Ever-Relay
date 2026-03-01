@@ -7,6 +7,7 @@ import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   finder: { w: 780, h: 480 },
   canvas: { w: 1160, h: 760 },
+  logo: { w: 980, h: 700 },
   vibecoding: { w: 980, h: 640 },
   textedit: { w: 720, h: 520 },
 }
@@ -230,31 +231,37 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
   fitWindowsToViewport: () =>
     set((state) => {
       const { width: viewW, height: viewH } = getDesktopViewportSize()
+      let hasChanges = false
 
-      return {
-        windows: state.windows.map((w) => {
-          if (w.maximized) {
-            return w
-          }
+      const nextWindows = state.windows.map((w) => {
+        if (w.maximized) {
+          return w
+        }
 
-          const width = Math.min(w.width, Math.max(300, viewW - 24))
-          const height = Math.min(w.height, Math.max(200, viewH - 24))
-          const x = Math.max(0, Math.min(w.x, viewW - width))
-          const y = Math.max(0, Math.min(w.y, viewH - height))
+        const width = Math.min(w.width, Math.max(300, viewW - 24))
+        const height = Math.min(w.height, Math.max(200, viewH - 24))
+        const x = Math.max(0, Math.min(w.x, viewW - width))
+        const y = Math.max(0, Math.min(w.y, viewH - height))
 
-          if (x === w.x && y === w.y && width === w.width && height === w.height) {
-            return w
-          }
+        if (x === w.x && y === w.y && width === w.width && height === w.height) {
+          return w
+        }
 
-          return {
-            ...w,
-            x,
-            y,
-            width,
-            height,
-          }
-        }),
+        hasChanges = true
+        return {
+          ...w,
+          x,
+          y,
+          width,
+          height,
+        }
+      })
+
+      if (!hasChanges) {
+        return state
       }
+
+      return { windows: nextWindows }
     }),
   clearActiveWindow: () => set({ activeWindowId: null }),
 }))

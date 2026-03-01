@@ -25,6 +25,7 @@ import { useUserStore } from "@/lib/stores/user-store"
 const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",
   canvas: "Canvas",
+  logo: "Logo Studio",
   vibecoding: "vibecoding",
   textedit: "TextEdit",
 }

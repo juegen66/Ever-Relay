@@ -1,5 +1,6 @@
 import { Agent } from "@mastra/core/agent"
 import model from "@/server/mastra/model"
+import { createAgentMemory } from "@/server/mastra/memory"
 import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
 import { DESKTOP_COPILOT_AGENT } from "@/shared/copilot/constants"
@@ -15,6 +16,7 @@ export const desktopAgent = new Agent({
     "If a tool reports failure, explain clearly and ask user for next step.",
   ].join("\n"),
   model: model.lzmodel4oMini,
+  memory: createAgentMemory(),
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,

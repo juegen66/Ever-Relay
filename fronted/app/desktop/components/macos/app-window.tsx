@@ -4,6 +4,7 @@ import { useRef, useCallback, useEffect, useState } from "react"
 import type { WindowState } from "./types"
 import { FinderApp } from "./apps/finder-app"
 import { CanvasApp } from "./apps/canvas-app"
+import { LogoStudioApp } from "./apps/logo-studio-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { TextEditApp } from "./apps/textedit-app"
@@ -12,6 +13,7 @@ import type { DesktopFolder, DesktopItemType } from "./desktop-icon"
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",
   canvas: "Canvas",
+  logo: "Logo Studio",
   vibecoding: "vibecoding",
   textedit: "TextEdit",
 }
@@ -19,6 +21,7 @@ const APP_TITLES: Record<string, string> = {
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
   finder: FinderApp,
   canvas: CanvasApp,
+  logo: LogoStudioApp,
   vibecoding: VibecodingApp,
 }
 

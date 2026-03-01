@@ -146,6 +146,10 @@ export const WORKFLOW_RUN_STAGES = [
   "plan",
   "generate",
   "validate",
+  "planning",
+  "brand_designing",
+  "poster_designing",
+  "persisting",
   "complete",
   "failed",
 ] as const
@@ -161,12 +165,20 @@ export const WORKFLOW_RUN_STATUSES = [
 
 export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
+export const WORKFLOW_RUN_TYPES = ["app-build", "logo-design"] as const
+export type WorkflowRunType = (typeof WORKFLOW_RUN_TYPES)[number]
+
 export const workflowRuns = pgTable(
   "workflow_runs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id").notNull(),
     projectId: text("project_id"),
+    workflowType: text("workflow_type")
+      .$type<WorkflowRunType>()
+      .notNull()
+      .default("app-build"),
+    brandBrief: jsonb("brand_brief").$type<Record<string, unknown>>(),
     prompt: text("prompt").notNull(),
     stage: text("stage").$type<WorkflowRunStage>().notNull().default("queued"),
     status: text("status").$type<WorkflowRunStatus>().notNull().default("queued"),
@@ -179,6 +191,48 @@ export const workflowRuns = pgTable(
   (table) => ({
     userStatusIdx: index("workflow_runs_user_status_idx").on(table.userId, table.status),
     userCreatedIdx: index("workflow_runs_user_created_idx").on(table.userId, table.createdAt),
+    workflowTypeIdx: index("workflow_runs_workflow_type_idx").on(table.workflowType),
+  })
+)
+
+export const LOGO_ASSET_TYPES = [
+  "logo_svg_full",
+  "logo_svg_icon",
+  "logo_svg_wordmark",
+  "logo_png",
+  "color_palette",
+  "typography_spec",
+  "brand_guidelines",
+  "design_philosophy",
+  "poster_svg",
+  "poster_png",
+] as const
+
+export type LogoAssetType = (typeof LOGO_ASSET_TYPES)[number]
+
+export const logoDesignAssets = pgTable(
+  "logo_design_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => workflowRuns.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    assetType: text("asset_type").$type<LogoAssetType>().notNull(),
+
+    contentText: text("content_text"),
+    storageKey: text("storage_key"),
+    mimeType: text("mime_type"),
+    sizeBytes: integer("size_bytes"),
+    width: integer("width"),
+    height: integer("height"),
+
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    runIdx: index("logo_design_assets_run_idx").on(table.runId),
+    userCreatedIdx: index("logo_design_assets_user_created_idx").on(table.userId, table.createdAt),
   })
 )
 

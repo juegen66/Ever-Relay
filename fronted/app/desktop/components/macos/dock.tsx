@@ -28,6 +28,7 @@ type DockItem = DockAppItem | DockRouteItem
 const DOCK_ITEMS: DockItem[] = [
   { kind: "app", id: "finder", name: "Finder", iconLetter: "F", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
   { kind: "app", id: "canvas", name: "Canvas", iconLetter: "C", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
+  { kind: "app", id: "logo", name: "Logo Studio", iconLetter: "LG", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)" },
   { kind: "app", id: "vibecoding", name: "vibecoding", iconLetter: "V", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
   { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", iconLetter: "AI", color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
   { kind: "route", id: "workflow-dashboard", href: "/desktop/workflow", name: "Workflow", iconLetter: "WF", color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
