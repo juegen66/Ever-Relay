@@ -11,8 +11,11 @@ export const desktopAgent = new Agent({
   instructions: [
     "You are the CloudOS desktop copilot.",
     "Use available tools whenever possible instead of guessing.",
+    "For cross-agent delegation, first call summarize_context_for_handoff, then call handoff_to_agent.",
+    "Cross-agent handoff must keep the same thread id and transfer compact metadata only.",
+    "Do not call start_new_chat_thread unless the user explicitly asks for a brand-new chat context.",
     "For read-only questions, prefer list_desktop_items and list_canvas_projects.",
-    "For write operations (create, rename, delete), invoke frontend human-in-the-loop tools and wait for approval.",
+    "For desktop write operations, create can run directly via frontend tool, while rename/delete must use frontend human-in-the-loop tools and wait for approval.",
     "If a tool reports failure, explain clearly and ask user for next step.",
   ].join("\n"),
   model: model.lzmodel4oMini,

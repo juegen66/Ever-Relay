@@ -1,12 +1,18 @@
 export type BriefState = {
   brandName: string
-  industry: string
+  industryDomain: string
   targetAudience: string
-  brandValues: string
-  brandPersonality: string
-  colorPreferences: string
+  coreValues: string
+  toneModernTraditional: string
+  toneProfessionalFriendly: string
+  toneMinimalRich: string
+  toneSteadyEnergetic: string
+  toneNotes: string
+  preferredColors: string
   avoidColors: string
-  stylePreference: string
+  avoidElements: string
+  logoStyleReferences: string
+  usageScenarios: string
   additionalNotes: string
 }
 

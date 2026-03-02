@@ -286,6 +286,17 @@
   margin-top: 0.5rem;
 }
 
+/* Hide CopilotKit branding text in desktop sidebar chat, keep footer spacing */
+.copilotKitSidebar .poweredByContainer {
+  min-height: 0;
+}
+
+.copilotKitSidebar .poweredBy {
+  display: block !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* ========== Landing Page Animations ========== */
 @keyframes hero-fade-in {
   from { opacity: 0; transform: translateY(30px); }
@@ -346,4 +357,208 @@
 }
 .animate-shake {
   animation: shake 0.5s ease-in-out;
+}
+
+/* ========== TextEdit Redesign ========== */
+@keyframes textedit-status-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.textedit-shell {
+  --textedit-bg: #f4f6fa;
+  --textedit-panel: rgba(255, 255, 255, 0.78);
+  --textedit-border: rgba(15, 23, 42, 0.1);
+  --textedit-divider: rgba(15, 23, 42, 0.08);
+  --textedit-text: #1f2937;
+  --textedit-muted: #6b7280;
+  background:
+    radial-gradient(circle at 8% -15%, rgba(255, 255, 255, 0.95), transparent 45%),
+    linear-gradient(180deg, #fbfcff 0%, var(--textedit-bg) 100%);
+  color: var(--textedit-text);
+}
+
+.textedit-center-state {
+  color: var(--textedit-muted);
+}
+
+.textedit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--textedit-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.66) 100%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+.textedit-toolbar-left {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.textedit-doc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(140deg, #94a3b8, #64748b);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8), 0 0 0 1.5px rgba(100, 116, 139, 0.25);
+}
+
+.textedit-file-name {
+  max-width: 240px;
+  overflow: hidden;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #111827;
+}
+
+.textedit-doc-type {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--textedit-border);
+  border-radius: 9999px;
+  padding: 2px 7px;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--textedit-muted);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.textedit-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--textedit-border);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--textedit-muted);
+  background: rgba(255, 255, 255, 0.74);
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.textedit-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #16a34a;
+}
+
+.textedit-status-pill.is-saved {
+  color: #166534;
+}
+
+.textedit-status-pill.is-saving {
+  color: #0369a1;
+}
+
+.textedit-status-pill.is-saving .textedit-status-dot {
+  background: #0ea5e9;
+  animation: textedit-status-pulse 1.2s ease-in-out infinite;
+}
+
+.textedit-status-pill.is-conflict {
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.28);
+  background: rgba(254, 242, 242, 0.9);
+}
+
+.textedit-status-pill.is-conflict .textedit-status-dot {
+  background: #dc2626;
+}
+
+.textedit-warning-strip {
+  border-bottom: 1px solid rgba(220, 38, 38, 0.22);
+  padding: 6px 14px;
+  font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  color: #b91c1c;
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.86) 0%, rgba(255, 250, 250, 0.68) 100%);
+}
+
+.textedit-body {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 12px 12px;
+}
+
+.textedit-editor-surface {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--textedit-divider);
+  border-radius: 14px;
+  background: var(--textedit-panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 14px 34px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+}
+
+.textedit-shell .w-md-editor {
+  height: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.textedit-shell .w-md-editor-toolbar {
+  border-bottom: 1px solid var(--textedit-divider) !important;
+  padding: 6px 8px !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+.textedit-shell .w-md-editor-toolbar li button {
+  border-radius: 8px;
+  color: #475569 !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.textedit-shell .w-md-editor-toolbar li button:hover {
+  background: rgba(226, 232, 240, 0.72) !important;
+  color: #0f172a !important;
+}
+
+.textedit-shell .w-md-editor-content {
+  min-height: 0;
+  background: transparent !important;
+}
+
+.textedit-shell .w-md-editor-input {
+  background: rgba(255, 255, 255, 0.75) !important;
+}
+
+.textedit-shell .w-md-editor-preview {
+  border-left: 1px solid var(--textedit-divider) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+}
+
+@media (max-width: 720px) {
+  .textedit-file-name {
+    max-width: 150px;
+  }
+
+  .textedit-doc-type {
+    display: none;
+  }
+
+  .textedit-body {
+    padding: 8px;
+  }
 }

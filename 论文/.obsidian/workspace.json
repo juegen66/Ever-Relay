@@ -1,0 +1,195 @@
+{
+  "main": {
+    "id": "23073cd7e94d55cc",
+    "type": "split",
+    "children": [
+      {
+        "id": "9db749f47dabb010",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9779fa4948c22515",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "articlepage/agent-teams-handoff.architecture.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "agent-teams-handoff.architecture"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b30a9bce3884439c",
+    "type": "split",
+    "children": [
+      {
+        "id": "bfbd8bd6a7fdd63f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d91a321ffd6e3cbc",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "fc90c0eff49f9f81",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "25c5662329c401a4",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "90e88972d13eb6cb",
+    "type": "split",
+    "children": [
+      {
+        "id": "ee3a3be82297ded9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "499dd135eee87b3c",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "articlepage/agent-teams-handoff.architecture.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for agent-teams-handoff.architecture"
+            }
+          },
+          {
+            "id": "7a03f24a3c50062c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "articlepage/agent-teams-handoff.architecture.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from agent-teams-handoff.architecture"
+            }
+          },
+          {
+            "id": "9ee4adc110d92dca",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "b14726ca65113a04",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "c0895f2702452703",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "articlepage/agent-teams-handoff.architecture.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of agent-teams-handoff.architecture"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "obsidian-excalidraw-plugin:New drawing": false
+    }
+  },
+  "active": "9779fa4948c22515",
+  "lastOpenFiles": [
+    "articlepage/agent-teams-handoff.architecture.md",
+    "Untitled.canvas",
+    "2026-03-01.md",
+    "Untitled 1.base",
+    "Untitled.base",
+    "articlepage",
+    "Welcome.md"
+  ]
+}

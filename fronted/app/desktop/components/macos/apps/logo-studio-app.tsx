@@ -18,13 +18,19 @@ import type { LogoDesignAsset, LogoDesignRun } from "@/shared/contracts/logo-des
 
 const EMPTY_BRIEF: BriefState = {
   brandName: "",
-  industry: "",
+  industryDomain: "",
   targetAudience: "",
-  brandValues: "",
-  brandPersonality: "",
-  colorPreferences: "",
+  coreValues: "",
+  toneModernTraditional: "",
+  toneProfessionalFriendly: "",
+  toneMinimalRich: "",
+  toneSteadyEnergetic: "",
+  toneNotes: "",
+  preferredColors: "",
   avoidColors: "",
-  stylePreference: "",
+  avoidElements: "",
+  logoStyleReferences: "",
+  usageScenarios: "",
   additionalNotes: "",
 }
 
@@ -277,13 +283,19 @@ export function LogoStudioApp() {
     try {
       submitBrief({
         brandName,
-        industry: brief.industry.trim() || undefined,
+        industryDomain: brief.industryDomain.trim() || undefined,
         targetAudience: brief.targetAudience.trim() || undefined,
-        brandValues: brief.brandValues.trim() || undefined,
-        brandPersonality: brief.brandPersonality.trim() || undefined,
-        colorPreferences: brief.colorPreferences.trim() || undefined,
+        coreValues: brief.coreValues.trim() || undefined,
+        toneModernTraditional: brief.toneModernTraditional.trim() || undefined,
+        toneProfessionalFriendly: brief.toneProfessionalFriendly.trim() || undefined,
+        toneMinimalRich: brief.toneMinimalRich.trim() || undefined,
+        toneSteadyEnergetic: brief.toneSteadyEnergetic.trim() || undefined,
+        toneNotes: brief.toneNotes.trim() || undefined,
+        preferredColors: brief.preferredColors.trim() || undefined,
         avoidColors: brief.avoidColors.trim() || undefined,
-        stylePreference: brief.stylePreference.trim() || undefined,
+        avoidElements: brief.avoidElements.trim() || undefined,
+        logoStyleReferences: brief.logoStyleReferences.trim() || undefined,
+        usageScenarios: brief.usageScenarios.trim() || undefined,
         additionalNotes: brief.additionalNotes.trim() || undefined,
       })
       return true

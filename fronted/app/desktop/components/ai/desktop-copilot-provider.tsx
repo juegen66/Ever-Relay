@@ -14,7 +14,7 @@ import {
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
-import { useDesktopCopilotTools } from "@/features/desktop-copilot/hooks/use-desktop-copilot-tools"
+import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
@@ -95,7 +95,8 @@ interface DesktopCopilotProviderProps {
 function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps) {
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
-  useDesktopCopilotTools()
+  const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
+  const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
   const copilotSidebarOpen = useDesktopUIStore((state) => state.copilotSidebarOpen)
   const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
@@ -146,6 +147,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
         Header={DesktopCopilotHeader}
         instructions={DESKTOP_COPILOT_INSTRUCTIONS}
       >
+        <CopilotToolsRegistry agentId={activeAgent} />
         <SidebarOpenStateSync />
         {desktop}
       </CopilotSidebar>

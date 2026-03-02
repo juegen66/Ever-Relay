@@ -20,7 +20,9 @@ export const logoCopilotAgent = new Agent({
     "Before triggering workflow, summarize the final brief and ask for explicit user confirmation.",
     "After user confirmation, call confirm_logo_brief with: fullPrompt (required) and brandBrief (structured object).",
     "If information is already sufficient, call confirm_logo_brief directly without opening sidebar.",
-    "Do not trigger non-logo build workflows unless the user explicitly asks.",
+    "If the task should continue in another specialist agent, call summarize_context_for_handoff first, then call handoff_to_agent.",
+    "Cross-agent handoff must keep the same thread id and transfer compact metadata only.",
+    "Do not trigger non-logo build workflows directly unless the user explicitly asks; use handoff when needed.",
   ].join("\n"),
   memory: createAgentMemory(),
   tools: {

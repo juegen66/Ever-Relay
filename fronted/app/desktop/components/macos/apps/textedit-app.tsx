@@ -235,20 +235,20 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-white">
-        <Loader2 className="h-6 w-6 animate-spin text-[#999]" />
+      <div className="textedit-shell textedit-center-state flex h-full items-center justify-center" data-color-mode="light">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-[14px] text-[#999]">{error}</p>
+      <div className="textedit-shell textedit-center-state flex h-full items-center justify-center" data-color-mode="light">
+        <div className="text-center text-slate-500">
+          <p className="text-[13px]">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-[13px] text-[#007aff] hover:underline"
+            className="mt-2 text-[12px] font-medium text-sky-600 transition-colors hover:text-sky-700"
           >
             Retry
           </button>
@@ -257,34 +257,43 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
     )
   }
 
+  const saveStatus = saveError ? "Conflict" : saving ? "Saving" : "Saved"
+  const saveStatusClassName = saveError ? "is-conflict" : saving ? "is-saving" : "is-saved"
+
   return (
-    <div className="flex h-full flex-col bg-white" data-color-mode="light">
-      {/* Status bar */}
-      <div
-        className="flex items-center justify-between px-3 py-1"
-        style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}
-      >
-        <span className="text-[11px] text-[#999]">{fileName}</span>
-        <span className="text-[11px] text-[#999]">
-          {saving ? "Saving..." : saveError ? "Conflict" : "Saved"}
-        </span>
+    <div className="textedit-shell flex h-full flex-col" data-color-mode="light">
+      <div className="textedit-toolbar">
+        <div className="textedit-toolbar-left">
+          <span className="textedit-doc-dot" aria-hidden />
+          <span className="textedit-file-name" title={fileName}>
+            {fileName}
+          </span>
+          <span className="textedit-doc-type">Markdown</span>
+        </div>
+        <div className={`textedit-status-pill ${saveStatusClassName}`}>
+          <span className="textedit-status-dot" aria-hidden />
+          <span>{saveStatus}</span>
+        </div>
       </div>
+
       {saveError ? (
-        <div className="border-b border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-600">
+        <div className="textedit-warning-strip">
           {saveError}
         </div>
       ) : null}
 
-      {/* Editor */}
-      <div className="flex-1 overflow-hidden">
-        <MDEditor
-          value={content}
-          onChange={handleChange}
-          height="100%"
-          visibleDragbar={false}
-          preview="live"
-          style={{ height: "100%", background: "white" }}
-        />
+      <div className="textedit-body">
+        <div className="textedit-editor-surface">
+          <MDEditor
+            value={content}
+            onChange={handleChange}
+            height="100%"
+            visibleDragbar={false}
+            preview="live"
+            className="textedit-md-editor"
+            style={{ height: "100%" }}
+          />
+        </div>
       </div>
     </div>
   )
