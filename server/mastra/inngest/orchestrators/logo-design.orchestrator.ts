@@ -2,11 +2,11 @@ import { init } from "@mastra/inngest"
 import { inngest } from "@/server/mastra/inngest/client"
 import { brandDesignStep } from "@/server/mastra/inngest/functions/logo-design/brand-design.function"
 import { notifyStep } from "@/server/mastra/inngest/functions/logo-design/notify.function"
-import { persistStep } from "@/server/mastra/inngest/functions/logo-design/persist.function"
 import { planLogoStep } from "@/server/mastra/inngest/functions/logo-design/plan.function"
+import { philosophyStep } from "@/server/mastra/inngest/functions/logo-design/philosophy.function"
 import { posterDesignStep } from "@/server/mastra/inngest/functions/logo-design/poster-design.function"
 import {
-  logoDesignPersistOutputSchema,
+  logoDesignFinalOutputSchema,
   logoDesignWorkflowInputSchema,
 } from "@/server/mastra/inngest/functions/logo-design/schemas"
 
@@ -17,9 +17,9 @@ export const LOGO_DESIGN_WORKFLOW_ID = "logo-design"
 export const logoDesignWorkflow = createWorkflow({
   id: LOGO_DESIGN_WORKFLOW_ID,
   description:
-    "Multi-agent logo design: plan -> brand -> poster -> persist -> notify",
+    "Multi-agent logo design: brief -> concepts -> philosophy -> poster -> notify",
   inputSchema: logoDesignWorkflowInputSchema,
-  outputSchema: logoDesignPersistOutputSchema,
+  outputSchema: logoDesignFinalOutputSchema,
   concurrency: {
     limit: 2,
     key: "event.data.userId",
@@ -27,7 +27,7 @@ export const logoDesignWorkflow = createWorkflow({
 })
   .then(planLogoStep)
   .then(brandDesignStep)
+  .then(philosophyStep)
   .then(posterDesignStep)
-  .then(persistStep)
   .then(notifyStep)
   .commit()

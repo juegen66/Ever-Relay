@@ -12,8 +12,8 @@ import {
 
 export const BRAND_DESIGNER_AGENT_ID = "brand_designer_agent"
 
-const brandDesignerSkillPath = join(process.cwd(), "skills/brand-designer/SKILL.md")
-const brandDesignerPrompt = readFileSync(brandDesignerSkillPath, "utf-8").replace(
+const brandLogoGenerationSkillPath = join(process.cwd(), "skills/brand-logo-generation/SKILL.md")
+const brandLogoGenerationPrompt = readFileSync(brandLogoGenerationSkillPath, "utf-8").replace(
   /^---[\s\S]*?---\n/,
   ""
 )
@@ -38,12 +38,12 @@ export const brandDesignerAgent = new Agent({
     "The object must include conceptName, rationaleMd, and logoSvg.full/icon/wordmark (all valid SVG strings).",
     "Do not output planning-only keys such as goal, assumptions, brandPositioning, or logoSystemDirection.",
     "Also include optional colorPalette, typography, and top-level brandGuidelines.",
-    "Follow these design principles strictly:",
-    brandDesignerPrompt,
+    "Follow the brand-logo-generation skill guidance strictly:",
+    brandLogoGenerationPrompt,
   ].join("\n\n"),
   tools: {
-    listCanvasProjects: listCanvasProjectsTool,
-    createCanvasProject: createCanvasProjectTool,
-    updateCanvasProject: updateCanvasProjectTool,
+    // listCanvasProjects: listCanvasProjectsTool,
+    // createCanvasProject: createCanvasProjectTool,
+    // updateCanvasProject: updateCanvasProjectTool,
   },
 })

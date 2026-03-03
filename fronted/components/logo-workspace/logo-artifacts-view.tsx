@@ -34,6 +34,8 @@ type ArtifactMetadata = {
   neutralColor: string
 }
 
+type ArtifactDisplayVariant = "framed" | "clean"
+
 function asRecord(value: unknown) {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>
@@ -128,6 +130,7 @@ function ArtifactCard({
   asset,
   runId,
   selected = false,
+  displayVariant = "framed",
 }: {
   title: string
   subtitle: string
@@ -135,7 +138,17 @@ function ArtifactCard({
   asset: LogoDesignAsset | null
   runId: string
   selected?: boolean
+  displayVariant?: ArtifactDisplayVariant
 }) {
+  const mediaContainerClass =
+    displayVariant === "clean"
+      ? "mx-auto mt-8 flex h-[172px] w-full items-center justify-center overflow-hidden"
+      : "mx-auto mt-8 flex h-[136px] w-[136px] items-center justify-center overflow-hidden rounded-[14px] border border-black/10 bg-[#f3f4f7]"
+  const mediaImageClass =
+    displayVariant === "clean"
+      ? "h-full w-full object-contain"
+      : "h-full w-full object-contain p-1.5"
+
   return (
     <article
       className={`relative rounded-[28px] bg-[#fcfcfc] p-5 ${
@@ -148,12 +161,12 @@ function ArtifactCard({
         </div>
       ) : null}
 
-      <div className="mx-auto mt-8 flex h-[132px] w-[132px] items-center justify-center overflow-hidden rounded-[14px] border border-black/10 bg-[#f3f4f7]">
+      <div className={mediaContainerClass}>
         {asset ? (
           <img
             src={logoDesignApi.getAssetUrl(runId, asset.id)}
             alt={title}
-            className="h-full w-full object-contain p-2"
+            className={mediaImageClass}
           />
         ) : (
           <span className="px-3 text-center text-[11px] text-[#8b8f98]">Missing asset</span>
@@ -260,6 +273,7 @@ export function LogoArtifactsView({
             subtitle="Full Mark"
             asset={artifactSet.full}
             runId={run.id}
+            displayVariant="clean"
           />
           <ArtifactCard
             title={metadata.conceptName.toUpperCase()}
@@ -268,12 +282,14 @@ export function LogoArtifactsView({
             selected
             asset={artifactSet.icon}
             runId={run.id}
+            displayVariant="framed"
           />
           <ArtifactCard
             title="WORDMARK"
             subtitle="Brand Signature"
             asset={artifactSet.wordmark}
             runId={run.id}
+            displayVariant="clean"
           />
         </section>
 

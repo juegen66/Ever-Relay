@@ -42,7 +42,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "Files"
+              "title": "文件列表"
             }
           },
           {
@@ -172,24 +172,54 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Open quick switcher": false,
-      "graph:Open graph view": false,
-      "canvas:Create new canvas": false,
-      "daily-notes:Open today's daily note": false,
-      "templates:Insert template": false,
-      "command-palette:Open command palette": false,
-      "bases:Create new base": false,
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false,
       "obsidian-excalidraw-plugin:New drawing": false
     }
   },
   "active": "9779fa4948c22515",
   "lastOpenFiles": [
+    "article/11-submit-draft/figures/ch03-system-design/src/F3-5-app-build-sequence.md",
+    "article/11-submit-draft/figures/ch03-system-design/src/F3-4-logo-workflow-state.md",
+    "article/11-submit-draft/figures/ch03-system-design/src/F3-3-no-chatbot-flow.md",
+    "article/11-submit-draft/figures/ch03-system-design/src/F3-2-system-architecture-mermaid.md",
+    "article/11-submit-draft/figures/ch03-system-design/src/F3-1-system-architecture.excalidraw",
+    "article/11-submit-draft/figures/ch03-system-design/out/F3-1-system-architecture.png",
+    "article/11-submit-draft/04-chapter4-system-implementation.md",
+    "article/11-submit-draft/03-chapter3-system-design.md",
+    "article/11-submit-draft/02-chapter2-foundations.md",
+    "article/11-submit-draft/01-chapter1-introduction.md",
+    "article/11-submit-draft/00-abstract.md",
+    "react-vs-nextjs-iframe-architecture-comparison.md",
+    "article/11-submit-draft/figures/ch02-foundations/out/F2-1-capture2-tech-stack.png",
+    "article/11-submit-draft/figures/ch02-foundations/src/F2-1-capture2-tech-stack.excalidraw",
+    "article/11-submit-draft/figures/ch05-scenario-evaluation/src",
+    "article/11-submit-draft/figures/ch05-scenario-evaluation/out",
+    "article/11-submit-draft/figures/ch05-scenario-evaluation/index.md",
+    "article/11-submit-draft/figures/ch03-system-design/src",
+    "article/11-submit-draft/figures/ch03-system-design/out",
+    "article/11-submit-draft/figures/ch03-system-design/index.md",
+    "article/11-submit-draft/figures/ch06-conclusion/src",
+    "article/11-submit-draft/figures/ch06-conclusion/out",
+    "article/11-submit-draft/figures/ch06-conclusion/index.md",
+    "article/11-submit-draft/figures/ch04-system-implementation/src",
+    "article/11-submit-draft/figures/ch04-system-implementation/index.md",
+    "article/11-submit-draft/figures/ch04-system-implementation/out",
+    "article/11-submit-draft/figures/ch02-foundations/index.md",
+    "article/11-submit-draft/figures/ch01-introduction/index.md",
+    "article/11-submit-draft/figures/FIGURE_MASTER_INDEX.md",
+    "article/11-submit-draft/figures/README.md",
+    "article/11-submit-draft/05-chapter5-scenario-evaluation.md",
+    "article/plan.md",
+    "desktop-remote-app-architecture.md",
     "articlepage/agent-teams-handoff.architecture.md",
     "Untitled.canvas",
     "2026-03-01.md",
-    "Untitled 1.base",
-    "Untitled.base",
-    "articlepage",
     "Welcome.md"
   ]
 }

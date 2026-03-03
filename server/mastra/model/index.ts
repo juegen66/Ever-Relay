@@ -1,4 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai"
+import { anthropic } from "@ai-sdk/anthropic"
+
+// const claude = createClaude({
+//   apiKey: process.env.CLAUDE_API_KEY ?? "",
+//   baseURL: process.env.CLAUDE_BASE_URL ?? "https://api.anthropic.com/v1",
+// })
+
 
 const perplexityProvider = createOpenAI({
   apiKey: process.env.PERPLEXITY_API_KEY ?? "",
@@ -17,7 +24,7 @@ const tuzimodel = createOpenAI({
   baseURL: process.env.TUZI_BASE_URL ?? "https://api.tu-zi.com/v1",
 })
 
-const lzmodel4oMini = lzmodel.chat("MiniMax-M2.5")
+const lzmodel4oMini = lzmodel.chat("gemini-3.1-pro-preview")
 const tuzimodel4oMini = tuzimodel.chat("gpt-4o-mini")
 
 const model = {

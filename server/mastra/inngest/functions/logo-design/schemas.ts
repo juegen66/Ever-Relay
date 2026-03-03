@@ -6,6 +6,20 @@ const logoSvgSetSchema = z.object({
   wordmark: z.string().min(1),
 })
 
+export const logoConceptLockupTypeSchema = z.enum([
+  "icon_only",
+  "icon_with_wordmark",
+  "wordmark_only",
+])
+
+export const logoConceptSchema = z.object({
+  id: z.string().min(1),
+  conceptType: logoConceptLockupTypeSchema,
+  conceptName: z.string().min(1),
+  rationaleMd: z.string().min(1),
+  logoSvg: z.string().min(1),
+})
+
 export const logoBrandOutputSchema = z.object({
   conceptName: z.string().min(1),
   rationaleMd: z.string().min(1),
@@ -28,23 +42,35 @@ export const logoDesignWorkflowInputSchema = z.object({
   brandBrief: z.record(z.string(), z.unknown()).optional(),
 })
 
-export const logoDesignPlanOutputSchema = z.object({
+export const logoDesignBriefOutputSchema = z.object({
   runId: z.string().uuid(),
   userId: z.string().min(1),
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
-  planText: z.string(),
-  planJson: z.record(z.string(), z.unknown()).nullable(),
+  logoBriefMarkdown: z.string().min(1),
 })
 
-export const logoDesignBrandOutputSchema = z.object({
+export const logoDesignConceptOutputSchema = z.object({
   runId: z.string().uuid(),
   userId: z.string().min(1),
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
-  planText: z.string(),
-  planJson: z.record(z.string(), z.unknown()).nullable(),
+  logoBriefMarkdown: z.string().min(1),
+  logoConcepts: z.array(logoConceptSchema).min(3),
+  selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
+})
+
+export const logoDesignPhilosophyOutputSchema = z.object({
+  runId: z.string().uuid(),
+  userId: z.string().min(1),
+  prompt: z.string().min(1),
+  brandBrief: z.record(z.string(), z.unknown()).optional(),
+  logoBriefMarkdown: z.string().min(1),
+  logoConcepts: z.array(logoConceptSchema).min(3),
+  selectedConceptId: z.string().min(1),
+  brandOutput: logoBrandOutputSchema,
+  designPhilosophyMarkdown: z.string().min(1),
 })
 
 export const logoDesignPosterOutputSchema = z.object({
@@ -52,26 +78,33 @@ export const logoDesignPosterOutputSchema = z.object({
   userId: z.string().min(1),
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
-  planText: z.string(),
-  planJson: z.record(z.string(), z.unknown()).nullable(),
+  logoBriefMarkdown: z.string().min(1),
+  logoConcepts: z.array(logoConceptSchema).min(3),
+  selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
+  designPhilosophyMarkdown: z.string().min(1),
   posterOutput: logoPosterOutputSchema,
 })
 
-export const logoDesignPersistOutputSchema = z.object({
+export const logoDesignFinalOutputSchema = z.object({
   runId: z.string().uuid(),
   userId: z.string().min(1),
   prompt: z.string().min(1),
-  planText: z.string(),
-  planJson: z.record(z.string(), z.unknown()).nullable(),
+  logoBriefMarkdown: z.string().min(1),
+  logoConcepts: z.array(logoConceptSchema).min(3),
+  selectedConceptId: z.string().min(1),
+  designPhilosophyMarkdown: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
   posterOutput: logoPosterOutputSchema,
 })
 
 export type LogoBrandOutput = z.infer<typeof logoBrandOutputSchema>
+export type LogoConcept = z.infer<typeof logoConceptSchema>
+export type LogoConceptLockupType = z.infer<typeof logoConceptLockupTypeSchema>
 export type LogoPosterOutput = z.infer<typeof logoPosterOutputSchema>
 export type LogoDesignWorkflowInput = z.infer<typeof logoDesignWorkflowInputSchema>
-export type LogoDesignPlanOutput = z.infer<typeof logoDesignPlanOutputSchema>
-export type LogoDesignBrandOutput = z.infer<typeof logoDesignBrandOutputSchema>
+export type LogoDesignBriefOutput = z.infer<typeof logoDesignBriefOutputSchema>
+export type LogoDesignConceptOutput = z.infer<typeof logoDesignConceptOutputSchema>
+export type LogoDesignPhilosophyOutput = z.infer<typeof logoDesignPhilosophyOutputSchema>
 export type LogoDesignPosterOutput = z.infer<typeof logoDesignPosterOutputSchema>
-export type LogoDesignPersistOutput = z.infer<typeof logoDesignPersistOutputSchema>
+export type LogoDesignFinalOutput = z.infer<typeof logoDesignFinalOutputSchema>
