@@ -7,6 +7,10 @@ import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./brand-designer-ag
 import { posterDesignerAgent, POSTER_DESIGNER_AGENT_ID } from "./poster-designer-agent"
 import { logoCopilotAgent } from "./logo-copilot-agent"
 import {
+  contextCompressionAgent,
+  CONTEXT_COMPRESSION_AGENT_ID,
+} from "./context-compression-agent"
+import {
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
@@ -14,6 +18,7 @@ import {
 export const agents = {
   [DESKTOP_COPILOT_AGENT]: desktopAgent,
   [LOGO_COPILOT_AGENT]: logoCopilotAgent,
+  [CONTEXT_COMPRESSION_AGENT_ID]: contextCompressionAgent,
   [PLANNER_AGENT_ID]: plannerAgent,
   [BUILDER_AGENT_ID]: builderAgent,
   [REVIEWER_AGENT_ID]: reviewerAgent,

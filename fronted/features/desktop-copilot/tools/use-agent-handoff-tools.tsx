@@ -1,22 +1,30 @@
 "use client"
 
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useMemo } from "react"
 
-import { useCopilotChatInternal, useFrontendTool } from "@copilotkit/react-core"
+import {
+  useCopilotChat,
+  useCopilotChatInternal,
+  useFrontendTool,
+} from "@copilotkit/react-core"
 
+import { copilotApi } from "@/lib/api/modules/copilot"
 import {
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
+import type {
+  CopilotHandoffMessage,
+  PrepareHandoffBody,
+} from "@/shared/contracts/copilot-handoff"
+import { type HandoffMetadata } from "@/shared/copilot/handoff"
 import {
-  HANDOFF_SCHEMA_VERSION,
-  type HandoffMetadata,
-  type HandoffReport,
-} from "@/shared/copilot/handoff"
-import { useDesktopUIStore, type CopilotAgentMode } from "@/lib/stores/desktop-ui-store"
+  useDesktopUIStore,
+  type CopilotAgentMode,
+} from "@/lib/stores/desktop-ui-store"
 import {
   HANDOFF_TO_AGENT_PARAMS,
-  SUMMARIZE_CONTEXT_FOR_HANDOFF_PARAMS,
+  toErrorMessage,
 } from "./types"
 
 const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
@@ -24,13 +32,21 @@ const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
   [LOGO_COPILOT_AGENT]: "logo",
 }
 
+const MAX_SUMMARY_INPUT_MESSAGES = 60
+
 type ChatMessage = {
+  id?: string
   role?: string
+  name?: unknown
   content?: unknown
+  toolCalls?: unknown
+  toolCallId?: unknown
+  error?: unknown
 }
 
-type HandoffSummaryArgs = {
+type HandoffToolArgs = {
   targetAgentId?: string
+  reason?: string
   maxTokens?: number
   task?: string
   done?: string[]
@@ -39,17 +55,7 @@ type HandoffSummaryArgs = {
   artifacts?: string[]
   openQuestions?: string[]
   riskNotes?: string[]
-}
-
-type HandoffToolArgs = {
-  targetAgentId?: string
-  reason?: string
   report?: Record<string, unknown>
-}
-
-type CachedReport = {
-  targetAgentId: string
-  report: HandoffReport
 }
 
 function toSafeText(value: unknown) {
@@ -84,67 +90,256 @@ function toMessageText(content: unknown): string {
   return textParts.join("\n").trim()
 }
 
-function truncateText(input: string, maxChars: number) {
-  if (input.length <= maxChars) {
-    return input
-  }
+function toHandoffMessageRole(role: unknown): CopilotHandoffMessage["role"] | null {
+  const normalized = toSafeText(role).toLowerCase()
 
-  return `${input.slice(0, Math.max(0, maxChars - 3))}...`
+  if (normalized === "user") return "user"
+  if (normalized === "assistant") return "assistant"
+  if (normalized === "developer") return "developer"
+  if (normalized === "system") return "system"
+  if (normalized === "tool") return "tool"
+  if (normalized === "activity") return "activity"
+
+  return null
 }
 
-function inferTask(messages: ChatMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if (message?.role !== "user") continue
-    const content = toMessageText(message.content)
-    if (!content) continue
-    return truncateText(content, 240)
-  }
-
-  return "Continue the current task with focused context."
-}
-
-function buildContextDigest(messages: ChatMessage[], maxChars: number) {
-  const relevant = messages
-    .filter((message) => {
-      const role = message.role ?? ""
-      return role === "user" || role === "assistant"
-    })
+function toApiMessages(messages: ChatMessage[]): CopilotHandoffMessage[] {
+  return messages
     .map((message) => {
-      const role = message.role === "assistant" ? "ASSISTANT" : "USER"
+      const role = toHandoffMessageRole(message.role)
       const content = toMessageText(message.content)
+      if (!role || !content) {
+        return null
+      }
+
       return { role, content }
     })
-    .filter((message) => Boolean(message.content))
-    .filter((message) => !message.content.includes("[HANDOFF_METADATA_V1]"))
-    .slice(-14)
-
-  if (relevant.length === 0) {
-    return "No prior chat context was available."
-  }
-
-  const lines = relevant.map((message, index) => `${index + 1}. ${message.role}: ${message.content}`)
-  return truncateText(lines.join("\n"), maxChars)
+    .filter((message): message is CopilotHandoffMessage => message !== null)
+    .slice(-MAX_SUMMARY_INPUT_MESSAGES)
 }
 
-function toHandoffReport(
-  source: Partial<HandoffReport>,
-  fallbackTask: string,
-  fallbackDigest: string
-): HandoffReport {
-  const task = toSafeText(source.task) || fallbackTask
-  const contextDigest = toSafeText(source.contextDigest) || fallbackDigest
+function findLastMessageId(messages: ChatMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const candidate = toSafeText(messages[index]?.id)
+    if (candidate) {
+      return candidate
+    }
+  }
+  return undefined
+}
+
+function pruneMessagesBeforeId(messages: ChatMessage[], messageId: string | null) {
+  if (!messageId) {
+    return messages
+  }
+
+  const cutoffIndex = messages.findIndex(
+    (message) => toSafeText(message.id) === messageId
+  )
+  if (cutoffIndex <= 0) {
+    return messages
+  }
+
+  return messages.slice(cutoffIndex)
+}
+
+function toOptionalString(value: unknown) {
+  const text = toSafeText(value)
+  return text || undefined
+}
+
+type SerializableToolCall = {
+  id: string
+  type: "function"
+  function: {
+    name: string
+    arguments: string
+  }
+}
+
+function toSerializableToolCalls(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const toolCalls = value
+    .map((item): SerializableToolCall | null => {
+      if (!item || typeof item !== "object") {
+        return null
+      }
+
+      const record = item as Record<string, unknown>
+      const callId = toOptionalString(record.id)
+      const fnRecord =
+        record.function && typeof record.function === "object"
+          ? (record.function as Record<string, unknown>)
+          : null
+      const fnName = toOptionalString(fnRecord?.name)
+
+      if (!callId || !fnName) {
+        return null
+      }
+
+      const rawArguments = fnRecord?.arguments
+      let fnArgs = "{}"
+      if (typeof rawArguments === "string") {
+        fnArgs = rawArguments
+      } else if (rawArguments !== undefined) {
+        try {
+          fnArgs = JSON.stringify(rawArguments)
+        } catch {
+          fnArgs = "{}"
+        }
+      }
+
+      return {
+        id: callId,
+        type: "function",
+        function: {
+          name: fnName,
+          arguments: fnArgs,
+        },
+      }
+    })
+    .filter((toolCall): toolCall is SerializableToolCall => toolCall !== null)
+
+  return toolCalls.length > 0 ? toolCalls : undefined
+}
+
+type SerializableUserContentPart =
+  | {
+      type: "text"
+      text: string
+    }
+  | {
+      type: "binary"
+      mimeType: string
+      id?: string
+      url?: string
+      data?: string
+      filename?: string
+    }
+
+function toSerializableUserContent(content: unknown): string | SerializableUserContentPart[] {
+  if (typeof content === "string") {
+    return content
+  }
+
+  if (!Array.isArray(content)) {
+    return toMessageText(content)
+  }
+
+  const parts = content
+    .map((item): SerializableUserContentPart | null => {
+      if (!item || typeof item !== "object") {
+        return null
+      }
+
+      const record = item as Record<string, unknown>
+      const type = toSafeText(record.type).toLowerCase()
+
+      if (type === "text") {
+        const text = toOptionalString(record.text)
+        if (!text) {
+          return null
+        }
+        return {
+          type: "text",
+          text,
+        }
+      }
+
+      if (type !== "binary") {
+        return null
+      }
+
+      const mimeType = toOptionalString(record.mimeType)
+      if (!mimeType) {
+        return null
+      }
+
+      return {
+        type: "binary",
+        mimeType,
+        id: toOptionalString(record.id),
+        url: toOptionalString(record.url),
+        data: toOptionalString(record.data),
+        filename: toOptionalString(record.filename),
+      }
+    })
+    .filter((part): part is SerializableUserContentPart => part !== null)
+
+  return parts.length > 0 ? parts : toMessageText(content)
+}
+
+function toSerializableMessage(message: ChatMessage, index: number) {
+  const role = toHandoffMessageRole(message.role)
+  if (!role || role === "activity") {
+    return null
+  }
+
+  const id = toOptionalString(message.id) ?? `handoff-${index}-${crypto.randomUUID()}`
+  const name = toOptionalString(message.name)
+
+  if (role === "user") {
+    return {
+      id,
+      role: "user" as const,
+      content: toSerializableUserContent(message.content),
+      ...(name ? { name } : {}),
+    }
+  }
+
+  if (role === "assistant") {
+    const content = toMessageText(message.content)
+    const toolCalls = toSerializableToolCalls(message.toolCalls)
+    if (!content && !toolCalls) {
+      return null
+    }
+
+    return {
+      id,
+      role: "assistant" as const,
+      ...(name ? { name } : {}),
+      ...(content ? { content } : {}),
+      ...(toolCalls ? { toolCalls } : {}),
+    }
+  }
+
+  if (role === "tool") {
+    const content = toMessageText(message.content)
+    const toolCallId = toOptionalString(message.toolCallId)
+    if (!content || !toolCallId) {
+      return null
+    }
+
+    const error = toOptionalString(message.error)
+    return {
+      id,
+      role: "tool" as const,
+      content,
+      toolCallId,
+      ...(error ? { error } : {}),
+    }
+  }
+
+  const content = toMessageText(message.content)
+  if (!content) {
+    return null
+  }
 
   return {
-    task,
-    contextDigest,
-    done: toStringList(source.done),
-    nextSteps: toStringList(source.nextSteps),
-    constraints: toStringList(source.constraints),
-    artifacts: toStringList(source.artifacts),
-    openQuestions: toStringList(source.openQuestions),
-    riskNotes: toStringList(source.riskNotes),
+    id,
+    role,
+    content,
+    ...(name ? { name } : {}),
   }
+}
+
+function toSerializableMessages(messages: ChatMessage[]) {
+  return messages
+    .map((message, index) => toSerializableMessage(message, index))
+    .filter((message): message is NonNullable<ReturnType<typeof toSerializableMessage>> => Boolean(message))
 }
 
 function formatHandoffMetadata(metadata: HandoffMetadata) {
@@ -167,56 +362,15 @@ function nextAnimationFrame() {
 }
 
 export function useAgentHandoffTools() {
-  const { messages, sendMessage } = useCopilotChatInternal({})
+  const { stopGeneration, isLoading } = useCopilotChat()
+  const { messages, setMessages, sendMessage } = useCopilotChatInternal({})
   const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopUIStore((state) => state.copilotThreadId)
   const setCopilotAgentMode = useDesktopUIStore((state) => state.setCopilotAgentMode)
-  const lastReportRef = useRef<CachedReport | null>(null)
 
   const sourceAgentId = useMemo(
     () => (copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT),
     [copilotAgentMode]
-  )
-
-  const summarizeContextForHandoff = useCallback(
-    async (args: HandoffSummaryArgs) => {
-      const targetAgentId = toSafeText(args.targetAgentId)
-      if (!targetAgentId || !AGENT_ID_TO_MODE[targetAgentId]) {
-        return {
-          ok: false,
-          error: `Unsupported targetAgentId: ${args.targetAgentId ?? "unknown"}`,
-        }
-      }
-
-      const maxTokens = Number.isFinite(args.maxTokens) ? Math.max(100, Math.floor(args.maxTokens as number)) : 400
-      const maxChars = maxTokens * 4
-      const digest = buildContextDigest(messages as ChatMessage[], maxChars)
-      const report = toHandoffReport(
-        {
-          task: args.task,
-          contextDigest: digest,
-          done: args.done,
-          nextSteps: args.nextSteps,
-          constraints: args.constraints,
-          artifacts: args.artifacts,
-          openQuestions: args.openQuestions,
-          riskNotes: args.riskNotes,
-        },
-        inferTask(messages as ChatMessage[]),
-        digest
-      )
-
-      lastReportRef.current = { targetAgentId, report }
-
-      return {
-        ok: true,
-        sourceAgentId,
-        targetAgentId,
-        threadId: copilotThreadId,
-        report,
-      }
-    },
-    [copilotThreadId, messages, sourceAgentId]
   )
 
   const handoffToAgent = useCallback(
@@ -241,31 +395,61 @@ export function useAgentHandoffTools() {
         }
       }
 
-      const maxChars = 1600
-      const digest = buildContextDigest(messages as ChatMessage[], maxChars)
-      const reportFromArgs = args.report as Partial<HandoffReport> | undefined
-      const fallbackReport = lastReportRef.current?.targetAgentId === targetAgentId ? lastReportRef.current.report : null
-      const report = toHandoffReport(
-        reportFromArgs ?? fallbackReport ?? { contextDigest: digest },
-        inferTask(messages as ChatMessage[]),
-        digest
-      )
-      lastReportRef.current = { targetAgentId, report }
+      let handoffMetadata: HandoffMetadata
+      let droppedMessageCount = (messages as ChatMessage[]).length
+      let truncateBeforeMessageId: string | null = null
+      try {
+        const snapshotMessages = messages as ChatMessage[]
+        const body: PrepareHandoffBody = {
+          targetAgentId,
+          sourceAgentId,
+          threadId: copilotThreadId,
+          lastMessageId: findLastMessageId(snapshotMessages),
+          reason: toSafeText(args.reason) || undefined,
+          maxTokens:
+            typeof args.maxTokens === "number" && Number.isFinite(args.maxTokens)
+              ? args.maxTokens
+              : undefined,
+          task: toSafeText(args.task) || undefined,
+          done: toStringList(args.done),
+          nextSteps: toStringList(args.nextSteps),
+          constraints: toStringList(args.constraints),
+          artifacts: toStringList(args.artifacts),
+          openQuestions: toStringList(args.openQuestions),
+          riskNotes: toStringList(args.riskNotes),
+          report:
+            typeof args.report === "object" && args.report !== null
+              ? (args.report as PrepareHandoffBody["report"])
+              : undefined,
+          messages: toApiMessages(snapshotMessages),
+        }
 
-      const handoffMetadata: HandoffMetadata = {
-        schemaVersion: HANDOFF_SCHEMA_VERSION,
-        handoffId: crypto.randomUUID(),
-        sourceAgentId,
-        targetAgentId,
-        threadId: copilotThreadId,
-        createdAt: new Date().toISOString(),
-        reason: toSafeText(args.reason) || null,
-        report,
+        const response = await copilotApi.prepareHandoff(body)
+        handoffMetadata = response.metadata
+        droppedMessageCount = response.droppedMessageCount
+        truncateBeforeMessageId = response.truncateBeforeMessageId
+      } catch (error) {
+        return {
+          ok: false,
+          error: toErrorMessage(error),
+        }
       }
+
+      // Abort current generation and trim message list before switching agent.
+      if (isLoading) {
+        stopGeneration()
+      }
+
+      const prunedMessages = pruneMessagesBeforeId(
+        messages as ChatMessage[],
+        truncateBeforeMessageId
+      )
+      setMessages(toSerializableMessages(prunedMessages) as typeof messages)
 
       setCopilotAgentMode(targetMode)
       await nextAnimationFrame()
 
+      // Handoff metadata is internal routing context, so we keep it as developer role.
       await sendMessage(
         {
           id: crypto.randomUUID(),
@@ -281,46 +465,47 @@ export function useAgentHandoffTools() {
         sourceAgentId,
         targetAgentId,
         threadId: copilotThreadId,
+        droppedMessageCount,
         metadata: handoffMetadata,
       }
     },
-    [copilotThreadId, messages, sendMessage, setCopilotAgentMode, sourceAgentId]
-  )
-
-  useFrontendTool(
-    {
-      name: "summarize_context_for_handoff",
-      description:
-        "Summarize current context into a compact handoff report for another agent, keeping the same thread id.",
-      parameters: SUMMARIZE_CONTEXT_FOR_HANDOFF_PARAMS,
-      handler: async (args) => {
-        return summarizeContextForHandoff({
-          targetAgentId: typeof args.targetAgentId === "string" ? args.targetAgentId : undefined,
-          maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined,
-          task: typeof args.task === "string" ? args.task : undefined,
-          done: Array.isArray(args.done) ? (args.done as string[]) : undefined,
-          nextSteps: Array.isArray(args.nextSteps) ? (args.nextSteps as string[]) : undefined,
-          constraints: Array.isArray(args.constraints) ? (args.constraints as string[]) : undefined,
-          artifacts: Array.isArray(args.artifacts) ? (args.artifacts as string[]) : undefined,
-          openQuestions: Array.isArray(args.openQuestions) ? (args.openQuestions as string[]) : undefined,
-          riskNotes: Array.isArray(args.riskNotes) ? (args.riskNotes as string[]) : undefined,
-        })
-      },
-    },
-    [summarizeContextForHandoff]
+    [
+      copilotThreadId,
+      isLoading,
+      messages,
+      sendMessage,
+      setMessages,
+      setCopilotAgentMode,
+      sourceAgentId,
+      stopGeneration,
+    ]
   )
 
   useFrontendTool(
     {
       name: "handoff_to_agent",
       description:
-        "Switch to another agent without changing thread id. Injects compact handoff metadata before continuation.",
+        "Switch to another agent without changing thread id. Backend digest is injected as developer metadata before continuation.",
       parameters: HANDOFF_TO_AGENT_PARAMS,
       handler: async (args) => {
         return handoffToAgent({
-          targetAgentId: typeof args.targetAgentId === "string" ? args.targetAgentId : undefined,
+          targetAgentId:
+            typeof args.targetAgentId === "string"
+              ? args.targetAgentId
+              : undefined,
           reason: typeof args.reason === "string" ? args.reason : undefined,
-          report: typeof args.report === "object" && args.report !== null ? (args.report as Record<string, unknown>) : undefined,
+          maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined,
+          task: typeof args.task === "string" ? args.task : undefined,
+          done: toStringList(args.done),
+          nextSteps: toStringList(args.nextSteps),
+          constraints: toStringList(args.constraints),
+          artifacts: toStringList(args.artifacts),
+          openQuestions: toStringList(args.openQuestions),
+          riskNotes: toStringList(args.riskNotes),
+          report:
+            typeof args.report === "object" && args.report !== null
+              ? (args.report as Record<string, unknown>)
+              : undefined,
         })
       },
     },

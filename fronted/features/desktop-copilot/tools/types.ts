@@ -119,33 +119,6 @@ export const OPEN_LOGO_SIDEBAR_PARAMS: ToolParameter[] = [
   },
 ]
 
-export const SUMMARIZE_CONTEXT_FOR_HANDOFF_PARAMS: ToolParameter[] = [
-  {
-    name: "targetAgentId",
-    type: "string",
-    description: "Agent id to receive the handoff metadata, for example main_agent or logo_agent.",
-    required: true,
-  },
-  {
-    name: "maxTokens",
-    type: "number",
-    description: "Approximate max token budget for digest text. Defaults to 400.",
-    required: false,
-  },
-  {
-    name: "task",
-    type: "string",
-    description: "Optional explicit task statement from source agent.",
-    required: false,
-  },
-  { name: "done", type: "string[]", description: "Optional completed work bullets.", required: false },
-  { name: "nextSteps", type: "string[]", description: "Optional immediate next-step bullets.", required: false },
-  { name: "constraints", type: "string[]", description: "Optional constraints or requirements.", required: false },
-  { name: "artifacts", type: "string[]", description: "Optional files/ids/outputs produced so far.", required: false },
-  { name: "openQuestions", type: "string[]", description: "Optional unresolved questions.", required: false },
-  { name: "riskNotes", type: "string[]", description: "Optional known risks or caveats.", required: false },
-]
-
 export const HANDOFF_TO_AGENT_PARAMS: ToolParameter[] = [
   {
     name: "targetAgentId",
@@ -160,9 +133,27 @@ export const HANDOFF_TO_AGENT_PARAMS: ToolParameter[] = [
     required: false,
   },
   {
+    name: "maxTokens",
+    type: "number",
+    description: "Optional digest budget for backend summarization. Defaults to 400.",
+    required: false,
+  },
+  {
+    name: "task",
+    type: "string",
+    description: "Optional explicit task statement to carry into handoff report.",
+    required: false,
+  },
+  { name: "done", type: "string[]", description: "Optional completed work bullets.", required: false },
+  { name: "nextSteps", type: "string[]", description: "Optional immediate next-step bullets.", required: false },
+  { name: "constraints", type: "string[]", description: "Optional constraints or requirements.", required: false },
+  { name: "artifacts", type: "string[]", description: "Optional files/ids/outputs produced so far.", required: false },
+  { name: "openQuestions", type: "string[]", description: "Optional unresolved questions.", required: false },
+  { name: "riskNotes", type: "string[]", description: "Optional known risks or caveats.", required: false },
+  {
     name: "report",
     type: "object",
-    description: "Optional structured handoff report. If omitted, latest summary is used or auto-generated.",
+    description: "Optional report patch. Backend auto-generates summary first, then merges this patch.",
     required: false,
   },
 ]
