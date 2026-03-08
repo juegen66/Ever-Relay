@@ -33,7 +33,7 @@ export const OpacitySidebar = ({
 
     useEffect(() => {
         if (typeof currentOpacity === "number") {
-            setOpacityPercent(Math.round(currentOpacity * 100));
+            queueMicrotask(() => setOpacityPercent(Math.round(currentOpacity * 100)));
         }
     }, [currentOpacity]);
 

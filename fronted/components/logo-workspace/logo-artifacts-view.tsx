@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowLeft, Loader2, RefreshCcw } from "lucide-react"
+import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
@@ -161,11 +162,12 @@ function ArtifactCard({
         </div>
       ) : null}
 
-      <div className={mediaContainerClass}>
+      <div className={`${mediaContainerClass} relative`}>
         {asset ? (
-          <img
+          <Image
             src={logoDesignApi.getAssetUrl(runId, asset.id)}
             alt={title}
+            fill
             className={mediaImageClass}
           />
         ) : (
@@ -372,12 +374,13 @@ export function LogoArtifactsView({
             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8b8e96]">Poster Artifact</p>
             <p className="text-[12px] font-medium text-[#6f7382]">1 / 1</p>
           </div>
-          <div className="flex min-h-[240px] items-center justify-center overflow-hidden rounded-[20px] border border-[#1d2028]/10 bg-[#f3f4f6]">
+          <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-[20px] border border-[#1d2028]/10 bg-[#f3f4f6]">
             {artifactSet.poster ? (
-              <img
+              <Image
                 src={logoDesignApi.getAssetUrl(run.id, artifactSet.poster.id)}
                 alt="Poster"
-                className="h-full w-full object-contain"
+                fill
+                className="object-contain"
               />
             ) : (
               <span className="text-sm text-[#8b9099]">Poster asset is not available for this run.</span>

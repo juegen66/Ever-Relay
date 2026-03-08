@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChromePicker, type ColorResult } from "react-color";
+
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { ActiveTools, STROKE_COLORS } from "../types";
 import { ToolSidebarClose } from "./tool-sidebar-close";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { EditorType } from "../hooks/use-Editor";
 
 interface StrokeColorSidebarProps {
@@ -40,7 +42,7 @@ export const StrokeColorSidebar = ({
 
     useEffect(() => {
         if (currentSelectionStroke) {
-            setPickerColor(currentSelectionStroke);
+            queueMicrotask(() => setPickerColor(currentSelectionStroke));
         }
     }, [currentSelectionStroke]);
 

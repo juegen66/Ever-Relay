@@ -1,6 +1,5 @@
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import * as fabric from "fabric"
-import { useMemo, useRef } from "react"
 import {
     CIRCLE_OPTION,
     RECTANGLE_OPTION,
@@ -745,7 +744,7 @@ export type EditorType = ReturnType<typeof buildEditor>
 export const useEditor = () => {
 
     const [canvas, setCanvas] = useState<fabric.Canvas | null>(null)
-    const [container, setContainer] = useState<HTMLDivElement | null>(null)
+    const [, setContainer] = useState<HTMLDivElement | null>(null)
     const [workspace, setWorkspace] = useState<fabric.Rect | null>(null)
     const workspaceRef = useRef<fabric.Rect | null>(null)
 
@@ -754,10 +753,6 @@ export const useEditor = () => {
     const isRestoringRef = useRef(false)
     const [canUndo, setCanUndo] = useState(false)
     const [canRedo, setCanRedo] = useState(false)
-
-    const [fillColor, setFillColor] = useState<string>(FILL_COLORS)
-    const [strokeColor, setStrokeColor] = useState<string>(STROKE_COLORS)
-    const [strokeWidth, setStrokeWidth] = useState<number>(STROKE_WIDTH)
 
     const syncHistoryFlags = useCallback(() => {
         setCanUndo(historyRef.current.length > 1)

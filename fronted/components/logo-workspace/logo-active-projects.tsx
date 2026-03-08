@@ -1,6 +1,7 @@
 "use client"
 
 import { Plus } from "lucide-react"
+import Image from "next/image"
 
 import type { LogoWorkspaceProjectCard } from "@/components/logo-workspace/types"
 import { cn } from "@/lib/utils"
@@ -78,12 +79,14 @@ export function LogoActiveProjects({
                 <div className="pointer-events-none absolute -top-10 right-0 h-24 w-24 rounded-full bg-[#d7e8ff]/70 blur-2xl" />
 
                 <div className="relative mb-3 flex items-start justify-between gap-2">
-                  <div className="flex h-[62px] w-[62px] items-center justify-center overflow-hidden rounded-xl border border-white/90 bg-white/80 text-[24px] font-semibold text-[#294469] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_20px_rgba(35,59,94,0.12)]">
+                  <div className="relative flex h-[62px] w-[62px] items-center justify-center overflow-hidden rounded-xl border border-white/90 bg-white/80 text-[24px] font-semibold text-[#294469] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_20px_rgba(35,59,94,0.12)]">
                     {project.previewImageUrl ? (
-                      <img
+                      <Image
                         src={project.previewImageUrl}
                         alt={`${project.title} preview`}
-                        className="h-full w-full object-contain p-1.5"
+                        fill
+                        className="object-contain p-1.5"
+                        unoptimized
                       />
                     ) : (
                       project.title.slice(0, 1).toUpperCase()

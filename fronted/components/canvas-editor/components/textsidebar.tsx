@@ -3,12 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import type * as fabric from "fabric"
 import { ChromePicker, type ColorResult } from "react-color"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ActiveTools, TEXT_PRESETS, type TextPresetId } from "../types"
-import { EditorType } from "../hooks/use-Editor"
-import { ToolSidebarClose } from "./tool-sidebar-close"
 import {
     AlignCenter,
     AlignJustify,
@@ -25,6 +19,14 @@ import {
     Type,
     Underline,
 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+import { ActiveTools, TEXT_PRESETS, type TextPresetId } from "../types"
+import { EditorType } from "../hooks/use-Editor"
+import { ToolSidebarClose } from "./tool-sidebar-close"
 
 interface TextSidebarProps {
     activeTool: ActiveTools
@@ -107,53 +109,55 @@ export const TextSidebar = ({
             return
         }
 
-        const nextFontFamily = selectedText.get("fontFamily")
-        if (typeof nextFontFamily === "string" && nextFontFamily.length > 0) {
-            setFontFamily(nextFontFamily)
-        }
+        queueMicrotask(() => {
+            const nextFontFamily = selectedText.get("fontFamily")
+            if (typeof nextFontFamily === "string" && nextFontFamily.length > 0) {
+                setFontFamily(nextFontFamily)
+            }
 
-        const nextFontSize = selectedText.get("fontSize")
-        if (typeof nextFontSize === "number") {
-            setFontSize(Math.round(nextFontSize))
-        }
+            const nextFontSize = selectedText.get("fontSize")
+            if (typeof nextFontSize === "number") {
+                setFontSize(Math.round(nextFontSize))
+            }
 
-        const nextFontWeight = selectedText.get("fontWeight")
-        if (typeof nextFontWeight === "string" || typeof nextFontWeight === "number") {
-            setFontWeight(String(nextFontWeight))
-        } else {
-            setFontWeight("400")
-        }
+            const nextFontWeight = selectedText.get("fontWeight")
+            if (typeof nextFontWeight === "string" || typeof nextFontWeight === "number") {
+                setFontWeight(String(nextFontWeight))
+            } else {
+                setFontWeight("400")
+            }
 
-        const nextFontStyle = selectedText.get("fontStyle")
-        setFontStyle(nextFontStyle === "italic" ? "italic" : "normal")
+            const nextFontStyle = selectedText.get("fontStyle")
+            setFontStyle(nextFontStyle === "italic" ? "italic" : "normal")
 
-        const isUnderline = selectedText.get("underline")
-        setUnderline(Boolean(isUnderline))
+            const isUnderline = selectedText.get("underline")
+            setUnderline(Boolean(isUnderline))
 
-        const nextAlign = selectedText.get("textAlign")
-        if (nextAlign === "left" || nextAlign === "center" || nextAlign === "right" || nextAlign === "justify") {
-            setTextAlign(nextAlign)
-        }
+            const nextAlign = selectedText.get("textAlign")
+            if (nextAlign === "left" || nextAlign === "center" || nextAlign === "right" || nextAlign === "justify") {
+                setTextAlign(nextAlign)
+            }
 
-        const fill = selectedText.get("fill")
-        if (typeof fill === "string") {
-            setTextColor(fill)
-        }
+            const fill = selectedText.get("fill")
+            if (typeof fill === "string") {
+                setTextColor(fill)
+            }
 
-        const bg = selectedText.get("textBackgroundColor")
-        setBackgroundColor(typeof bg === "string" && bg.length > 0 ? bg : undefined)
+            const bg = selectedText.get("textBackgroundColor")
+            setBackgroundColor(typeof bg === "string" && bg.length > 0 ? bg : undefined)
 
-        const nextLineHeight = selectedText.get("lineHeight")
-        if (typeof nextLineHeight === "number") {
-            setLineHeight(Number(nextLineHeight.toFixed(2)))
-        }
+            const nextLineHeight = selectedText.get("lineHeight")
+            if (typeof nextLineHeight === "number") {
+                setLineHeight(Number(nextLineHeight.toFixed(2)))
+            }
 
-        const nextCharSpacing = selectedText.get("charSpacing")
-        if (typeof nextCharSpacing === "number") {
-            setLetterSpacing(Math.round(nextCharSpacing / 10))
-        } else {
-            setLetterSpacing(0)
-        }
+            const nextCharSpacing = selectedText.get("charSpacing")
+            if (typeof nextCharSpacing === "number") {
+                setLetterSpacing(Math.round(nextCharSpacing / 10))
+            } else {
+                setLetterSpacing(0)
+            }
+        })
     }, [selectedText])
 
     if (activeTool !== "Text") {

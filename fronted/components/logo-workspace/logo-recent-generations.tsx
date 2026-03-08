@@ -1,6 +1,7 @@
 "use client"
 
 import { Box, Infinity, Leaf, Pentagon, Settings, Sparkles } from "lucide-react"
+import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import type { LogoWorkspaceRecentItem } from "@/components/logo-workspace/types"
@@ -69,10 +70,12 @@ export function LogoRecentGenerations({
                   <div className="pointer-events-none absolute -top-8 right-1 h-16 w-16 rounded-full bg-[#d6e7ff]/70 blur-2xl" />
                   <div className="relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-md border border-white/90 bg-white/80 shadow-[0_4px_12px_rgba(23,41,68,0.12)]">
                     {item.previewImageUrl ? (
-                      <img
+                      <Image
                         src={item.previewImageUrl}
                         alt={`${item.title} preview`}
-                        className="h-full w-full object-contain p-[2px]"
+                        fill
+                        className="object-contain p-[2px]"
+                        unoptimized
                       />
                     ) : (
                       <Icon className="h-4 w-4 text-[#7087a6]" />

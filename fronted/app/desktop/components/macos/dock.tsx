@@ -57,7 +57,7 @@ export function Dock() {
   }, [])
 
   const getScale = useCallback((index: number) => {
-    if (mouseX === null || !dockRef.current) return 1
+    if (mouseX === null) return 1
     const itemWidth = 52
     const padding = 10
     const separatorsBefore = DOCK_ITEMS.slice(0, index + 1).filter((item) => item.separatorBefore).length

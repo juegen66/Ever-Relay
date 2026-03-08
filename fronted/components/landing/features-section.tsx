@@ -1,26 +1,28 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import type { RefObject } from "react"
+
 import {
-  Monitor,
-  Terminal,
-  FolderOpen,
-  Music,
-  Globe,
-  Mail,
+  ArrowRight,
   Calculator,
-  Camera,
-  MessageSquare,
   CalendarDays,
+  Camera,
   Cloud,
-  MapPin,
-  Shield,
-  Zap,
+  FolderOpen,
+  Globe,
   Layers,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Monitor,
+  Music,
   Palette,
+  Shield,
+  Terminal,
+  Zap,
 } from "lucide-react"
+import Link from "next/link"
 
 const FEATURES = [
   {
@@ -64,8 +66,7 @@ const APPS = [
   { icon: Monitor, name: "Settings", desc: "Preferences", color: "#8e8e93" },
 ]
 
-function useInView(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null)
+function useInView(ref: RefObject<HTMLDivElement | null>, threshold = 0.15) {
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const el = ref.current
@@ -77,27 +78,30 @@ function useInView(threshold = 0.15) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [threshold])
-  return { ref, visible }
+  return visible
 }
 
 export function FeaturesSection() {
-  const features = useInView()
-  const apps = useInView()
-  const cta = useInView()
+  const featuresRef = useRef<HTMLDivElement>(null)
+  const appsRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
+  const featuresVisible = useInView(featuresRef)
+  const appsVisible = useInView(appsRef)
+  const ctaVisible = useInView(ctaRef)
 
   return (
     <>
       {/* Features */}
-      <section id="features" className="relative px-6 py-24" ref={features.ref}>
+      <section id="features" className="relative px-6 py-24" ref={featuresRef}>
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2
-              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${featuresVisible ? "reveal-on-scroll" : "opacity-0"}`}
             >
               Tools for your creative flow.
             </h2>
             <p
-              className={`mt-4 text-[17px] text-[#8a8680] ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`mt-4 text-[17px] text-[#8a8680] ${featuresVisible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
               An operating system optimized for your creative process.
@@ -108,7 +112,7 @@ export function FeaturesSection() {
             {FEATURES.map((f, i) => (
               <div
                 key={f.title}
-                className={`group rounded-2xl border border-[#e8e4de] bg-white p-6 transition-all hover:border-[#d8d4ce] hover:shadow-md ${features.visible ? "reveal-on-scroll" : "opacity-0"}`}
+                className={`group rounded-2xl border border-[#e8e4de] bg-white p-6 transition-all hover:border-[#d8d4ce] hover:shadow-md ${featuresVisible ? "reveal-on-scroll" : "opacity-0"}`}
                 style={{ animationDelay: `${0.1 + i * 0.08}s` }}
               >
                 <div
@@ -130,16 +134,16 @@ export function FeaturesSection() {
       </section>
 
       {/* Apps Grid */}
-      <section id="apps" className="relative px-6 py-24" ref={apps.ref}>
+      <section id="apps" className="relative px-6 py-24" ref={appsRef}>
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 text-center">
             <h2
-              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl ${appsVisible ? "reveal-on-scroll" : "opacity-0"}`}
             >
               A Suite for Creators
             </h2>
             <p
-              className={`mt-4 text-[17px] text-[#8a8680] ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+              className={`mt-4 text-[17px] text-[#8a8680] ${appsVisible ? "reveal-on-scroll" : "opacity-0"}`}
               style={{ animationDelay: "0.1s" }}
             >
               Essential tools for managing your brand and workflow.
@@ -150,7 +154,7 @@ export function FeaturesSection() {
             {APPS.map((app, i) => (
               <div
                 key={app.name}
-                className={`group flex flex-col items-center gap-3 rounded-2xl border border-[#e8e4de] bg-white p-5 transition-all hover:border-[#d8d4ce] hover:shadow-md ${apps.visible ? "reveal-on-scroll" : "opacity-0"}`}
+                className={`group flex flex-col items-center gap-3 rounded-2xl border border-[#e8e4de] bg-white p-5 transition-all hover:border-[#d8d4ce] hover:shadow-md ${appsVisible ? "reveal-on-scroll" : "opacity-0"}`}
                 style={{ animationDelay: `${0.05 + i * 0.04}s` }}
               >
                 <div
@@ -170,21 +174,21 @@ export function FeaturesSection() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative px-6 py-24" ref={cta.ref}>
+      <section className="relative px-6 py-24" ref={ctaRef}>
         <div className="mx-auto max-w-2xl text-center">
           <h2
-            className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+            className={`text-3xl font-bold tracking-tight text-[#1a1a2e] md:text-5xl text-balance ${ctaVisible ? "reveal-on-scroll" : "opacity-0"}`}
           >
             Ready to build your brand?
           </h2>
           <p
-            className={`mt-4 text-[17px] text-[#8a8680] ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+            className={`mt-4 text-[17px] text-[#8a8680] ${ctaVisible ? "reveal-on-scroll" : "opacity-0"}`}
             style={{ animationDelay: "0.1s" }}
           >
             Create a free account and access your cloud desktop in seconds.
           </p>
           <div
-            className={`mt-8 flex items-center justify-center gap-4 ${cta.visible ? "reveal-on-scroll" : "opacity-0"}`}
+            className={`mt-8 flex items-center justify-center gap-4 ${ctaVisible ? "reveal-on-scroll" : "opacity-0"}`}
             style={{ animationDelay: "0.2s" }}
           >
             <Link

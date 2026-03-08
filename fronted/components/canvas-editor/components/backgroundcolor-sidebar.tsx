@@ -26,7 +26,7 @@ export const BackgroundColorSidebar = ({
     useEffect(() => {
         const workspaceColor = editor?.getWorkspaceBackground();
         if (workspaceColor) {
-            setPickerColor(workspaceColor);
+            queueMicrotask(() => setPickerColor(workspaceColor));
         }
     }, [editor]);
 

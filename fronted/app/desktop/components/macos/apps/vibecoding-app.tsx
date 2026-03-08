@@ -273,7 +273,7 @@ export function VibecodingApp() {
 
   useEffect(() => {
     const filePaths = activeFragment ? Object.keys(activeFragment.files) : []
-    setSelectedFilePath(filePaths[0] ?? null)
+    queueMicrotask(() => setSelectedFilePath(filePaths[0] ?? null))
   }, [activeFragmentId, activeFragment])
 
   useEffect(() => {

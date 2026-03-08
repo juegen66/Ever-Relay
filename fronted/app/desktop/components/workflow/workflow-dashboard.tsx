@@ -41,7 +41,7 @@ export function WorkflowDashboard() {
   const [isExecuting, setIsExecuting] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    queueMicrotask(() => setMounted(true))
     return () => {
       if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current)

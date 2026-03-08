@@ -24,8 +24,10 @@ export const CanvasSizeSidebar = ({
     useEffect(() => {
         const workspaceSize = editor?.getWorkspaceSize()
         if (!workspaceSize) return
-        setWorkspaceWidth(Math.round(workspaceSize.width))
-        setWorkspaceHeight(Math.round(workspaceSize.height))
+        queueMicrotask(() => {
+            setWorkspaceWidth(Math.round(workspaceSize.width))
+            setWorkspaceHeight(Math.round(workspaceSize.height))
+        })
     }, [editor])
 
     if (activeTool !== "CanvasSize") {

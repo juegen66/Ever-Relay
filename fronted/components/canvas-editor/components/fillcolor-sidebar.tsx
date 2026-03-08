@@ -32,7 +32,7 @@ export const FillColorSidebar = ({ activeTool, onToolChange, editor, selectedObj
 
     useEffect(() => {
         if (currentSelectionFill) {
-            setPickerColor(currentSelectionFill);
+            queueMicrotask(() => setPickerColor(currentSelectionFill));
         }
     }, [currentSelectionFill]);
 

@@ -107,6 +107,8 @@ export const useAutoResize = ({ container, canvas }: UseAutoResizeProps) => {
                 selectable: false,
             })
 
+        // fabric.js Canvas requires mutation; cannot use immutable pattern
+        // eslint-disable-next-line react-hooks/immutability -- fabric.Canvas API is mutable by design
         canvas.clipPath = clipPath
         clipPath.set({
             width: workspaceRect.width ?? 0,

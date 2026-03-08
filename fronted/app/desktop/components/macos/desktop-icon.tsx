@@ -74,12 +74,12 @@ export function DesktopIcon({
   const isFolder = itemType === "folder"
 
   useEffect(() => {
-    setName(folder.name)
+    queueMicrotask(() => setName(folder.name))
   }, [folder.name])
 
   useEffect(() => {
     if (folder.isNew && !editing) {
-      setEditing(true)
+      queueMicrotask(() => setEditing(true))
     }
   }, [editing, folder.isNew])
 

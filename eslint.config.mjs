@@ -35,6 +35,10 @@ const eslintConfig = [
       "no-return-await": "off",
 
       // --- TypeScript 规则（仅使用非 type-aware 规则）---
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/consistent-type-imports": [
         "warn",
         { prefer: "type-imports", fixStyle: "inline-type-imports" },

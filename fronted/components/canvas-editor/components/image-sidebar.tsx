@@ -1,6 +1,7 @@
 "use client"
 
 import { type ChangeEvent, useRef, useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ActiveTools } from "../types"
@@ -105,12 +106,14 @@ export const ImageSidebar = ({
                         Choose from device
                     </Button>
 
-                    <div className="flex h-48 items-center justify-center overflow-hidden rounded-md border border-black/10 bg-white/70">
+                    <div className="relative flex h-48 items-center justify-center overflow-hidden rounded-md border border-black/10 bg-white/70">
                         {previewUrl ? (
-                            <img
+                            <Image
                                 src={previewUrl}
                                 alt="Selected preview"
-                                className="h-full w-full object-contain"
+                                fill
+                                className="object-contain"
+                                unoptimized
                             />
                         ) : (
                             <span className="px-4 text-center text-xs text-muted-foreground">

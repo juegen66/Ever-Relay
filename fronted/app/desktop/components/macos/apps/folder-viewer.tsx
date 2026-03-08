@@ -64,7 +64,7 @@ export function FolderViewer({
   folderId,
   folderName,
   allItems,
-  onOpenFolder,
+  onOpenFolder: _onOpenFolder,
   onOpenFile,
   onCreateItem,
   onDeleteItem,
