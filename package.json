@@ -6,7 +6,7 @@
     "dev": "next dev ./fronted --turbo",
     "build": "next build ./fronted",
     "start": "next start ./fronted",
-    "lint": "next lint ./fronted",
+    "lint": "eslint ./fronted",
     "mastra:dev": "pnpm exec mastra dev -d server/mastra",
     "mastra:studio": "pnpm exec mastra studio --server-port 4111 --port 4112",
     "inngest:dev": "pnpm exec inngest dev",
@@ -110,7 +110,9 @@
     "inngest-cli": "^1.17.1",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6"
   },
   "pnpm": {
     "overrides": {
