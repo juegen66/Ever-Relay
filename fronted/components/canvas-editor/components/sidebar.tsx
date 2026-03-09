@@ -7,8 +7,9 @@ import {
   Settings,
   Ruler,
 } from "lucide-react"
+
 import { SidebarItem } from "./sidebar-item"
-import { ActiveTools } from "../types"
+import { type ActiveTools } from "../types"
 interface SidebarProps {
   activeTool: ActiveTools
   onToolChange: (tool: ActiveTools) => void

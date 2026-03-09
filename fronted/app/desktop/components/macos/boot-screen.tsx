@@ -1,8 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
+
 import { Apple } from "lucide-react"
+import { useRouter } from "next/navigation"
+
 import {
   authClient,
   GOOGLE_AUTH_ENABLED,

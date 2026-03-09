@@ -17,5 +17,5 @@ export function DesktopAuthGate({ children, user }: DesktopAuthGateProps) {
     setCurrentUser(user)
   }, [setCurrentUser, user])
 
-  return <>{children}</>
+  return children
 }

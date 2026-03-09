@@ -1,10 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+
 import { Search } from "lucide-react"
-import type { AppId } from "./types"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
+import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
+import type { AppId } from "./types"
 
 const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
@@ -16,6 +20,7 @@ const ALL_APPS: { id: AppId; name: string; category: string }[] = [
 export function Spotlight() {
   const onClose = useDesktopUIStore((state) => state.closeSpotlight)
   const onOpenApp = useDesktopWindowStore((state) => state.openApp)
+  const logAction = useDesktopActionLogStore((state) => state.logAction)
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -43,6 +48,9 @@ export function Spotlight() {
     } else if (e.key === "Enter") {
       e.preventDefault()
       if (filtered[selectedIndex]) {
+        if (query.trim()) {
+          logAction({ type: "spotlight_searched", query: query.trim() })
+        }
         onOpenApp(filtered[selectedIndex].id)
       }
     } else if (e.key === "Escape") {
@@ -104,7 +112,12 @@ export function Spotlight() {
             {filtered.map((app, index) => (
               <button
                 key={app.id}
-                onClick={() => onOpenApp(app.id)}
+                onClick={() => {
+                  if (query.trim()) {
+                    logAction({ type: "spotlight_searched", query: query.trim() })
+                  }
+                  onOpenApp(app.id)
+                }}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors ${
                   selectedIndex === index

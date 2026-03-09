@@ -1,13 +1,17 @@
 "use client"
 
 import { type ChangeEvent, useRef, useState } from "react"
+
 import Image from "next/image"
+
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ActiveTools } from "../types"
-import { EditorType } from "../hooks/use-Editor"
-import { ToolSidebarClose } from "./tool-sidebar-close"
 import { imageProcessingApi } from "@/lib/api/modules/image-processing"
+
+import { type EditorType } from "../hooks/use-Editor"
+import { type ActiveTools } from "../types"
+import { ToolSidebarClose } from "./tool-sidebar-close"
+
 
 interface ImageSidebarProps {
     activeTool: ActiveTools

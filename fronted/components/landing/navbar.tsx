@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
+
 import { Monitor, Menu, X } from "lucide-react"
+import Link from "next/link"
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)

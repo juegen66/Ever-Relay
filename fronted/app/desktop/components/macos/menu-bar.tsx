@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+
 import {
   Apple,
   Wifi,
@@ -16,11 +16,15 @@ import {
   SkipForward,
   SkipBack,
 } from "lucide-react"
-import type { AppId } from "./types"
+import { useRouter } from "next/navigation"
+
+
 import { authClient } from "@/lib/auth/auth-client"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useUserStore } from "@/lib/stores/user-store"
+
+import type { AppId } from "./types"
 
 const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",

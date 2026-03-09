@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect } from "react"
+
 import { useCopilotChatInternal } from "@copilotkit/react-core"
-import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
+
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import type { BrandBriefPayload } from "@/shared/copilot/brand-brief"
+import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
 
 /**
  * Listens for brand brief events and injects the message into logo copilot chat.

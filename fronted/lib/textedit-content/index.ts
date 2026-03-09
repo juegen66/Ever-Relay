@@ -1,6 +1,7 @@
 "use client"
 
 import { filesApi } from "@/lib/api/modules/files"
+
 import type { TextEditWriteEventDetail } from "./types"
 
 export { type TextEditWriteEventDetail } from "./types"

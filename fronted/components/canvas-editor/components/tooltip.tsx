@@ -1,8 +1,11 @@
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { MousePointer2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
-import { ActiveTools } from "../types"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+
+import { type ActiveTools } from "../types"
+
 
 interface TooltipComponentProps {
     activeTool: ActiveTools;

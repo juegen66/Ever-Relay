@@ -3,8 +3,8 @@
 import { Box, Infinity, Leaf, Pentagon, Settings, Sparkles } from "lucide-react"
 import Image from "next/image"
 
-import { Button } from "@/components/ui/button"
 import type { LogoWorkspaceRecentItem } from "@/components/logo-workspace/types"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const ICONS = [Pentagon, Infinity, Leaf, Settings, Box, Sparkles] as const

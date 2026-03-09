@@ -1,14 +1,17 @@
 "use client"
 
 import type { ComponentType } from "react"
+
 import { DESKTOP_COPILOT_AGENT, LOGO_COPILOT_AGENT } from "@/shared/copilot/constants"
-import { useDesktopCoreTools } from "./use-desktop-core-tools"
-import { useCanvasTools } from "./use-canvas-tools"
-import { useTextEditTools } from "./use-textedit-tools"
-import { useBuildTools } from "./use-build-tools"
-import { useLogoTools } from "./use-logo-tools"
-import { useDesktopHitlTools } from "./use-desktop-hitl-tools"
+
 import { useAgentHandoffTools } from "./use-agent-handoff-tools"
+import { useBuildTools } from "./use-build-tools"
+import { useCanvasTools } from "./use-canvas-tools"
+import { useDesktopCoreTools } from "./use-desktop-core-tools"
+import { useDesktopHitlTools } from "./use-desktop-hitl-tools"
+import { useLogoTools } from "./use-logo-tools"
+import { usePredictionTools } from "./use-prediction-tools"
+import { useTextEditTools } from "./use-textedit-tools"
 
 /** Mounts tools for main_agent (desktop mode). */
 function DesktopAgentToolsMount() {
@@ -18,6 +21,7 @@ function DesktopAgentToolsMount() {
   useBuildTools()
   useDesktopHitlTools()
   useAgentHandoffTools()
+  usePredictionTools()
   return null
 }
 

@@ -1,15 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+
 import * as fabric from "fabric"
 
 import type { CanvasProject } from "@/lib/api/modules/canvas"
-import { useAutoResize } from "../hooks/use-auto-resize"
-import { useCanvasEvents } from "../hooks/use-canvas-events"
-import { useEditor, type EditorType } from "../hooks/use-Editor"
-import type { ActiveTools } from "../types"
-import { BackgroundColorSidebar } from "./backgroundcolor-sidebar"
+
 import { AiSidebar } from "./ai-sidebar"
+import { BackgroundColorSidebar } from "./backgroundcolor-sidebar"
 import { CanvasSizeSidebar } from "./canvas-size-sidebar"
 import { FillColorSidebar } from "./fillcolor-sidebar"
 import { Footer } from "./Footer"
@@ -19,11 +17,16 @@ import { OpacitySidebar } from "./opacity-sidebar"
 import { SettingsSidebar } from "./settings-sidebar"
 import { ShapesSidebar } from "./shapesiedebar"
 import { Sidebar } from "./sidebar"
-import { StrokeColorSidebar } from "./strokecolor-sidebar"
 import { StrokeStyleSidebar } from "./stroke-style-sidebar"
+import { StrokeColorSidebar } from "./strokecolor-sidebar"
 import { TemplatesSidebar } from "./templates-sidebar"
 import { TextSidebar } from "./textsidebar"
 import Toolbar from "./Toolbar"
+import { useAutoResize } from "../hooks/use-auto-resize"
+import { useCanvasEvents } from "../hooks/use-canvas-events"
+import { useEditor, type EditorType } from "../hooks/use-Editor"
+
+import type { ActiveTools } from "../types"
 
 interface SaveCanvasContentResult {
   project?: CanvasProject

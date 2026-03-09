@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { ChromePicker, type ColorResult } from "react-color";
-import { ActiveTools, FILL_COLORS } from "../types";
-import { ToolSidebarClose } from "./tool-sidebar-close";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { EditorType } from "../hooks/use-Editor";
+
+import { type ActiveTools, FILL_COLORS } from "../types";
+import { ToolSidebarClose } from "./tool-sidebar-close";
+import { type EditorType } from "../hooks/use-Editor";
 
 interface FillColorSidebarProps {
     activeTool: ActiveTools;

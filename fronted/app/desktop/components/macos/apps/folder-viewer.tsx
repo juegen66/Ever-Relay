@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
+
 import {
   Folder,
   File,
@@ -15,6 +16,7 @@ import {
   List,
   Trash2,
 } from "lucide-react"
+
 import type { DesktopFolder, DesktopItemType } from "../desktop-icon"
 
 const FILE_ICON_MAP: Record<DesktopItemType, { icon: typeof File; colorClass: string }> = {

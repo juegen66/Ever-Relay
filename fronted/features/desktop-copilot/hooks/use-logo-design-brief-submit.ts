@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
+
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { dispatchBrandBriefToCopilot } from "@/shared/copilot/brand-brief"
 

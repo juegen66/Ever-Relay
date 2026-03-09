@@ -6,10 +6,12 @@ import {
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
+import { PREDICTION_AGENT_ID } from "@/server/mastra/agents/prediction-agent"
 
 const COPILOT_AGENT_IDS = [
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
+  PREDICTION_AGENT_ID,
 ] as const
 
 type CopilotAgentId = (typeof COPILOT_AGENT_IDS)[number]

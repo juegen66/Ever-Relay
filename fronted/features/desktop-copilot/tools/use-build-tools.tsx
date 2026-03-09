@@ -7,6 +7,7 @@ import { useCopilotChat, useFrontendTool } from "@copilotkit/react-core"
 import { buildsApi } from "@/lib/api/modules/builds"
 import { useBuildProgressStore } from "@/lib/stores/build-progress-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+
 import { START_NEW_CHAT_THREAD_PARAMS, TRIGGER_BUILD_PARAMS, toErrorMessage } from "./types"
 
 export function useBuildTools() {

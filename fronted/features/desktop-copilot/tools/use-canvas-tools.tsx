@@ -5,13 +5,14 @@ import { useCallback } from "react"
 import { useFrontendTool } from "@copilotkit/react-core"
 
 import { canvasApi } from "@/lib/api/modules/canvas"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
   getActiveCanvasProjectId,
   insertSvgIntoActiveCanvasSession,
   openCanvasProjectInSession,
   waitForCanvasSessionReady,
 } from "@/lib/canvas-session"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
 import { ADD_SVG_TO_CANVAS_PARAMS, OPEN_CANVAS_PROJECT_PARAMS, toErrorMessage } from "./types"
 
 export function useCanvasTools() {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+
 import { useQueryClient } from "@tanstack/react-query"
 
 import { CanvasEditor, type SaveCanvasContentResult } from "@/components/canvas-editor/canvas-editor"

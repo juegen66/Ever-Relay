@@ -77,7 +77,7 @@ function useInView(ref: RefObject<HTMLDivElement | null>, threshold = 0.15) {
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [threshold])
+  }, [ref, threshold])
   return visible
 }
 

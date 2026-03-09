@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+
 import { Folder, Pencil, Trash2, FolderOpen, Info, FileText, File, FileImage, FileCode, FileSpreadsheet } from "lucide-react"
 
 export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"

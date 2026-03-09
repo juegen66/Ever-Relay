@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react"
+
 import * as fabric from "fabric"
+
 import {
     CIRCLE_OPTION,
     RECTANGLE_OPTION,

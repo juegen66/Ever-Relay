@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
+
 import { useCopilotChat } from "@copilotkit/react-core"
 
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"

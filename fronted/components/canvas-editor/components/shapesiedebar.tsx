@@ -1,9 +1,11 @@
-import { ActiveTools } from "../types";
-import { ToolSidebarClose } from "./tool-sidebar-close";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShapeToolbar } from "./shapetools-bar";
 import { Square, Circle, Triangle, Diamond, Star, Heart } from "lucide-react";
-import { EditorType } from "../hooks/use-Editor";
+
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+import { type ActiveTools } from "../types";
+import { ShapeToolbar } from "./shapetools-bar";
+import { ToolSidebarClose } from "./tool-sidebar-close";
+import { type EditorType } from "../hooks/use-Editor";
 
 interface ShapesSidebarProps {
     activeTool: ActiveTools;

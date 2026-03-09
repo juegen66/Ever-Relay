@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+
 import { Loader2, X } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import { buildsApi } from "@/lib/api/modules/builds"
 import { useBuildProgressStore } from "@/lib/stores/build-progress-store"
 import type { WorkflowRun } from "@/shared/contracts/builds"
-import { Button } from "@/components/ui/button"
 
 function stageLabel(stage: WorkflowRun["stage"]) {
   switch (stage) {

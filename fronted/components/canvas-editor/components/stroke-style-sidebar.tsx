@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { ActiveTools, STROKE_WIDTH, DEFAULT_STROKE_STYLE, type StrokeStyle } from "../types";
-import { ToolSidebarClose } from "./tool-sidebar-close";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { EditorType } from "../hooks/use-Editor";
+
+import { type ActiveTools, STROKE_WIDTH, DEFAULT_STROKE_STYLE, type StrokeStyle } from "../types";
+import { ToolSidebarClose } from "./tool-sidebar-close";
+import { type EditorType } from "../hooks/use-Editor";
 
 interface StrokeStyleSidebarProps {
     activeTool: ActiveTools;

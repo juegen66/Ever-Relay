@@ -1,8 +1,9 @@
-import type { AxiosRequestConfig, AxiosResponse, Method } from 'axios'
 
 import { apiClient } from './client'
 import { normalizeAxiosError } from './error'
+
 import type { ApiResponse } from './types'
+import type { AxiosRequestConfig, AxiosResponse, Method } from 'axios'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null

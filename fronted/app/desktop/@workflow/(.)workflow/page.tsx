@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
-import { WorkflowDashboard } from "@/app/desktop/components/workflow/workflow-dashboard"
 import { DesktopAuthGate } from "@/app/desktop/components/macos/desktop-auth-gate"
+import { WorkflowDashboard } from "@/app/desktop/components/workflow/workflow-dashboard"
 import { getServerDesktopUser } from "@/server/lib/auth/get-server-desktop-user"
 
 export default async function InterceptedDesktopWorkflowPage() {

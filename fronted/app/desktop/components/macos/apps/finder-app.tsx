@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
+
 import {
   Folder,
   File,
-  Image,
+  Image as ImageIcon,
   Music,
   Film,
   Download,
@@ -28,7 +29,7 @@ const SIDEBAR_ITEMS = [
   { name: "Desktop", icon: <HardDrive className="h-4 w-4" /> },
   { name: "Documents", icon: <Folder className="h-4 w-4" /> },
   { name: "Downloads", icon: <Download className="h-4 w-4" /> },
-  { name: "Pictures", icon: <Image className="h-4 w-4" /> },
+  { name: "Pictures", icon: <ImageIcon className="h-4 w-4" /> },
   { name: "Music", icon: <Music className="h-4 w-4" /> },
   { name: "Movies", icon: <Film className="h-4 w-4" /> },
 ]
@@ -37,7 +38,7 @@ const FILES: Record<string, FileItem[]> = {
   Desktop: [
     { name: "Projects", icon: <Folder className="h-5 w-5 text-blue-500" />, type: "folder", size: "--", modified: "Today" },
     { name: "Notes.txt", icon: <File className="h-5 w-5 text-gray-500" />, type: "file", size: "4 KB", modified: "Yesterday" },
-    { name: "Screenshot.png", icon: <Image className="h-5 w-5 text-green-500" />, type: "file", size: "2.3 MB", modified: "Jan 15" },
+    { name: "Screenshot.png", icon: <ImageIcon className="h-5 w-5 text-green-500" />, type: "file", size: "2.3 MB", modified: "Jan 15" },
   ],
   Documents: [
     { name: "Work", icon: <Folder className="h-5 w-5 text-blue-500" />, type: "folder", size: "--", modified: "Dec 20" },
@@ -59,7 +60,7 @@ const FILES: Record<string, FileItem[]> = {
   ],
   Pictures: [
     { name: "Vacation", icon: <Folder className="h-5 w-5 text-blue-500" />, type: "folder", size: "--", modified: "Aug 15" },
-    { name: "wallpaper.jpg", icon: <Image className="h-5 w-5 text-green-500" />, type: "file", size: "5.8 MB", modified: "Jul 20" },
+    { name: "wallpaper.jpg", icon: <ImageIcon className="h-5 w-5 text-green-500" />, type: "file", size: "5.8 MB", modified: "Jul 20" },
   ],
   Music: [
     { name: "Playlists", icon: <Folder className="h-5 w-5 text-blue-500" />, type: "folder", size: "--", modified: "Jun 5" },

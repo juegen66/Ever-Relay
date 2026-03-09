@@ -6,6 +6,7 @@ import { useFrontendTool } from "@copilotkit/react-core"
 
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+
 import { CONFIRM_LOGO_BRIEF_PARAMS, OPEN_LOGO_SIDEBAR_PARAMS, toErrorMessage } from "./types"
 
 export function useLogoTools() {

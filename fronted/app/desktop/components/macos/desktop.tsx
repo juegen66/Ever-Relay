@@ -1,21 +1,25 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+
 import { usePathname } from "next/navigation"
 
-import { Dock } from "./dock"
+import { toDesktopFolder } from "@/lib/desktop-items"
+import { useDesktopItemsQuery } from "@/lib/query/files"
+import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
+import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
+import { ActionLogDebugPanel } from "../ai/action-log-debug-panel"
+import { AboutMac } from "./about-mac"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
 import { DesktopIcon } from "./desktop-icon"
-import { Spotlight } from "./spotlight"
+import { Dock } from "./dock"
 import { Launchpad } from "./launchpad"
-import { AboutMac } from "./about-mac"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
-import { toDesktopFolder } from "@/lib/desktop-items"
-import { useDesktopItemsQuery } from "@/lib/query/files"
-import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { Spotlight } from "./spotlight"
 
 type FolderNativeDragStartDetail = {
   itemId: string
@@ -302,6 +306,7 @@ export function Desktop() {
           onClose={closeContextMenu}
           onAction={(action) => {
             const { x, y } = contextMenu
+            useDesktopActionLogStore.getState().logAction({ type: "context_menu_action", action })
             if (action === "new-folder") void createFolder(x, y)
             if (action === "new-file-text") void createFile(x, y, "text")
             if (action === "new-file-image") void createFile(x, y, "image")
@@ -328,6 +333,8 @@ export function Desktop() {
       )}
 
       <Dock />
+
+      <ActionLogDebugPanel />
     </div>
   )
 }

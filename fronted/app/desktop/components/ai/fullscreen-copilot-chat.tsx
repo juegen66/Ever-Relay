@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createPortal } from "react-dom"
+
+import { CopilotChat } from "@copilotkit/react-ui"
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { CopilotChat } from "@copilotkit/react-ui"
+import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
+
 import { useStartNewCopilotChat } from "./use-start-new-copilot-chat"
 
 export function FullscreenCopilotChat() {

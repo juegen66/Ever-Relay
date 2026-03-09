@@ -1,4 +1,5 @@
 import { desktopAgent } from "./desktop-agent"
+import { predictionAgent, PREDICTION_AGENT_ID } from "./prediction-agent"
 import { plannerAgent, PLANNER_AGENT_ID } from "./planner-agent"
 import { builderAgent, BUILDER_AGENT_ID } from "./builder-agent"
 import { reviewerAgent, REVIEWER_AGENT_ID } from "./reviewer-agent"
@@ -18,6 +19,7 @@ import {
 export const agents = {
   [DESKTOP_COPILOT_AGENT]: desktopAgent,
   [LOGO_COPILOT_AGENT]: logoCopilotAgent,
+  [PREDICTION_AGENT_ID]: predictionAgent,
   [CONTEXT_COMPRESSION_AGENT_ID]: contextCompressionAgent,
   [PLANNER_AGENT_ID]: plannerAgent,
   [BUILDER_AGENT_ID]: builderAgent,

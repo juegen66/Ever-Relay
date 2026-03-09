@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react"
-import { EditorType } from "./use-Editor"
+
 import * as fabric from "fabric"
+
+import { type EditorType } from "./use-Editor"
 
 
 interface UseCanvasEventsProps {

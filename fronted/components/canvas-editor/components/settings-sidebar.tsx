@@ -1,7 +1,8 @@
 "use client"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ActiveTools } from "../types"
+
+import { type ActiveTools } from "../types"
 import { ToolSidebarClose } from "./tool-sidebar-close"
 
 interface SettingsSidebarProps {

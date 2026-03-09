@@ -10,18 +10,19 @@ import {
 
 import { copilotApi } from "@/lib/api/modules/copilot"
 import {
-  DESKTOP_COPILOT_AGENT,
-  LOGO_COPILOT_AGENT,
-} from "@/shared/copilot/constants"
+  useDesktopUIStore,
+  type CopilotAgentMode,
+} from "@/lib/stores/desktop-ui-store"
 import type {
   CopilotHandoffMessage,
   PrepareHandoffBody,
 } from "@/shared/contracts/copilot-handoff"
-import { type HandoffMetadata } from "@/shared/copilot/handoff"
 import {
-  useDesktopUIStore,
-  type CopilotAgentMode,
-} from "@/lib/stores/desktop-ui-store"
+  DESKTOP_COPILOT_AGENT,
+  LOGO_COPILOT_AGENT,
+} from "@/shared/copilot/constants"
+import { type HandoffMetadata } from "@/shared/copilot/handoff"
+
 import {
   HANDOFF_TO_AGENT_PARAMS,
   toErrorMessage,

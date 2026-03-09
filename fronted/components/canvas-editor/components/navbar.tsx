@@ -9,7 +9,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
 import { TooltipComponent } from "./tooltip"
+
 import type { EditorType } from "../hooks/use-Editor"
 import type { ActiveTools } from "../types"
 

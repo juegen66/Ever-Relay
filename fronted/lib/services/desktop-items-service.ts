@@ -1,10 +1,11 @@
 "use client"
 
-import type { QueryClient } from "@tanstack/react-query"
 
 import { filesApi } from "@/lib/api/modules/files"
 import type { CreateFileParams, FileItem, UpdateFileParams } from "@/lib/api/modules/files"
 import { filesQueryKeys, getCachedFileItems, setCachedFileItems } from "@/lib/query/files"
+
+import type { QueryClient } from "@tanstack/react-query"
 
 function patchFileItem(item: FileItem, params: UpdateFileParams): FileItem {
   return {

@@ -6,6 +6,7 @@ import { useFrontendTool } from "@copilotkit/react-core"
 
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
 import { toAppId } from "../types"
 import { MOVE_DESKTOP_ITEM_PARAMS, OPEN_APP_PARAMS, toErrorMessage } from "./types"
 

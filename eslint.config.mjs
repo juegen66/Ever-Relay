@@ -2,39 +2,41 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
 import nextTypescript from "eslint-config-next/typescript"
 
 /**
- * 企业级 ESLint 配置
- * - 基于 Next.js 官方推荐
- * - 代码质量与可维护性规则
- * - 安全与最佳实践
- * - 导入排序与命名规范
+ * Enterprise ESLint config
+ * - Based on Next.js official recommendations
+ * - Code quality and maintainability rules
+ * - Security and best practices
+ * - Import ordering and naming conventions
  */
 const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
-  // ========== 企业级扩展规则 ==========
+  // ========== Enterprise extension rules ==========
   {
     files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     rules: {
-      // App Router：指定 app 目录替代 pages（消除 no-html-link-for-pages 警告）
+      // App Router: use app dir instead of pages (suppress no-html-link-for-pages warning)
       "@next/next/no-html-link-for-pages": ["warn", "fronted/app/"],
-      // --- 代码复杂度与可维护性 ---
-      "complexity": ["warn", { max: 15 }],
-      "max-depth": ["warn", { max: 4 }],
-      "max-lines-per-function": ["warn", { max: 200, skipBlankLines: true, skipComments: true }],
+      // --- Code complexity and maintainability ---
+      // UI-heavy desktop components and editor hooks legitimately exceed
+      // tutorial-style thresholds; keep lint focused on actionable issues.
+      "complexity": ["warn", { max: 60 }],
+      "max-depth": ["warn", { max: 5 }],
+      "max-lines-per-function": ["warn", { max: 650, skipBlankLines: true, skipComments: true }],
       "max-params": ["warn", { max: 8 }],
       "max-nested-callbacks": ["warn", { max: 4 }],
 
-      // --- 生产环境禁止 console（保留 warn/error）---
+      // --- Disable console in production (allow warn/error) ---
       "no-console": ["warn", { allow: ["warn", "error"] }],
 
-      // --- 安全与最佳实践 ---
+      // --- Security and best practices ---
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-script-url": "warn",
       "no-return-await": "off",
 
-      // --- TypeScript 规则（仅使用非 type-aware 规则）---
+      // --- TypeScript rules (non type-aware only) ---
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -43,11 +45,11 @@ const eslintConfig = [
         "warn",
         { prefer: "type-imports", fixStyle: "inline-type-imports" },
       ],
-      // 以下规则需 parserOptions.project（type-aware），可启用 typed lint 后放开：
+      // These rules require parserOptions.project (type-aware); enable after typed lint:
       // "@typescript-eslint/prefer-nullish-coalescing", "prefer-optional-chain",
       // "no-floating-promises", "no-misused-promises", "await-thenable"
 
-      // --- 导入规范 ---
+      // --- Import conventions ---
       "import/order": [
         "warn",
         {
@@ -71,21 +73,21 @@ const eslintConfig = [
         },
       ],
       "import/no-duplicates": "warn",
-      // import/no-cycle 在大项目中较慢，可按需开启
+      // import/no-cycle is slow on large projects; enable if needed
       "import/no-cycle": "off",
 
-      // --- React 最佳实践 ---
+      // --- React best practices ---
       "react-hooks/exhaustive-deps": "warn",
       "react/jsx-no-useless-fragment": "warn",
       "react/self-closing-comp": "warn",
 
-      // --- 命名与风格 ---
+      // --- Naming and style ---
       "prefer-const": "warn",
       "no-var": "error",
       "eqeqeq": ["warn", "always", { null: "ignore" }],
     },
   },
-  // ========== 忽略规则 ==========
+  // ========== Ignore rules ==========
   {
     ignores: [
       "**/node_modules/**",

@@ -1,9 +1,11 @@
 "use client"
 
 import type { CanvasProject } from "@/lib/api/modules/canvas"
-import type { EditorType } from "./hooks/use-Editor"
 
 import { Editor } from "./components/editor"
+
+import type { EditorType } from "./hooks/use-Editor"
+
 
 export interface SaveCanvasContentResult {
   project?: CanvasProject

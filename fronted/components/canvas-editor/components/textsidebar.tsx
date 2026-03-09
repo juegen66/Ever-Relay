@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import type * as fabric from "fabric"
-import { ChromePicker, type ColorResult } from "react-color"
+
 import {
     AlignCenter,
     AlignJustify,
@@ -19,14 +18,17 @@ import {
     Type,
     Underline,
 } from "lucide-react"
+import { ChromePicker, type ColorResult } from "react-color"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-import { ActiveTools, TEXT_PRESETS, type TextPresetId } from "../types"
-import { EditorType } from "../hooks/use-Editor"
+import { type EditorType } from "../hooks/use-Editor"
+import { type ActiveTools, TEXT_PRESETS, type TextPresetId } from "../types"
 import { ToolSidebarClose } from "./tool-sidebar-close"
+
+import type * as fabric from "fabric"
 
 interface TextSidebarProps {
     activeTool: ActiveTools

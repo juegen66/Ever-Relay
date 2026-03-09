@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,13 +9,16 @@ import {
   CheckCircle2,
   Circle,
   Cog,
-  FileArchive,
+  Loader2,
   Sparkles,
   Zap,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
+import { usePredictionStore } from "@/lib/stores/prediction-store"
+import { dispatchSilentCopilotMessage } from "@/shared/copilot/silent"
 
 type WorkflowStep = {
   id: number
@@ -31,6 +34,18 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   { id: 2, title: "Generate PDF", subtitle: "Waiting for output" },
 ]
 
+const PREDICTION_PROMPT =
+  "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions. Call update_predictions with the result."
+
+function formatTimeSince(ts: number | null) {
+  if (!ts) return "Never"
+  const diff = Math.floor((Date.now() - ts) / 1000)
+  if (diff < 10) return "Updated just now"
+  if (diff < 60) return `Updated ${diff}s ago`
+  if (diff < 3600) return `Updated ${Math.floor(diff / 60)}m ago`
+  return `Updated ${Math.floor(diff / 3600)}h ago`
+}
+
 export function WorkflowDashboard() {
   const router = useRouter()
   const timeoutRef = useRef<number | null>(null)
@@ -40,6 +55,12 @@ export function WorkflowDashboard() {
   const [activeStep, setActiveStep] = useState(1)
   const [isExecuting, setIsExecuting] = useState(false)
 
+  const predictions = usePredictionStore((state) => state.predictions)
+  const suggestions = usePredictionStore((state) => state.suggestions)
+  const lastUpdated = usePredictionStore((state) => state.lastUpdated)
+  const isLoading = usePredictionStore((state) => state.isLoading)
+  const setLoading = usePredictionStore((state) => state.setLoading)
+
   useEffect(() => {
     queueMicrotask(() => setMounted(true))
     return () => {
@@ -48,6 +69,27 @@ export function WorkflowDashboard() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    setLoading(true)
+    dispatchSilentCopilotMessage({
+      message: PREDICTION_PROMPT,
+      followUp: false,
+      resetAfterRun: true,
+    })
+
+    const interval = window.setInterval(() => {
+      dispatchSilentCopilotMessage({
+        message: PREDICTION_PROMPT,
+        followUp: false,
+        resetAfterRun: true,
+      })
+    }, 5 * 60 * 1000)
+
+    return () => window.clearInterval(interval)
+  }, [mounted, setLoading])
 
   const handleExecute = () => {
     setIsExecuting(true)
@@ -65,6 +107,9 @@ export function WorkflowDashboard() {
   if (!mounted) {
     return null
   }
+
+  const hasPredictions = predictions.length > 0
+  const hasSuggestions = suggestions.length > 0
 
   return createPortal(
     <div
@@ -122,6 +167,7 @@ export function WorkflowDashboard() {
             <h1 className="mt-2 text-[49px] font-medium leading-[1.05] text-[#202020]">Let&apos;s continue where you left off.</h1>
           </section>
 
+          {/* Predicted Next Steps */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#242424]">
@@ -129,67 +175,74 @@ export function WorkflowDashboard() {
                 Predicted Next Steps
               </div>
               <div className="rounded-full border border-black/10 bg-white px-3 py-1 text-[11px] font-medium text-[#919191]">
-                Updated just now
+                {isLoading ? "Analyzing..." : formatTimeSince(lastUpdated)}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-5">
-              <article className="rounded-[26px] border border-black/10 bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-                <div className="mb-6 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f3f4f7] text-[#3e3e3e]">
-                    <BarChart3 className="h-5 w-5" />
-                  </div>
-                  <span className="rounded-full bg-[#ecf8ec] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#5a985a]">
-                    98% Confidence
-                  </span>
+            {isLoading && !hasPredictions ? (
+              <div className="flex items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#919191]" />
+                  <p className="text-[15px] text-[#919191]">AI is analyzing your activity...</p>
                 </div>
-                <h2 className="text-[40px] font-medium leading-[1.05] text-[#1f1f1f]">Q3 Financial Report</h2>
-                <p className="mt-3 max-w-[92%] text-[18px] leading-[1.45] text-[#8a8a8a]">
-                  You viewed the Q2 data yesterday. The system has pre-compiled Q3 projections based on new CSV uploads.
-                </p>
-                <div className="mt-7 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-5 w-5 rounded-full bg-[#ececef]" />
-                    <span className="h-5 w-5 rounded-full bg-[#d9d9de]" />
-                  </div>
-                  <Button
-                    className="h-12 rounded-[14px] bg-black px-8 text-[15px] font-medium text-white hover:bg-black/90"
-                    onClick={handleExecute}
-                  >
-                    {isExecuting ? "Executing..." : "Execute"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </article>
-
-              <article className="rounded-[26px] border border-black/10 bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-                <div className="mb-6 flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f3f4f7] text-[#3e3e3e]">
-                    <FileArchive className="h-5 w-5" />
-                  </div>
-                  <span className="rounded-full bg-[#f4f4f4] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#888]">
-                    84% Confidence
-                  </span>
-                </div>
-                <h2 className="text-[40px] font-medium leading-[1.05] text-[#1f1f1f]">Archive Project Alpha</h2>
-                <p className="mt-3 max-w-[92%] text-[18px] leading-[1.45] text-[#8a8a8a]">
-                  Project Alpha deliverables were marked &quot;Final&quot; 2 hours ago. Suggest archiving to cold storage.
-                </p>
-                <div className="mt-7 flex items-center justify-between">
-                  <p className="text-[14px] text-[#aaaaaa]">Estimated time: 45s</p>
-                  <Button
-                    variant="outline"
-                    className="h-12 rounded-[14px] border-black/10 bg-white px-8 text-[15px] font-medium text-[#2f2f2f] hover:bg-[#f8f8f8]"
-                    onClick={() => setActiveSuggestion(1)}
-                  >
-                    Review
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </article>
-            </div>
+              </div>
+            ) : hasPredictions ? (
+              <div className="grid grid-cols-2 gap-5">
+                {predictions.slice(0, 2).map((pred, index) => (
+                  <article key={pred.id} className="rounded-[26px] border border-black/10 bg-white p-6 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                    <div className="mb-6 flex items-start justify-between">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f3f4f7] text-[#3e3e3e]">
+                        <BarChart3 className="h-5 w-5" />
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] ${
+                          pred.confidence >= 90
+                            ? "bg-[#ecf8ec] text-[#5a985a]"
+                            : pred.confidence >= 70
+                              ? "bg-[#fef9ec] text-[#9a8a5a]"
+                              : "bg-[#f4f4f4] text-[#888]"
+                        }`}
+                      >
+                        {pred.confidence}% Confidence
+                      </span>
+                    </div>
+                    <h2 className="text-[40px] font-medium leading-[1.05] text-[#1f1f1f]">{pred.title}</h2>
+                    <p className="mt-3 max-w-[92%] text-[18px] leading-[1.45] text-[#8a8a8a]">
+                      {pred.description}
+                    </p>
+                    <div className="mt-7 flex items-center justify-between">
+                      {pred.estimatedTime ? (
+                        <p className="text-[14px] text-[#aaaaaa]">Estimated: {pred.estimatedTime}</p>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-5 w-5 rounded-full bg-[#ececef]" />
+                          <span className="h-5 w-5 rounded-full bg-[#d9d9de]" />
+                        </div>
+                      )}
+                      <Button
+                        className={`h-12 rounded-[14px] px-8 text-[15px] font-medium ${
+                          index === 0
+                            ? "bg-black text-white hover:bg-black/90"
+                            : "border-black/10 bg-white text-[#2f2f2f] hover:bg-[#f8f8f8]"
+                        }`}
+                        variant={index === 0 ? "default" : "outline"}
+                        onClick={handleExecute}
+                      >
+                        {isExecuting ? "Executing..." : pred.actionLabel ?? "Execute"}
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                <p className="text-[15px] text-[#919191]">No predictions yet. Interact with the desktop to generate insights.</p>
+              </div>
+            )}
           </section>
 
+          {/* Improvement Layer + Active Workflow */}
           <section className="space-y-3 pb-2">
             <div className="grid grid-cols-[320px_1fr] items-center gap-5">
               <div className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#242424]">
@@ -207,27 +260,33 @@ export function WorkflowDashboard() {
 
             <div className="grid grid-cols-[320px_1fr] gap-5">
               <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-                <button
-                  onClick={() => setActiveSuggestion(0)}
-                  className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
-                    activeSuggestion === 0 ? "border-black/20 bg-[#f8f8f8]" : "border-transparent hover:border-black/10 hover:bg-[#f8f8f8]"
-                  }`}
-                >
-                  <p className="text-[24px] font-medium leading-[1.2] text-[#262626]">Refine Document Structure</p>
-                  <p className="mt-2 text-[15px] leading-[1.4] text-[#9a9a9a]">Detected inconsistent heading levels in &apos;Meeting Notes&apos;.</p>
-                </button>
-                <button
-                  onClick={() => setActiveSuggestion(1)}
-                  className={`mt-2 w-full rounded-2xl border px-4 py-4 text-left transition ${
-                    activeSuggestion === 1 ? "border-black/20 bg-[#f8f8f8]" : "border-transparent hover:border-black/10 hover:bg-[#f8f8f8]"
-                  }`}
-                >
-                  <p className="text-[24px] font-medium leading-[1.2] text-[#262626]">Draft Reply</p>
-                  <p className="mt-2 text-[15px] leading-[1.4] text-[#9a9a9a]">Sarah is waiting for approval on the budget. One click draft.</p>
-                </button>
-                <button className="mt-5 h-12 w-full rounded-2xl border border-black/10 bg-[#f7f7f7] text-[12px] font-semibold uppercase tracking-[0.06em] text-[#929292] transition hover:bg-[#f1f1f1]">
-                  View all 5 suggestions
-                </button>
+                {isLoading && !hasSuggestions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-[#919191]" />
+                  </div>
+                ) : hasSuggestions ? (
+                  <>
+                    {suggestions.map((sug, index) => (
+                      <button
+                        key={sug.id}
+                        onClick={() => setActiveSuggestion(index)}
+                        className={`${index > 0 ? "mt-2" : ""} w-full rounded-2xl border px-4 py-4 text-left transition ${
+                          activeSuggestion === index ? "border-black/20 bg-[#f8f8f8]" : "border-transparent hover:border-black/10 hover:bg-[#f8f8f8]"
+                        }`}
+                      >
+                        <p className="text-[24px] font-medium leading-[1.2] text-[#262626]">{sug.title}</p>
+                        <p className="mt-2 text-[15px] leading-[1.4] text-[#9a9a9a]">{sug.description}</p>
+                      </button>
+                    ))}
+                    <button className="mt-5 h-12 w-full rounded-2xl border border-black/10 bg-[#f7f7f7] text-[12px] font-semibold uppercase tracking-[0.06em] text-[#929292] transition hover:bg-[#f1f1f1]">
+                      View all {suggestions.length} suggestions
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-[13px] text-[#919191]">No suggestions yet.</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex min-h-[360px] items-center justify-center rounded-[24px] border border-black/10 bg-white p-8 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">

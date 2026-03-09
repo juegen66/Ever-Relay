@@ -1,10 +1,12 @@
 "use client"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ActiveTools } from "../types"
-import type { EditorType } from "../hooks/use-Editor"
-import { ToolSidebarClose } from "./tool-sidebar-close"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+import { type ActiveTools } from "../types"
+import { ToolSidebarClose } from "./tool-sidebar-close"
+
+import type { EditorType } from "../hooks/use-Editor"
 
 interface TemplatesSidebarProps {
   activeTool: ActiveTools

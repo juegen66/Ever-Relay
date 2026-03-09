@@ -1,11 +1,12 @@
 "use client"
 
 import { useCallback } from "react"
+
 import { useRouter } from "next/navigation"
 
+import { BootScreen } from "@/app/desktop/components/macos/boot-screen"
 import type { DesktopUser } from "@/lib/auth-user"
 import { useUserStore } from "@/lib/stores/user-store"
-import { BootScreen } from "@/app/desktop/components/macos/boot-screen"
 
 interface LoginScreenProps {
   callbackURL: string

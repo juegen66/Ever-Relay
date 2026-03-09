@@ -1,24 +1,27 @@
 "use client"
 
 import { useCallback, useEffect, type ReactNode } from "react"
-import { MessageSquare, X } from "lucide-react"
+
 
 import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
+import { MessageSquare, X } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
+import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
-import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
-import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
-import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
-import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
+
 import { BuildProgressPanel } from "./build-progress-panel"
+import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
+import { DesktopAgentContextProvider } from "./desktop-agent-context-provider"
 import { useStartNewCopilotChat } from "./use-start-new-copilot-chat"
 
 function DesktopCopilotHeader() {
@@ -148,6 +151,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
         instructions={DESKTOP_COPILOT_INSTRUCTIONS}
       >
         <CopilotToolsRegistry agentId={activeAgent} />
+        <DesktopAgentContextProvider />
         <SidebarOpenStateSync />
         {desktop}
       </CopilotSidebar>

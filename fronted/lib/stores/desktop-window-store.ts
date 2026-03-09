@@ -1,7 +1,9 @@
 "use client"
 
 import { create } from "zustand"
+
 import type { AppId, WindowState } from "@/app/desktop/components/macos/types"
+import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
@@ -112,6 +114,8 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       activeWindowId: id,
       nextZIndex: state.nextZIndex + 1,
     }))
+
+    useDesktopActionLogStore.getState().logAction({ type: "app_opened", appId })
   },
   openFolderWindow: (folderId, folderName) => {
     useDesktopUIStore.getState().closeTransientUi()
@@ -144,6 +148,8 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       activeWindowId: id,
       nextZIndex: state.nextZIndex + 1,
     }))
+
+    useDesktopActionLogStore.getState().logAction({ type: "folder_opened", folderId, folderName })
   },
   openFileWindow: (fileId, fileName) => {
     useDesktopUIStore.getState().closeTransientUi()
@@ -176,6 +182,8 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       activeWindowId: id,
       nextZIndex: state.nextZIndex + 1,
     }))
+
+    useDesktopActionLogStore.getState().logAction({ type: "file_opened", fileId, fileName })
   },
   focusWindow: (id) =>
     set((state) => {
@@ -189,11 +197,20 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
         nextZIndex: state.nextZIndex + 1,
       }
     }),
-  closeWindow: (id) =>
+  closeWindow: (id) => {
+    const win = get().windows.find((w) => w.id === id)
+    if (win) {
+      useDesktopActionLogStore.getState().logAction({
+        type: "window_closed",
+        appId: win.appId,
+        title: win.fileName ?? win.folderName,
+      })
+    }
     set((state) => ({
       windows: state.windows.filter((w) => w.id !== id),
       activeWindowId: state.activeWindowId === id ? null : state.activeWindowId,
-    })),
+    }))
+  },
   minimizeWindow: (id) =>
     set((state) => ({
       windows: state.windows.map((w) => (w.id === id ? { ...w, minimized: true } : w)),

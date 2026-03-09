@@ -1,7 +1,8 @@
-import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 
 import { QueryProvider } from '@/components/providers/query-provider'
+
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })

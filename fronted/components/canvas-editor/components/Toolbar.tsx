@@ -1,6 +1,5 @@
-import { ActiveTools } from "../types"
-import { EditorType } from "../hooks/use-Editor"
-import { Button } from "@/components/ui/button"
+import { PaintBucket, Square, Palette, Droplet, Ruler, ArrowUp, ArrowDown, Trash2 } from "lucide-react"
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -12,7 +11,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { PaintBucket, Square, Palette, Droplet, Ruler, ArrowUp, ArrowDown, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
+import { type EditorType } from "../hooks/use-Editor"
+import { type ActiveTools } from "../types"
+
 interface ToolbarProps {
     activeTool: ActiveTools
     onToolChange: (tool: ActiveTools) => void

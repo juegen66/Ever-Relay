@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from "react"
+
 import * as fabric from "fabric"
 
 interface UseAutoResizeProps {

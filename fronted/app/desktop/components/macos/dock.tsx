@@ -1,9 +1,12 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+
 import { usePathname, useRouter } from "next/navigation"
-import type { AppId } from "./types"
+
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+
+import type { AppId } from "./types"
 
 interface DockItemBase {
   name: string
