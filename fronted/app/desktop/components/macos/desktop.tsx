@@ -248,10 +248,9 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       onClick={handleDesktopClick}
     >
-      {windows.map((win) =>
-        win.minimized ? null : (
+      {windows.map((win) => (
+        <div key={win.id} style={win.minimized ? { display: "none" } : undefined}>
           <AppWindow
-            key={win.id}
             windowState={win}
             isActive={win.id === activeWindowId}
             onFocus={() => focusWindow(win.id)}
@@ -262,8 +261,8 @@ export function Desktop() {
             onResize={(w, h) => updateWindowSize(win.id, w, h)}
             folderViewerProps={win.folderId ? folderViewerProps : undefined}
           />
-        )
-      )}
+        </div>
+      ))}
 
       {rootDesktopItems.map((folder) => (
         <DesktopIcon

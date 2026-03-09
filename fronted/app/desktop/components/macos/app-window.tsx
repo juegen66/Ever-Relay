@@ -170,12 +170,12 @@ export function AppWindow({
 
   const windowStyle = maximized
     ? {
-        top: 0,
-        left: 0,
-        width: "100%" as const,
-        height: "100%" as const,
-        zIndex,
-      }
+      top: 0,
+      left: 0,
+      width: "100%" as const,
+      height: "100%" as const,
+      zIndex,
+    }
     : { top: y, left: x, width, height, zIndex }
 
   const titleBarBg = isCanvasApp

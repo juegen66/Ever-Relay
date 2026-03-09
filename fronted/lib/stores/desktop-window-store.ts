@@ -128,6 +128,20 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       return
     }
 
+    const minimized = windows.find(
+      (w) => w.appId === "finder" && w.folderId === folderId && w.minimized
+    )
+    if (minimized) {
+      set((state) => ({
+        windows: state.windows.map((w) =>
+          w.id === minimized.id ? { ...w, minimized: false, zIndex: state.nextZIndex } : w
+        ),
+        activeWindowId: minimized.id,
+        nextZIndex: state.nextZIndex + 1,
+      }))
+      return
+    }
+
     const size = DEFAULT_WINDOW_SIZE.finder
     const id = `finder-folder-${Date.now()}`
     const offset = (windows.length % 6) * 28
@@ -159,6 +173,20 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
     )
     if (existing) {
       get().focusWindow(existing.id)
+      return
+    }
+
+    const minimized = windows.find(
+      (w) => w.appId === "textedit" && w.fileId === fileId && w.minimized
+    )
+    if (minimized) {
+      set((state) => ({
+        windows: state.windows.map((w) =>
+          w.id === minimized.id ? { ...w, minimized: false, zIndex: state.nextZIndex } : w
+        ),
+        activeWindowId: minimized.id,
+        nextZIndex: state.nextZIndex + 1,
+      }))
       return
     }
 
