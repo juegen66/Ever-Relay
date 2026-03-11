@@ -2,7 +2,7 @@
 
 import { useFrontendTool } from "@copilotkit/react-core"
 
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { PredictionCard, SuggestionCard } from "@/lib/stores/prediction-store"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
@@ -11,6 +11,9 @@ export function usePredictionTools() {
   const setPredictions = usePredictionStore((state) => state.setPredictions)
   const setSuggestions = usePredictionStore((state) => state.setSuggestions)
   const setLoading = usePredictionStore((state) => state.setLoading)
+  const finishSilentPredictionRun = useDesktopAgentStore(
+    (state) => state.finishSilentPredictionRun
+  )
 
   useFrontendTool(
     {
@@ -34,7 +37,7 @@ export function usePredictionTools() {
         },
       ],
       handler: async (args) => {
-        const { silentAgentId, silentRunning } = useDesktopUIStore.getState()
+        const { silentAgentId, silentRunning } = useDesktopAgentStore.getState()
         if (!silentRunning || silentAgentId !== PREDICTION_AGENT_ID) {
           return {
             ok: false,
@@ -49,6 +52,7 @@ export function usePredictionTools() {
         setLoading(false)
         setPredictions(predictions)
         setSuggestions(suggestions)
+        finishSilentPredictionRun()
 
         return {
           ok: true,
@@ -57,6 +61,6 @@ export function usePredictionTools() {
         }
       },
     },
-    [setPredictions, setSuggestions, setLoading]
+    [finishSilentPredictionRun, setPredictions, setSuggestions, setLoading]
   )
 }

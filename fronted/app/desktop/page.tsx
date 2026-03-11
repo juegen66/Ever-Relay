@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 
-import { SilentTriggerTestPanel } from "@/app/desktop/components/ai/silent-trigger-test-panel"
+import { SilentTriggerTestPanel } from "@/app/desktop/_ai/devtools/silent-trigger-test-panel"
 import { DesktopAuthGate } from "@/app/desktop/components/macos/desktop-auth-gate"
 import { getServerDesktopUser } from "@/server/lib/auth/get-server-desktop-user"
 

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react"
 import { CopilotKit, useCopilotChatInternal } from "@copilotkit/react-core"
 
 import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import {
   DESKTOP_COPILOT_ENDPOINT,
@@ -16,8 +16,8 @@ import {
 } from "@/shared/copilot/constants"
 import type { SilentCopilotMessagePayload } from "@/shared/copilot/silent"
 
-import { DesktopAgentContextProvider } from "./desktop-agent-context-provider"
-import { queueDesktopPredictionRun } from "./prediction-control"
+import { queueDesktopPredictionRun } from "../lib/prediction-control"
+import { DesktopAgentContextProvider } from "../providers/desktop-agent-context-provider"
 
 const PREDICTION_PROMPT =
   "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions. Call update_predictions with the result."
@@ -83,7 +83,7 @@ function DesktopPredictionScheduler() {
 
     return () => {
       window.clearInterval(interval)
-      useDesktopUIStore.getState().resetSilentPredictionSession()
+      useDesktopAgentStore.getState().resetSilentPredictionSession()
       usePredictionStore.getState().setLoading(false)
     }
   }, [])
@@ -95,9 +95,9 @@ function SilentPredictionRuntime() {
   const { reset, sendMessage, stopGeneration, isLoading } = useCopilotChatInternal({
     id: DESKTOP_PREDICTION_CHAT_ID,
   })
-  const silentRunRequestId = useDesktopUIStore((state) => state.silentRunRequestId)
-  const silentRunning = useDesktopUIStore((state) => state.silentRunning)
-  const finishSilentPredictionRun = useDesktopUIStore(
+  const silentRunRequestId = useDesktopAgentStore((state) => state.silentRunRequestId)
+  const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
+  const finishSilentPredictionRun = useDesktopAgentStore(
     (state) => state.finishSilentPredictionRun
   )
   const handledRunRef = useRef(0)
@@ -134,12 +134,12 @@ function SilentPredictionRuntime() {
       } catch (error) {
         console.error("[silent-copilot-runtime] Failed to generate predictions", error)
       } finally {
-        reset()
+          reset()
 
         if (
           active &&
-          useDesktopUIStore.getState().silentRunning &&
-          useDesktopUIStore.getState().silentRunRequestId === silentRunRequestId
+          useDesktopAgentStore.getState().silentRunning &&
+          useDesktopAgentStore.getState().silentRunRequestId === silentRunRequestId
         ) {
           finishSilentPredictionRun()
         }
@@ -152,6 +152,16 @@ function SilentPredictionRuntime() {
       active = false
     }
   }, [finishSilentPredictionRun, reset, sendMessage, silentRunRequestId, silentRunning])
+
+  useEffect(() => {
+    // The prediction tool callback is the point where the app has the data it needs.
+    // If the underlying Copilot run keeps streaming after that, stop it so the next
+    // manual trigger is not blocked by a stale "running" flag.
+    if (!silentRunning && isLoading) {
+      stopGeneration()
+      reset()
+    }
+  }, [isLoading, reset, silentRunning, stopGeneration])
 
   useEffect(() => {
     return () => {
@@ -167,7 +177,7 @@ function SilentPredictionRuntime() {
 }
 
 export function SilentCopilotRuntime() {
-  const silentThreadId = useDesktopUIStore((state) => state.silentThreadId)
+  const silentThreadId = useDesktopAgentStore((state) => state.silentThreadId)
 
   return (
     <>

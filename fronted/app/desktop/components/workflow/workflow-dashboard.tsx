@@ -18,6 +18,7 @@ import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
+import { useWorkingMemory } from "@/hooks/use-working-memory"
 
 type WorkflowStep = {
   id: number
@@ -32,6 +33,38 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   { id: 1, title: "Analysis", subtitle: "Running Models" },
   { id: 2, title: "Generate PDF", subtitle: "Waiting for output" },
 ]
+
+function getTimeGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good Morning"
+  if (hour < 18) return "Good Afternoon"
+  return "Good Evening"
+}
+
+function getWelcomeMessage(state: import("@/shared/contracts/working-memory").WorkingMemoryState | null) {
+  if (!state) return "Let\u2019s continue where you left off."
+
+  if (state.currentFocus) {
+    return `Pick up where you left off \u2014 ${state.currentFocus}.`
+  }
+
+  if (state.pendingTasks && state.pendingTasks.length > 0) {
+    return `You have ${state.pendingTasks.length} pending task${state.pendingTasks.length > 1 ? "s" : ""} waiting.`
+  }
+
+  if (state.activeProjects && state.activeProjects.length > 0) {
+    const active = state.activeProjects.filter((p) => p.status === "in-progress" || p.status === "进行中")
+    if (active.length > 0) {
+      return `${active[0].name} is still in progress.`
+    }
+  }
+
+  if (state.userName) {
+    return `Welcome back, ${state.userName}.`
+  }
+
+  return "Let\u2019s continue where you left off."
+}
 
 function formatTimeSince(ts: number | null) {
   if (!ts) return "Never"
@@ -50,6 +83,8 @@ export function WorkflowDashboard() {
   const [activeSuggestion, setActiveSuggestion] = useState(0)
   const [activeStep, setActiveStep] = useState(1)
   const [isExecuting, setIsExecuting] = useState(false)
+
+  const { state: workingMemory } = useWorkingMemory()
 
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
@@ -137,8 +172,25 @@ export function WorkflowDashboard() {
 
             <main className="space-y-6 px-8 py-7">
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#a2a2a2]">Good Afternoon</p>
-            <h1 className="mt-2 text-[49px] font-medium leading-[1.05] text-[#202020]">Let&apos;s continue where you left off.</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#a2a2a2]">{getTimeGreeting()}</p>
+            <h1 className="mt-2 text-[49px] font-medium leading-[1.05] text-[#202020]">{getWelcomeMessage(workingMemory)}</h1>
+            {workingMemory?.pendingTasks && workingMemory.pendingTasks.length > 0 && !workingMemory.currentFocus && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {workingMemory.pendingTasks.slice(0, 3).map((task, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full border border-black/10 bg-white px-3 py-1 text-[12px] font-medium text-[#666]"
+                  >
+                    {task}
+                  </span>
+                ))}
+                {workingMemory.pendingTasks.length > 3 && (
+                  <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-[12px] font-medium text-[#999]">
+                    +{workingMemory.pendingTasks.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Predicted Next Steps */}

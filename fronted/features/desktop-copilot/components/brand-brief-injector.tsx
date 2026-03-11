@@ -4,7 +4,7 @@ import { useEffect } from "react"
 
 import { useCopilotChatInternal } from "@copilotkit/react-core"
 
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import type { BrandBriefPayload } from "@/shared/copilot/brand-brief"
 import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
 
@@ -14,7 +14,7 @@ import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
  */
 export function BrandBriefInjector() {
   const { sendMessage } = useCopilotChatInternal({})
-  const setCopilotAgentMode = useDesktopUIStore((state) => state.setCopilotAgentMode)
+  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   useEffect(() => {
     const onBrandBrief = (event: Event) => {

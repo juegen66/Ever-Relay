@@ -9,7 +9,7 @@ import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
 
-import { useStartNewCopilotChat } from "./use-start-new-copilot-chat"
+import { useStartNewCopilotChat } from "../hooks/use-start-new-copilot-chat"
 
 export function FullscreenCopilotChat() {
   const router = useRouter()

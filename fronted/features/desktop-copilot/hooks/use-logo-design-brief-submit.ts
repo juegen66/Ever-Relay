@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { dispatchBrandBriefToCopilot } from "@/shared/copilot/brand-brief"
 
 export interface BrandBriefFormData {
@@ -65,8 +65,8 @@ function formatBrandBriefForCopilot(data: BrandBriefFormData): string {
  * for clarification (open_logo_sidebar) or trigger confirm_logo_brief directly.
  */
 export function useLogoDesignBriefSubmit() {
-  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
-  const setCopilotAgentMode = useDesktopUIStore((state) => state.setCopilotAgentMode)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
+  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   const submitBrief = useCallback(
     (formData: BrandBriefFormData) => {

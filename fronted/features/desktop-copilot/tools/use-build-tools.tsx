@@ -6,14 +6,14 @@ import { useCopilotChat, useFrontendTool } from "@copilotkit/react-core"
 
 import { buildsApi } from "@/lib/api/modules/builds"
 import { useBuildProgressStore } from "@/lib/stores/build-progress-store"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 
 import { START_NEW_CHAT_THREAD_PARAMS, TRIGGER_BUILD_PARAMS, toErrorMessage } from "./types"
 
 export function useBuildTools() {
   const { reset, stopGeneration, isLoading } = useCopilotChat()
   const openBuildProgress = useBuildProgressStore((state) => state.openForRun)
-  const startNewCopilotThread = useDesktopUIStore((state) => state.startNewCopilotThread)
+  const startNewCopilotThread = useDesktopAgentStore((state) => state.startNewCopilotThread)
 
   const triggerBuild = useCallback(
     async (args: { prompt?: string; projectId?: string }) => {
@@ -52,7 +52,7 @@ export function useBuildTools() {
 
   const startNewChatThread = useCallback(
     async (args: { reason?: string }) => {
-      const { copilotAgentMode: previousAgentMode } = useDesktopUIStore.getState()
+      const { copilotAgentMode: previousAgentMode } = useDesktopAgentStore.getState()
 
       if (isLoading) {
         stopGeneration()
@@ -61,7 +61,7 @@ export function useBuildTools() {
       reset()
       startNewCopilotThread()
 
-      const { copilotThreadId: newThreadId } = useDesktopUIStore.getState()
+      const { copilotThreadId: newThreadId } = useDesktopAgentStore.getState()
       const reason = typeof args.reason === "string" ? args.reason.trim() : ""
 
       return {

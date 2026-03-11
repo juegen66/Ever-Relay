@@ -8,7 +8,7 @@ node_modules/
 .pnpm-store/
 .next/
 fronted/.next/
-fronted/tsconfig.tsbuildinfo
+tsconfig.tsbuildinfo
 .env*.local
 .DS_Store
 .idea/

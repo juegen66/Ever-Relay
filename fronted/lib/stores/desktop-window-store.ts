@@ -4,6 +4,7 @@ import { create } from "zustand"
 
 import type { AppId, WindowState } from "@/app/desktop/components/macos/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 
 const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
@@ -23,7 +24,7 @@ function getViewportSize() {
 
 function getDesktopViewportSize() {
   const { width, height } = getViewportSize()
-  const { copilotSidebarOpen } = useDesktopUIStore.getState()
+  const { copilotSidebarOpen } = useDesktopAgentStore.getState()
   const sidebarInset = copilotSidebarOpen && width >= 640 ? width * 0.25 : 0
 
   return {

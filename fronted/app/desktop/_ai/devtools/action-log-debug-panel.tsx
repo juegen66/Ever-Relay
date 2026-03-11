@@ -4,13 +4,14 @@ import { useEffect, useState } from "react"
 
 import { Activity, ChevronDown, ChevronUp, Sparkles, X } from "lucide-react"
 
-import { queueDesktopPredictionRun } from "@/app/desktop/components/ai/prediction-control"
 import {
   useDesktopActionLogStore,
   type DesktopAction,
 } from "@/lib/stores/desktop-action-log-store"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
+
+import { queueDesktopPredictionRun } from "../lib/prediction-control"
 
 function formatTs(ts: number) {
   return new Date(ts).toLocaleTimeString("en-US", {
@@ -40,7 +41,7 @@ function actionLabel(action: DesktopAction) {
     case "context_menu_action":
       return `Menu: ${action.action}`
     default:
-      return action.type
+      return "unknown action"
   }
 }
 
@@ -49,7 +50,7 @@ export function ActionLogDebugPanel() {
   const [collapsed, setCollapsed] = useState(false)
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
   const actions = useDesktopActionLogStore((state) => state.actions)
-  const silentRunning = useDesktopUIStore((state) => state.silentRunning)
+  const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)

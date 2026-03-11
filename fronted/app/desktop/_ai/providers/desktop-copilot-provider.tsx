@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
 import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
-import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
   DESKTOP_COPILOT_AGENT,
@@ -18,15 +18,15 @@ import {
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
-import { BuildProgressPanel } from "./build-progress-panel"
-import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "./copilot-config"
+import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "../copilot-config"
 import { DesktopAgentContextProvider } from "./desktop-agent-context-provider"
-import { useStartNewCopilotChat } from "./use-start-new-copilot-chat"
+import { useStartNewCopilotChat } from "../hooks/use-start-new-copilot-chat"
+import { BuildProgressPanel } from "../ui/build-progress-panel"
 
 function DesktopCopilotHeader() {
   const { labels } = useChatContext()
   const startNewChat = useStartNewCopilotChat()
-  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
 
   const handleStartNewChat = () => {
     const shouldStartNewChat = window.confirm("Start a new chat? This clears the current conversation view.")
@@ -59,7 +59,7 @@ function DesktopCopilotHeader() {
 
 function SidebarOpenStateSync() {
   const { open, setOpen } = useChatContext()
-  const desiredOpen = useDesktopUIStore((state) => state.copilotSidebarOpen)
+  const desiredOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
 
   useEffect(() => {
     if (open === desiredOpen) return
@@ -73,7 +73,7 @@ function DesktopCopilotOpenButton() {
   const { open } = useChatContext()
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
-  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
 
   if (open || !isDesktopRootRoute) {
     return null
@@ -97,19 +97,19 @@ interface DesktopCopilotProviderProps {
 function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps) {
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
-  const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
+  const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
-  const copilotSidebarOpen = useDesktopUIStore((state) => state.copilotSidebarOpen)
-  const setCopilotSidebarOpen = useDesktopUIStore((state) => state.setCopilotSidebarOpen)
+  const copilotSidebarOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   useEffect(() => {
-    if (useDesktopUIStore.getState().copilotSidebarOpen) {
+    if (useDesktopAgentStore.getState().copilotSidebarOpen) {
       setCopilotSidebarOpen(false)
     }
 
     return () => {
-      if (useDesktopUIStore.getState().copilotSidebarOpen) {
+      if (useDesktopAgentStore.getState().copilotSidebarOpen) {
         setCopilotSidebarOpen(false)
       }
     }
@@ -117,7 +117,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 
   useEffect(() => {
     if (!isDesktopRootRoute) {
-      if (useDesktopUIStore.getState().copilotSidebarOpen) {
+      if (useDesktopAgentStore.getState().copilotSidebarOpen) {
         setCopilotSidebarOpen(false)
       }
       fitWindowsToViewport()
@@ -129,7 +129,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   }, [copilotSidebarOpen, fitWindowsToViewport])
 
   const handleSidebarOpenChange = useCallback((open: boolean) => {
-    if (useDesktopUIStore.getState().copilotSidebarOpen === open) {
+    if (useDesktopAgentStore.getState().copilotSidebarOpen === open) {
       return
     }
 
@@ -160,8 +160,8 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 }
 
 export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProviderProps) {
-  const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
-  const copilotThreadId = useDesktopUIStore((state) => state.copilotThreadId)
+  const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
+  const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
   const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
 
   return (

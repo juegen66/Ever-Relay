@@ -10,9 +10,9 @@ import {
 
 import { copilotApi } from "@/lib/api/modules/copilot"
 import {
-  useDesktopUIStore,
+  useDesktopAgentStore,
   type CopilotAgentMode,
-} from "@/lib/stores/desktop-ui-store"
+} from "@/lib/stores/desktop-agent-store"
 import type {
   CopilotHandoffMessage,
   PrepareHandoffBody,
@@ -365,9 +365,9 @@ function nextAnimationFrame() {
 export function useAgentHandoffTools() {
   const { stopGeneration, isLoading } = useCopilotChat()
   const { messages, setMessages, sendMessage } = useCopilotChatInternal({})
-  const copilotAgentMode = useDesktopUIStore((state) => state.copilotAgentMode)
-  const copilotThreadId = useDesktopUIStore((state) => state.copilotThreadId)
-  const setCopilotAgentMode = useDesktopUIStore((state) => state.setCopilotAgentMode)
+  const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
+  const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
+  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   const sourceAgentId = useMemo(
     () => (copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT),

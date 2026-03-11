@@ -15,6 +15,7 @@ import {
   TEXTEDIT_WRITE_EVENT,
   type TextEditWriteEventDetail,
 } from "@/lib/textedit-content"
+import { RelatedFilesPanel } from "../related-files-panel"
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false })
 
@@ -284,18 +285,21 @@ export function TextEditApp({ fileId, fileName }: TextEditAppProps) {
         </div>
       ) : null}
 
-      <div className="textedit-body">
-        <div className="textedit-editor-surface">
-          <MDEditor
-            value={content}
-            onChange={handleChange}
-            height="100%"
-            visibleDragbar={false}
-            preview="live"
-            className="textedit-md-editor"
-            style={{ height: "100%" }}
-          />
+      <div className="flex min-h-0 flex-1">
+        <div className="textedit-body flex-1">
+          <div className="textedit-editor-surface">
+            <MDEditor
+              value={content}
+              onChange={handleChange}
+              height="100%"
+              visibleDragbar={false}
+              preview="live"
+              className="textedit-md-editor"
+              style={{ height: "100%" }}
+            />
+          </div>
         </div>
+        <RelatedFilesPanel currentFileName={fileName} />
       </div>
     </div>
   )

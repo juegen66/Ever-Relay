@@ -2,6 +2,7 @@
 
 import { useCopilotReadable } from "@copilotkit/react-core"
 
+import { useWorkingMemory } from "@/hooks/use-working-memory"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
@@ -11,6 +12,8 @@ export function DesktopAgentContextProvider() {
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const actionLog = useDesktopActionLogStore((state) => state.actions)
+
+  useWorkingMemory()
 
   useCopilotReadable({
     description: "Current desktop state and recent user actions for AI analysis",

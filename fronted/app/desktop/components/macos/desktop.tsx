@@ -11,7 +11,6 @@ import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
-import { ActionLogDebugPanel } from "../ai/action-log-debug-panel"
 import { AboutMac } from "./about-mac"
 import { AppWindow } from "./app-window"
 import { ContextMenu } from "./context-menu"
@@ -19,7 +18,9 @@ import { DesktopIcon } from "./desktop-icon"
 import { Dock } from "./dock"
 import { Launchpad } from "./launchpad"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
+import { PendingTasksWidget } from "./pending-tasks-widget"
 import { Spotlight } from "./spotlight"
+import { ActionLogDebugPanel } from "../../_ai/devtools/action-log-debug-panel"
 
 type FolderNativeDragStartDetail = {
   itemId: string
@@ -354,6 +355,8 @@ export function Desktop() {
           onDismiss={() => dismissNotification(notifications[notifications.length - 1].id)}
         />
       )}
+
+      <PendingTasksWidget />
 
       <Dock />
 
