@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { BrandIntakeWizard } from "@/components/logo-workspace/brand-intake-wizard"
-import { LogoActiveProjects } from "@/components/logo-workspace/logo-active-projects"
-import { LogoArtifactsView } from "@/components/logo-workspace/logo-artifacts-view"
-import { LogoRecentGenerations } from "@/components/logo-workspace/logo-recent-generations"
-import { LogoWorkspaceShell } from "@/components/logo-workspace/logo-workspace-shell"
+import {
+  BrandIntakeWizard,
+  LogoActiveProjects,
+  LogoArtifactsView,
+  LogoRecentGenerations,
+  LogoWorkspaceShell,
+} from "@/components/logo-workspace"
 import type {
   BriefState,
   LogoWorkspaceProjectCard,
   LogoWorkspaceRecentItem,
-} from "@/components/logo-workspace/types"
+} from "@/components/logo-workspace"
 import { useLogoDesignBriefSubmit } from "@/features/desktop-copilot/hooks/use-logo-design-brief-submit"
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
 import type { LogoDesignAsset, LogoDesignRun } from "@/shared/contracts/logo-design"

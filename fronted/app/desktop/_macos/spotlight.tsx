@@ -4,11 +4,10 @@ import { useState, useRef, useEffect } from "react"
 
 import { Search } from "lucide-react"
 
+import type { AppId } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
-
-import type { AppId } from "./types"
 
 const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },

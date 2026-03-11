@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 
-import type { AppId, WindowState } from "@/app/desktop/components/macos/types"
+import type { AppId, WindowState } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"

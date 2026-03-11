@@ -1,7 +1,7 @@
 "use client"
 
-import type { DesktopFolder, DesktopItemType } from "@/app/desktop/components/macos/desktop-icon"
 import type { CreateFileParams, FileItem } from "@/lib/api/modules/files"
+import type { DesktopFolder, DesktopItemType } from "@/lib/desktop/types"
 
 export const FILE_TYPE_DEFAULTS: Record<string, { name: string; itemType: DesktopItemType; mimeType: string }> = {
   text: { name: "untitled.txt", itemType: "text", mimeType: "text/plain" },

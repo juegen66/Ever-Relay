@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+
 import { ChevronDown, ChevronUp, Circle, Sparkles } from "lucide-react"
+
 import { useWorkingMemoryStore } from "@/lib/stores/working-memory-store"
 
 export function PendingTasksWidget() {

@@ -20,7 +20,7 @@ import { Launchpad } from "./launchpad"
 import { NotificationPopup, type NotificationItem } from "./notification-center"
 import { PendingTasksWidget } from "./pending-tasks-widget"
 import { Spotlight } from "./spotlight"
-import { ActionLogDebugPanel } from "../../_ai/devtools/action-log-debug-panel"
+import { ActionLogDebugPanel } from "../_ai/devtools/action-log-debug-panel"
 
 type FolderNativeDragStartDetail = {
   itemId: string

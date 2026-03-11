@@ -1,7 +1,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
+
 import { ChevronRight, FileText, Link2 } from "lucide-react"
+
 import { useWorkingMemoryStore } from "@/lib/stores/working-memory-store"
 
 interface RelatedFilesPanelProps {
@@ -12,12 +14,13 @@ interface RelatedFilesPanelProps {
 export function RelatedFilesPanel({ currentFileName, onOpenFile }: RelatedFilesPanelProps) {
   const state = useWorkingMemoryStore((s) => s.state)
   const [expanded, setExpanded] = useState(true)
+  const recentConnections = state?.recentConnections
 
   const relatedFiles = useMemo(() => {
-    if (!currentFileName || !state?.recentConnections) return []
+    if (!currentFileName || !recentConnections || recentConnections.length === 0) return []
 
     const normalizedName = currentFileName.toLowerCase()
-    return state.recentConnections.filter((conn) => {
+    return recentConnections.filter((conn) => {
       return (
         conn.itemA.toLowerCase().includes(normalizedName) ||
         conn.itemB.toLowerCase().includes(normalizedName) ||
@@ -32,7 +35,7 @@ export function RelatedFilesPanel({ currentFileName, onOpenFile }: RelatedFilesP
         relation: conn.relation,
       }
     })
-  }, [currentFileName, state?.recentConnections])
+  }, [currentFileName, recentConnections])
 
   if (relatedFiles.length === 0) {
     return null

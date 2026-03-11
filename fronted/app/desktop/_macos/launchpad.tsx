@@ -1,9 +1,8 @@
 "use client"
 
+import type { AppId } from "@/lib/desktop/types"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
-
-import type { AppId } from "./types"
 
 const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
   { id: "finder", name: "Finder", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)", letter: "F" },

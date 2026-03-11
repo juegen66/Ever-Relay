@@ -4,17 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 
 import { Folder, Pencil, Trash2, FolderOpen, Info, FileText, File, FileImage, FileCode, FileSpreadsheet } from "lucide-react"
 
-export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
-
-export interface DesktopFolder {
-  id: string
-  name: string
-  x: number
-  y: number
-  isNew?: boolean
-  itemType?: DesktopItemType
-  parentId?: string | null
-}
+import type { DesktopFolder, DesktopItemType } from "@/lib/desktop/types"
 
 interface DesktopIconProps {
   folder: DesktopFolder

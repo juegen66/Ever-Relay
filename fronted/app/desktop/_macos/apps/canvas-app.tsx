@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useQueryClient } from "@tanstack/react-query"
 
-import { CanvasEditor, type SaveCanvasContentResult } from "@/components/canvas-editor/canvas-editor"
-import type { EditorType } from "@/components/canvas-editor/hooks/use-Editor"
+import {
+  CanvasEditor,
+  type EditorType,
+  type SaveCanvasContentResult,
+} from "@/components/canvas-editor"
 import { ProjectsHub } from "@/components/canvas-manager"
 import { canvasApi } from "@/lib/api/modules/canvas"
 import {

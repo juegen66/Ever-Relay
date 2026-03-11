@@ -15,6 +15,7 @@ import {
   TEXTEDIT_WRITE_EVENT,
   type TextEditWriteEventDetail,
 } from "@/lib/textedit-content"
+
 import { RelatedFilesPanel } from "../related-files-panel"
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false })

@@ -17,8 +17,9 @@ import { useRouter } from "next/navigation"
 import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
-import { usePredictionStore } from "@/lib/stores/prediction-store"
 import { useWorkingMemory } from "@/hooks/use-working-memory"
+import { usePredictionStore } from "@/lib/stores/prediction-store"
+import type { WorkingMemoryState } from "@/shared/contracts/working-memory"
 
 type WorkflowStep = {
   id: number
@@ -41,7 +42,7 @@ function getTimeGreeting() {
   return "Good Evening"
 }
 
-function getWelcomeMessage(state: import("@/shared/contracts/working-memory").WorkingMemoryState | null) {
+function getWelcomeMessage(state: WorkingMemoryState | null) {
   if (!state) return "Let\u2019s continue where you left off."
 
   if (state.currentFocus) {

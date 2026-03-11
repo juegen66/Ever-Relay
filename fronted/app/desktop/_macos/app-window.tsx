@@ -2,14 +2,13 @@
 
 import { useRef, useCallback, useEffect, useState } from "react"
 
+import type { DesktopFolder, DesktopItemType, WindowState } from "@/lib/desktop/types"
+
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
 import { TextEditApp } from "./apps/textedit-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
-
-import type { DesktopFolder, DesktopItemType } from "./desktop-icon"
-import type { WindowState } from "./types"
 
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",

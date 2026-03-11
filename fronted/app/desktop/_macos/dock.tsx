@@ -5,9 +5,9 @@ import { useState, useRef, useCallback } from "react"
 import { Bot, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
+import type { AppId } from "@/lib/desktop/types"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
-import type { AppId } from "./types"
 import type { LucideIcon } from "lucide-react"
 
 interface DockItemBase {

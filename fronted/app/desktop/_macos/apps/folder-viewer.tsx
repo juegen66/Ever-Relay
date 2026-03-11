@@ -17,7 +17,7 @@ import {
   Trash2,
 } from "lucide-react"
 
-import type { DesktopFolder, DesktopItemType } from "../desktop-icon"
+import type { DesktopFolder, DesktopItemType } from "@/lib/desktop/types"
 
 const FILE_ICON_MAP: Record<DesktopItemType, { icon: typeof File; colorClass: string }> = {
   folder: { icon: Folder, colorClass: "text-[#56a3f8]" },

@@ -3,8 +3,9 @@
 import { Plus } from "lucide-react"
 import Image from "next/image"
 
-import type { LogoWorkspaceProjectCard } from "@/components/logo-workspace/types"
 import { cn } from "@/lib/utils"
+
+import type { LogoWorkspaceProjectCard } from "./types"
 
 interface LogoActiveProjectsProps {
   loading: boolean
