@@ -92,7 +92,7 @@ function DesktopPredictionScheduler() {
 }
 
 function SilentPredictionRuntime() {
-  const { reset, sendMessage, stopGeneration } = useCopilotChatInternal({
+  const { reset, sendMessage, stopGeneration, isLoading } = useCopilotChatInternal({
     id: DESKTOP_PREDICTION_CHAT_ID,
   })
   const silentRunRequestId = useDesktopUIStore((state) => state.silentRunRequestId)
@@ -101,6 +101,11 @@ function SilentPredictionRuntime() {
     (state) => state.finishSilentPredictionRun
   )
   const handledRunRef = useRef(0)
+  const isLoadingRef = useRef(false)
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading
+  }, [isLoading])
 
   useEffect(() => {
     if (
@@ -123,7 +128,7 @@ function SilentPredictionRuntime() {
             content: PREDICTION_PROMPT,
           },
           {
-            followUp: false,
+            followUp: true,
           }
         )
       } catch (error) {
@@ -150,7 +155,10 @@ function SilentPredictionRuntime() {
 
   useEffect(() => {
     return () => {
-      stopGeneration()
+      if (isLoadingRef.current) {
+        stopGeneration()
+      }
+
       reset()
     }
   }, [reset, stopGeneration])
