@@ -3,7 +3,6 @@
 import { useRef, useCallback, useEffect, useState } from "react"
 
 import { CanvasApp } from "./apps/canvas-app"
-import { FinderApp } from "./apps/finder-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
 import { TextEditApp } from "./apps/textedit-app"
@@ -21,7 +20,6 @@ const APP_TITLES: Record<string, string> = {
 }
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
-  finder: FinderApp,
   canvas: CanvasApp,
   logo: LogoStudioApp,
   vibecoding: VibecodingApp,
@@ -44,7 +42,7 @@ interface AppWindowProps {
     allItems: DesktopFolder[]
     onOpenFolder: (folderId: string, folderName: string) => void
     onOpenFile: (fileId: string, fileName: string) => void
-    onCreateItem: (parentId: string, itemType: DesktopItemType, name: string) => void
+    onCreateItem: (parentId: string | null, itemType: DesktopItemType, name: string) => void
     onDeleteItem: (id: string) => void
     onRenameItem: (id: string, name: string) => void
     onMoveItemOut: (id: string) => void
@@ -163,9 +161,9 @@ export function AppWindow({
     }, 320)
   }, [onMaximize])
 
-  const isFolderViewer = appId === "finder" && windowState.folderId
+  const isFinderView = appId === "finder" && folderViewerProps
   const isFileViewer = appId === "textedit" && windowState.fileId
-  const AppContent = (isFolderViewer || isFileViewer) ? null : APP_COMPONENTS[appId]
+  const AppContent = (isFinderView || isFileViewer) ? null : APP_COMPONENTS[appId]
   const shouldAnimateWindowBounds = maximized || isTogglingMaximize
 
   const windowStyle = maximized
@@ -283,17 +281,21 @@ export function AppWindow({
         </div>
 
         <div className={`flex-1 text-center text-[13px] font-medium ${isDark ? "text-white/60" : "text-[#4a4a4a]"}`}>
-          {isFolderViewer ? windowState.folderName || "Folder" : isFileViewer ? windowState.fileName || "Untitled" : APP_TITLES[appId]}
+          {isFinderView
+            ? windowState.folderName || "Desktop"
+            : isFileViewer
+              ? windowState.fileName || "Untitled"
+              : APP_TITLES[appId]}
         </div>
         <div className="w-[62px]" />
       </div>
 
       {/* App Content */}
       <div className="flex-1 overflow-hidden">
-        {isFolderViewer && folderViewerProps ? (
+        {isFinderView && folderViewerProps ? (
           <FolderViewer
-            folderId={windowState.folderId!}
-            folderName={windowState.folderName || "Folder"}
+            folderId={windowState.folderId ?? null}
+            folderName={windowState.folderName || "Desktop"}
             allItems={folderViewerProps.allItems}
             onOpenFolder={folderViewerProps.onOpenFolder}
             onOpenFile={folderViewerProps.onOpenFile}

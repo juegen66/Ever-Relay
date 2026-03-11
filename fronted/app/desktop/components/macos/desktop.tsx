@@ -64,6 +64,7 @@ export function Desktop() {
   const moveIntoFolder = useDesktopItemsStore((state) => state.moveIntoFolder)
   const moveItemToDesktop = useDesktopItemsStore((state) => state.moveItemToDesktop)
   const moveItemToDesktopAt = useDesktopItemsStore((state) => state.moveItemToDesktopAt)
+  const createItem = useDesktopItemsStore((state) => state.createItem)
   const createItemInFolder = useDesktopItemsStore((state) => state.createItemInFolder)
 
   const desktopFolders = useMemo(() => {
@@ -209,16 +210,39 @@ export function Desktop() {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
-  const folderViewerProps = {
-    allItems: desktopFolders,
-    onOpenFolder: openFolderWindow,
-    onOpenFile: openFileWindow,
-    onCreateItem: createItemInFolder,
-    onDeleteItem: deleteItem,
-    onRenameItem: renameItem,
-    onMoveItemOut: moveItemToDesktop,
-    onMoveItemToFolder: moveItemToFolder,
-  }
+  const folderViewerProps = useMemo(
+    () => ({
+      allItems: desktopFolders,
+      onOpenFolder: openFolderWindow,
+      onOpenFile: openFileWindow,
+      onCreateItem: (
+        parentId: string | null,
+        itemType: "folder" | "text" | "image" | "code" | "spreadsheet" | "generic",
+        name: string
+      ) => {
+        if (parentId === null || parentId === undefined) {
+          void createItem({ name, itemType })
+        } else {
+          void createItemInFolder(parentId, itemType, name)
+        }
+      },
+      onDeleteItem: deleteItem,
+      onRenameItem: renameItem,
+      onMoveItemOut: moveItemToDesktop,
+      onMoveItemToFolder: moveItemToFolder,
+    }),
+    [
+      desktopFolders,
+      openFolderWindow,
+      openFileWindow,
+      createItem,
+      createItemInFolder,
+      deleteItem,
+      renameItem,
+      moveItemToDesktop,
+      moveItemToFolder,
+    ]
+  )
 
   const rootDesktopItems = desktopFolders.filter((item) => !item.parentId)
 
@@ -259,7 +283,7 @@ export function Desktop() {
             onMaximize={() => maximizeWindow(win.id)}
             onMove={(x, y) => updateWindowPosition(win.id, x, y)}
             onResize={(w, h) => updateWindowSize(win.id, w, h)}
-            folderViewerProps={win.folderId ? folderViewerProps : undefined}
+            folderViewerProps={win.appId === "finder" ? folderViewerProps : undefined}
           />
         </div>
       ))}

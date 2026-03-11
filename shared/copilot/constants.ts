@@ -1,6 +1,8 @@
 export const DESKTOP_COPILOT_AGENT = "main_agent"
 export const LOGO_COPILOT_AGENT = "logo_agent"
+export const PREDICTION_AGENT_ID = "prediction_agent"
 export const DESKTOP_COPILOT_ENDPOINT = "/api/copilotkit"
 export const DESKTOP_COPILOT_SILENT_CHAT_ID = "desktop-copilot-silent"
+export const DESKTOP_PREDICTION_CHAT_ID = "desktop-prediction-silent"
 export const DESKTOP_COPILOT_SILENT_EVENT = "cloudos:copilot:silent-send"
 export const DESKTOP_COPILOT_BRAND_BRIEF_EVENT = "cloudos:copilot:brand-brief"

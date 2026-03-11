@@ -18,7 +18,6 @@ import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
-import { dispatchSilentCopilotMessage } from "@/shared/copilot/silent"
 
 type WorkflowStep = {
   id: number
@@ -33,9 +32,6 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   { id: 1, title: "Analysis", subtitle: "Running Models" },
   { id: 2, title: "Generate PDF", subtitle: "Waiting for output" },
 ]
-
-const PREDICTION_PROMPT =
-  "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions. Call update_predictions with the result."
 
 function formatTimeSince(ts: number | null) {
   if (!ts) return "Never"
@@ -59,7 +55,6 @@ export function WorkflowDashboard() {
   const suggestions = usePredictionStore((state) => state.suggestions)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)
   const isLoading = usePredictionStore((state) => state.isLoading)
-  const setLoading = usePredictionStore((state) => state.setLoading)
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true))
@@ -69,27 +64,6 @@ export function WorkflowDashboard() {
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-
-    setLoading(true)
-    dispatchSilentCopilotMessage({
-      message: PREDICTION_PROMPT,
-      followUp: false,
-      resetAfterRun: true,
-    })
-
-    const interval = window.setInterval(() => {
-      dispatchSilentCopilotMessage({
-        message: PREDICTION_PROMPT,
-        followUp: false,
-        resetAfterRun: true,
-      })
-    }, 5 * 60 * 1000)
-
-    return () => window.clearInterval(interval)
-  }, [mounted, setLoading])
 
   const handleExecute = () => {
     setIsExecuting(true)

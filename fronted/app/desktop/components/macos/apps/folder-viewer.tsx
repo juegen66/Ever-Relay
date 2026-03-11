@@ -29,12 +29,12 @@ const FILE_ICON_MAP: Record<DesktopItemType, { icon: typeof File; colorClass: st
 }
 
 interface FolderViewerProps {
-  folderId: string
+  folderId: string | null
   folderName: string
   allItems: DesktopFolder[]
   onOpenFolder: (folderId: string, folderName: string) => void
   onOpenFile: (fileId: string, fileName: string) => void
-  onCreateItem: (parentId: string, itemType: DesktopItemType, name: string) => void
+  onCreateItem: (parentId: string | null, itemType: DesktopItemType, name: string) => void
   onDeleteItem: (id: string) => void
   onRenameItem: (id: string, name: string) => void
   onMoveItemOut: (id: string) => void
@@ -60,6 +60,7 @@ type FolderNativeDragStartDetail = {
   itemId: string
 }
 
+const DESKTOP_ROOT_ID = "__desktop__"
 const DESKTOP_ITEM_MIME = "application/x-desktop-item-id"
 
 export function FolderViewer({
@@ -74,7 +75,9 @@ export function FolderViewer({
   onMoveItemOut,
   onMoveItemToFolder,
 }: FolderViewerProps) {
-  const [currentFolderId, setCurrentFolderId] = useState(folderId)
+  const resolvedFolderId = folderId ?? DESKTOP_ROOT_ID
+  const resolvedFolderName = folderName || "Desktop"
+  const [currentFolderId, setCurrentFolderId] = useState(resolvedFolderId)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
@@ -82,7 +85,7 @@ export function FolderViewer({
   const [dragOverTarget, setDragOverTarget] = useState<string | "desktop" | null>(null)
   const [isExternalDragOver, setIsExternalDragOver] = useState(false)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [history, setHistory] = useState<BreadcrumbItem[]>([{ id: folderId, name: folderName }])
+  const [history, setHistory] = useState<BreadcrumbItem[]>([{ id: resolvedFolderId, name: resolvedFolderName }])
   const [historyIndex, setHistoryIndex] = useState(0)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const editRef = useRef<HTMLInputElement>(null)
@@ -90,11 +93,14 @@ export function FolderViewer({
   const contentRef = useRef<HTMLDivElement>(null)
   const itemById = useMemo(() => new Map(allItems.map((item) => [item.id, item])), [allItems])
 
-  const children = allItems.filter((item) => item.parentId === currentFolderId)
+  const children =
+    currentFolderId === DESKTOP_ROOT_ID
+      ? allItems.filter((item) => !item.parentId)
+      : allItems.filter((item) => item.parentId === currentFolderId)
 
-  // Build breadcrumb path from root folder to current
+  // Build breadcrumb path from root folder to current (skip when at root)
   const breadcrumbs: BreadcrumbItem[] = []
-  {
+  if (currentFolderId !== DESKTOP_ROOT_ID) {
     let id: string | undefined | null = currentFolderId
     const visited = new Set<string>()
     while (id) {
@@ -196,7 +202,8 @@ export function FolderViewer({
 
   const handleCreateItem = useCallback(
     (itemType: DesktopItemType, name: string) => {
-      onCreateItem(currentFolderId, itemType, name)
+      const parentId = currentFolderId === DESKTOP_ROOT_ID ? null : currentFolderId
+      onCreateItem(parentId, itemType, name)
       setContextMenu(null)
     },
     [currentFolderId, onCreateItem]
@@ -216,6 +223,9 @@ export function FolderViewer({
 
   const canMoveIntoFolder = useCallback(
     (itemId: string, targetFolderId: string) => {
+      if (targetFolderId === DESKTOP_ROOT_ID) {
+        return Boolean(itemById.get(itemId)?.parentId)
+      }
       if (itemId === targetFolderId) return false
       const item = itemById.get(itemId)
       const target = itemById.get(targetFolderId)
@@ -258,16 +268,19 @@ export function FolderViewer({
       if (!detail || detail.dropHandled) return
 
       const { dropzoneId, overItem } = getPointTargetInfo(detail.x, detail.y)
-      if (
-        dropzoneId === currentFolderId &&
-        !overItem &&
-        canMoveIntoFolder(detail.draggedId, currentFolderId)
-      ) {
+      if (dropzoneId !== currentFolderId || overItem) return
+
+      if (currentFolderId === DESKTOP_ROOT_ID) {
+        if (canMoveIntoFolder(detail.draggedId, DESKTOP_ROOT_ID)) {
+          detail.dropHandled = true
+          onMoveItemOut(detail.draggedId)
+        }
+      } else if (canMoveIntoFolder(detail.draggedId, currentFolderId)) {
         detail.dropHandled = true
         onMoveItemToFolder(detail.draggedId, currentFolderId)
       }
     },
-    [canMoveIntoFolder, currentFolderId, getPointTargetInfo, onMoveItemToFolder]
+    [canMoveIntoFolder, currentFolderId, getPointTargetInfo, onMoveItemOut, onMoveItemToFolder]
   )
 
   useEffect(() => {
@@ -383,13 +396,16 @@ export function FolderViewer({
         {/* Breadcrumbs + drop targets */}
         <div className="flex flex-1 items-center gap-1 overflow-hidden text-[12px] text-[#666]">
           <button
+            onClick={() => navigateTo(DESKTOP_ROOT_ID, "Desktop")}
             onDragOver={(e) => handleDragOverDropTarget(e, "desktop")}
             onDrop={handleDropToDesktop}
             onDragLeave={handleDragLeaveDropTarget}
             className={`truncate rounded px-1 py-0.5 transition-colors ${
               dragOverTarget === "desktop"
                 ? "bg-[#0058d0]/15 text-[#0058d0]"
-                : "text-[#666] hover:bg-black/5"
+                : currentFolderId === DESKTOP_ROOT_ID
+                  ? "font-medium text-[#333]"
+                  : "text-[#666] hover:bg-black/5"
             }`}
           >
             Desktop
@@ -659,17 +675,19 @@ export function FolderViewer({
                   <File className="h-3.5 w-3.5 opacity-60" />
                   Rename
                 </button>
-                <button
-                  onClick={() => {
-                    onMoveItemOut(selectedItemId)
-                    setSelectedItemId(null)
-                    setContextMenu(null)
-                  }}
-                  className="flex w-full items-center gap-2 rounded-[4px] px-3 py-1 text-left text-[13px] text-[#262626] transition-colors hover:bg-[#0058d0] hover:text-white"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 opacity-60" />
-                  Move to Desktop
-                </button>
+                {itemById.get(selectedItemId)?.parentId && (
+                  <button
+                    onClick={() => {
+                      onMoveItemOut(selectedItemId)
+                      setSelectedItemId(null)
+                      setContextMenu(null)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-[4px] px-3 py-1 text-left text-[13px] text-[#262626] transition-colors hover:bg-[#0058d0] hover:text-white"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5 opacity-60" />
+                    Move to Desktop
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     onDeleteItem(selectedItemId)

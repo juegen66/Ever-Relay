@@ -2,7 +2,11 @@
 
 import type { ComponentType } from "react"
 
-import { DESKTOP_COPILOT_AGENT, LOGO_COPILOT_AGENT } from "@/shared/copilot/constants"
+import {
+  DESKTOP_COPILOT_AGENT,
+  LOGO_COPILOT_AGENT,
+  PREDICTION_AGENT_ID,
+} from "@/shared/copilot/constants"
 
 import { useAgentHandoffTools } from "./use-agent-handoff-tools"
 import { useBuildTools } from "./use-build-tools"
@@ -21,7 +25,6 @@ function DesktopAgentToolsMount() {
   useBuildTools()
   useDesktopHitlTools()
   useAgentHandoffTools()
-  usePredictionTools()
   return null
 }
 
@@ -33,9 +36,19 @@ function LogoAgentToolsMount() {
   return null
 }
 
+/** Mounts tools for prediction_agent (background prediction mode). */
+function PredictionAgentToolsMount() {
+  useDesktopCoreTools()
+  useCanvasTools()
+  useTextEditTools()
+  usePredictionTools()
+  return null
+}
+
 const AGENT_MOUNTS: Record<string, ComponentType> = {
   [DESKTOP_COPILOT_AGENT]: DesktopAgentToolsMount,
   [LOGO_COPILOT_AGENT]: LogoAgentToolsMount,
+  [PREDICTION_AGENT_ID]: PredictionAgentToolsMount,
 }
 
 /**

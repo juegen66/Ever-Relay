@@ -2,8 +2,10 @@
 
 import { useFrontendTool } from "@copilotkit/react-core"
 
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { PredictionCard, SuggestionCard } from "@/lib/stores/prediction-store"
+import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
 
 export function usePredictionTools() {
   const setPredictions = usePredictionStore((state) => state.setPredictions)
@@ -32,6 +34,15 @@ export function usePredictionTools() {
         },
       ],
       handler: async (args) => {
+        const { silentAgentId, silentRunning } = useDesktopUIStore.getState()
+        if (!silentRunning || silentAgentId !== PREDICTION_AGENT_ID) {
+          return {
+            ok: false,
+            ignored: true,
+            reason: "No active prediction run",
+          }
+        }
+
         const predictions = (args.predictions ?? []) as PredictionCard[]
         const suggestions = (args.suggestions ?? []) as SuggestionCard[]
 

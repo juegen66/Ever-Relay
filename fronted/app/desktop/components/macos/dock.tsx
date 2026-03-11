@@ -2,15 +2,17 @@
 
 import { useState, useRef, useCallback } from "react"
 
+import { Bot, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
 import type { AppId } from "./types"
+import type { LucideIcon } from "lucide-react"
 
 interface DockItemBase {
   name: string
-  iconLetter: string
+  icon: LucideIcon
   color: string
   separatorBefore?: boolean
 }
@@ -29,12 +31,12 @@ interface DockRouteItem extends DockItemBase {
 type DockItem = DockAppItem | DockRouteItem
 
 const DOCK_ITEMS: DockItem[] = [
-  { kind: "app", id: "finder", name: "Finder", iconLetter: "F", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
-  { kind: "app", id: "canvas", name: "Canvas", iconLetter: "C", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
-  { kind: "app", id: "logo", name: "Logo Studio", iconLetter: "LG", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)" },
-  { kind: "app", id: "vibecoding", name: "vibecoding", iconLetter: "V", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
-  { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", iconLetter: "AI", color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
-  { kind: "route", id: "workflow-dashboard", href: "/desktop/workflow", name: "Workflow", iconLetter: "WF", color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
+  { kind: "app", id: "finder", name: "Finder", icon: FolderOpen, color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
+  { kind: "app", id: "canvas", name: "Canvas", icon: Palette, color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
+  { kind: "app", id: "logo", name: "Logo Studio", icon: PenTool, color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)" },
+  { kind: "app", id: "vibecoding", name: "vibecoding", icon: Terminal, color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
+  { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", icon: Bot, color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
+  { kind: "route", id: "workflow-dashboard", href: "/desktop/workflow", name: "Workflow", icon: GitBranch, color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
 ]
 
 export function Dock() {
@@ -100,6 +102,7 @@ export function Dock() {
         onMouseLeave={handleMouseLeave}
       >
         {DOCK_ITEMS.map((item, index) => {
+          const Icon = item.icon
           const scale = getScale(index)
           const isOpen = item.kind === "app"
             ? openWindows.some((w) => w.appId === item.id)
@@ -145,9 +148,7 @@ export function Dock() {
                   }}
                   aria-label={`Open ${item.name}`}
                 >
-                  <span className="text-[18px] font-bold text-white" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
-                    {item.iconLetter}
-                  </span>
+                  <Icon className="h-5 w-5 text-white drop-shadow-sm" strokeWidth={2.5} />
                 </button>
                 {isOpen && (
                   <div

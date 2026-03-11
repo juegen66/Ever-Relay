@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, type ReactNode } from "react"
 
-
 import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
 import { MessageSquare, X } from "lucide-react"
@@ -136,7 +135,6 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 
     setCopilotSidebarOpen(open)
   }, [setCopilotSidebarOpen])
-
   return (
     <>
       <CopilotSidebar

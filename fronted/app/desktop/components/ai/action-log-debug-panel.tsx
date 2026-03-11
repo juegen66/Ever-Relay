@@ -1,10 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-import { Activity, ChevronDown, ChevronUp, X } from "lucide-react"
+import { Activity, ChevronDown, ChevronUp, Sparkles, X } from "lucide-react"
 
-import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
+import { queueDesktopPredictionRun } from "@/app/desktop/components/ai/prediction-control"
+import {
+  useDesktopActionLogStore,
+  type DesktopAction,
+} from "@/lib/stores/desktop-action-log-store"
+import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 
 function formatTs(ts: number) {
@@ -16,7 +21,7 @@ function formatTs(ts: number) {
   })
 }
 
-function actionLabel(action: { type: string; [k: string]: unknown }) {
+function actionLabel(action: DesktopAction) {
   switch (action.type) {
     case "app_opened":
       return `Opened app: ${action.appId}`
@@ -42,11 +47,43 @@ function actionLabel(action: { type: string; [k: string]: unknown }) {
 export function ActionLogDebugPanel() {
   const [visible, setVisible] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
   const actions = useDesktopActionLogStore((state) => state.actions)
+  const silentRunning = useDesktopUIStore((state) => state.silentRunning)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)
   const isLoading = usePredictionStore((state) => state.isLoading)
+
+  useEffect(() => {
+    if (!triggerMessage) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      setTriggerMessage(null)
+    }, 2400)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [triggerMessage])
+
+  const handleTriggerPredict = () => {
+    const triggered = queueDesktopPredictionRun()
+
+    if (triggered) {
+      setTriggerMessage("Triggered background predict run.")
+      return
+    }
+
+    if (silentRunning || isLoading) {
+      setTriggerMessage("Predict is already running.")
+      return
+    }
+
+    setTriggerMessage("Predict trigger skipped by debounce.")
+  }
 
   if (!visible) {
     return (
@@ -88,7 +125,18 @@ export function ActionLogDebugPanel() {
         <div className="max-h-[400px] overflow-auto">
           {/* Prediction Status */}
           <div className="border-b border-white/10 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Prediction Engine</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Prediction Engine</p>
+              <button
+                type="button"
+                onClick={handleTriggerPredict}
+                disabled={isLoading}
+                className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-[10px] font-medium text-white/80 transition hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Sparkles className="h-3 w-3" />
+                Trigger Predict
+              </button>
+            </div>
             <div className="mt-1.5 flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${isLoading ? "animate-pulse bg-yellow-400" : predictions.length > 0 ? "bg-green-400" : "bg-white/30"}`} />
               <span className="text-[11px] text-white/70">
@@ -103,6 +151,9 @@ export function ActionLogDebugPanel() {
               <p className="mt-1 text-[10px] text-white/40">
                 Last updated: {formatTs(lastUpdated)}
               </p>
+            )}
+            {triggerMessage && (
+              <p className="mt-1 text-[10px] text-cyan-300/80">{triggerMessage}</p>
             )}
             {predictions.length > 0 && (
               <div className="mt-2 space-y-1">
@@ -131,7 +182,7 @@ export function ActionLogDebugPanel() {
                 {[...actions].reverse().slice(0, 20).map((action, i) => (
                   <div key={`${action.ts}-${i}`} className="flex items-center gap-2 rounded px-1.5 py-1 text-[11px] hover:bg-white/5">
                     <span className="shrink-0 font-mono text-[10px] text-white/30">{formatTs(action.ts)}</span>
-                    <span className="truncate text-white/70">{actionLabel(action as any)}</span>
+                    <span className="truncate text-white/70">{actionLabel(action)}</span>
                   </div>
                 ))}
               </div>
