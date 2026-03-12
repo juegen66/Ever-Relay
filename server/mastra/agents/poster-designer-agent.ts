@@ -1,9 +1,9 @@
-import { readFileSync } from "fs"
-import { join } from "path"
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
+import model from "@/server/mastra/model"
+import { canvasDesignPrompt } from "@/server/mastra/prompts/logo-workflow-prompt"
 import {
   createCanvasProjectTool,
   listCanvasProjectsTool,
@@ -12,12 +12,6 @@ import {
 } from "@/server/mastra/tools"
 
 export const POSTER_DESIGNER_AGENT_ID = "poster_designer_agent"
-
-const canvasDesignSkillPath = join(process.cwd(), "skills/canvas-design/SKILL.md")
-const canvasDesignPrompt = readFileSync(canvasDesignSkillPath, "utf-8").replace(
-  /^---[\s\S]*?---\n/,
-  ""
-)
 
 const posterDesignerRequestContextSchema = z.object({
   userId: z.string().min(1),

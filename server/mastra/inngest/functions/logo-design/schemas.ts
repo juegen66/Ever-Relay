@@ -48,6 +48,7 @@ export const logoDesignBriefOutputSchema = z.object({
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
   logoBriefMarkdown: z.string().min(1),
+  designPhilosophyMarkdown: z.string().min(1),
 })
 
 export const logoDesignConceptOutputSchema = z.object({
@@ -56,6 +57,7 @@ export const logoDesignConceptOutputSchema = z.object({
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
   logoBriefMarkdown: z.string().min(1),
+  designPhilosophyMarkdown: z.string().min(1),
   logoConcepts: z.array(logoConceptSchema).min(3),
   selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,

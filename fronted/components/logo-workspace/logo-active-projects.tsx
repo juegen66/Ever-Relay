@@ -34,11 +34,12 @@ export function LogoActiveProjects({
   onSelect,
 }: LogoActiveProjectsProps) {
   return (
-    <section className="rounded-2xl border border-white/60 bg-white/34 p-5 shadow-[0_14px_36px_rgba(24,42,70,0.14),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-xl">
+    <section className="rounded-[30px] border border-[#e4e5e8] bg-white p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-[31px] font-semibold tracking-tight text-[#1f3556]">Active Projects</h2>
-          <p className="mt-1 text-[13px] text-[#5f6f88]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8b8e96]">Workspace Overview</p>
+          <h2 className="mt-3 text-[32px] font-semibold tracking-tight text-[#21242a]">Active Projects</h2>
+          <p className="mt-1 text-[13px] text-[#6f7382]">
             Continue working on current logo systems or spin up a new concept.
           </p>
         </div>
@@ -48,21 +49,21 @@ export function LogoActiveProjects({
         <button
           type="button"
           onClick={onCreate}
-          className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#8aa6c9]/60 bg-[linear-gradient(160deg,rgba(255,255,255,0.8)_0%,rgba(236,245,255,0.7)_100%)] px-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_22px_rgba(31,53,88,0.12)] transition hover:border-[#5d80ac]/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_rgba(31,53,88,0.18)]"
+          className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[24px] border border-dashed border-[#d5d8df] bg-[linear-gradient(180deg,#fcfcfc_0%,#f4f5f7_100%)] px-4 text-center transition hover:border-[#bfc4d0] hover:bg-[linear-gradient(180deg,#ffffff_0%,#f1f2f6_100%)]"
         >
-          <div className="pointer-events-none absolute -top-10 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-[#d2e6ff] blur-2xl transition group-hover:bg-[#b5d5ff]" />
-          <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/80 bg-white text-[#425c7f] shadow-[0_8px_18px_rgba(35,59,94,0.18)]">
+          <div className="pointer-events-none absolute inset-x-8 top-4 h-px bg-[linear-gradient(90deg,transparent,rgba(95,91,230,0.18),transparent)]" />
+          <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full border border-[#d8dbe3] bg-white text-[#5f5be6]">
             <Plus className="h-4 w-4" />
           </div>
-          <div className="relative z-10 mt-4 text-[15px] font-semibold text-[#294469]">Create New Project</div>
-          <div className="relative z-10 mt-1 text-[11px] font-medium text-[#6c7e99]">Start from a fresh brand brief</div>
+          <div className="relative z-10 mt-4 text-[15px] font-semibold text-[#252831]">Create New Project</div>
+          <div className="relative z-10 mt-1 text-[11px] font-medium text-[#8a8e99]">Start from a fresh brand brief</div>
         </button>
 
         {loading
           ? [0, 1, 2].map((item) => (
               <div
                 key={item}
-                className="min-h-[150px] animate-pulse rounded-2xl border border-white/65 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+                className="min-h-[150px] animate-pulse rounded-[24px] border border-[#e4e5e8] bg-[#f7f7f8]"
               />
             ))
           : projects.map((project) => (
@@ -71,16 +72,16 @@ export function LogoActiveProjects({
                 type="button"
                 onClick={() => onSelect(project.id)}
                 className={cn(
-                  "group relative min-h-[150px] overflow-hidden rounded-2xl border px-4 pb-3 pt-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_22px_rgba(31,53,88,0.12)] transition",
+                  "group relative min-h-[150px] overflow-hidden rounded-[24px] border px-4 pb-3 pt-3 text-left transition",
                   selectedRunId === project.id
-                    ? "border-[#5c81ad]/80 bg-[linear-gradient(165deg,rgba(255,255,255,0.88)_0%,rgba(236,246,255,0.84)_100%)]"
-                    : "border-white/65 bg-[linear-gradient(165deg,rgba(255,255,255,0.75)_0%,rgba(244,249,255,0.7)_100%)] hover:-translate-y-0.5 hover:border-[#88a8cf]/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_rgba(31,53,88,0.18)]"
+                    ? "border-[#5f5be6]/45 bg-[linear-gradient(180deg,#ffffff_0%,#f6f5ff_100%)]"
+                    : "border-[#e4e5e8] bg-[linear-gradient(180deg,#ffffff_0%,#f7f7f8_100%)] hover:-translate-y-0.5 hover:border-[#cfd2da]"
                 )}
               >
-                <div className="pointer-events-none absolute -top-10 right-0 h-24 w-24 rounded-full bg-[#d7e8ff]/70 blur-2xl" />
+                <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(95,91,230,0.14),transparent)]" />
 
                 <div className="relative mb-3 flex items-start justify-between gap-2">
-                  <div className="relative flex h-[62px] w-[62px] items-center justify-center overflow-hidden rounded-xl border border-white/90 bg-white/80 text-[24px] font-semibold text-[#294469] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_20px_rgba(35,59,94,0.12)]">
+                  <div className="relative flex h-[62px] w-[62px] items-center justify-center overflow-hidden rounded-[18px] border border-[#e4e5e8] bg-[#f3f4f7] text-[24px] font-semibold text-[#252831]">
                     {project.previewImageUrl ? (
                       <Image
                         src={project.previewImageUrl}
@@ -103,14 +104,14 @@ export function LogoActiveProjects({
                     >
                       {project.status.replace(/_/g, " ")}
                     </span>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#61728d]">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8b8e96]">
                       {project.stageLabel}
                     </span>
                   </div>
                 </div>
 
-                <div className="truncate text-[18px] font-semibold tracking-tight text-[#243f65]">{project.title}</div>
-                <div className="mt-0.5 truncate text-[12px] font-medium text-[#6880a3]">{project.subtitle}</div>
+                <div className="truncate text-[18px] font-semibold tracking-tight text-[#21242a]">{project.title}</div>
+                <div className="mt-0.5 truncate text-[12px] font-medium text-[#6f7382]">{project.subtitle}</div>
               </button>
             ))}
       </div>

@@ -1,14 +1,14 @@
 import { createStep } from "@mastra/inngest"
-import { posterDesignerAgent } from "@/server/mastra/agents/poster-designer-agent"
+
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
-import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
 import { logoDesignService } from "@/server/modules/logo-design/logo-design.service"
+
 import {
   logoDesignConceptOutputSchema,
   logoDesignPhilosophyOutputSchema,
 } from "./schemas"
-import { errorToMessage, parseJsonObject } from "./utils"
+import { errorToMessage } from "./utils"
 
 function asString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null
@@ -21,79 +21,11 @@ function asRecord(value: unknown) {
   return null
 }
 
-function stripTextElements(svg: string) {
-  return svg
-    .replace(/<text\b[\s\S]*?<\/text>/gi, "")
-    .replace(/<tspan\b[\s\S]*?<\/tspan>/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-}
-
-function ensureIconOnlyLogoSvg(svg: string) {
-  const stripped = stripTextElements(svg)
-  return stripped || svg
-}
-
-function buildPhilosophyPrompt(inputData: {
-  brandName: string
-  selectedConcept: {
-    id: string
-    conceptName: string
-    rationaleMd: string
-  }
-  selectedLogoSvg: string
-}) {
-  return [
-    "You are in step 3 of a strict logo workflow.",
-    "Task: create design philosophy markdown only.",
-    "Follow canvas-design skill's philosophy requirements: 4-6 concise paragraphs, visual-first, craftsmanship emphasis.",
-    "Use only the provided brand name and one selected icon-only logo SVG (no wordmark text) as context.",
-    "Output JSON only. No markdown fences. No SVG.",
-    "JSON shape:",
-    JSON.stringify({
-      designPhilosophyMarkdown: "string",
-    }),
-    `Brand name: ${inputData.brandName}`,
-    `Selected concept object: ${JSON.stringify(inputData.selectedConcept)}`,
-    `Selected logo SVG:\n${inputData.selectedLogoSvg}`,
-  ].join("\n\n")
-}
-
-function buildPhilosophyRepairPrompt(inputData: {
-  brandName: string
-  selectedConcept: {
-    id: string
-    conceptName: string
-    rationaleMd: string
-  }
-  selectedLogoSvg: string
-  invalidOutput: string
-}) {
-  return [
-    "Your previous response was invalid.",
-    "Return JSON only. No code fences.",
-    "Required JSON shape:",
-    JSON.stringify({
-      designPhilosophyMarkdown: "string",
-    }),
-    "designPhilosophyMarkdown must be 4-6 paragraphs and visual-first.",
-    `Brand name: ${inputData.brandName}`,
-    `Selected concept object: ${JSON.stringify(inputData.selectedConcept)}`,
-    `Selected logo SVG:\n${inputData.selectedLogoSvg}`,
-    `Invalid output to repair: ${inputData.invalidOutput}`,
-  ].join("\n\n")
-}
-
 function normalizePhilosophyMarkdown(text: string) {
-  const parsed = parseJsonObject(text)
-  const fromJson = asString(parsed?.designPhilosophyMarkdown)
-  if (fromJson) {
-    return fromJson
-  }
-
   const cleaned = text
     .replace(/^\s*```(?:markdown|md|json)?/i, "")
     .replace(/```\s*$/i, "")
+    .replace(/^##\s*Design Philosophy\s*/i, "")
     .trim()
 
   return cleaned || null
@@ -112,7 +44,7 @@ function createFallbackPhilosophyMarkdown(inputData: {
 
 export const philosophyStep = createStep({
   id: "logo_design_philosophy",
-  description: "Generate design philosophy markdown (in-memory) using canvas-design skill",
+  description: "Persist the canonical design philosophy before poster generation",
   inputSchema: logoDesignConceptOutputSchema,
   outputSchema: logoDesignPhilosophyOutputSchema,
   execute: async ({ inputData }) => {
@@ -125,66 +57,8 @@ export const philosophyStep = createStep({
         ) ?? inputData.logoConcepts[0]
       const brandName =
         asString(inputData.brandBrief?.brandName) ?? "Untitled Brand"
-      const iconOnlySelectedLogoSvg = ensureIconOnlyLogoSvg(selectedConcept.logoSvg)
-
-      const requestContext = createBuildRunRequestContext({
-        userId: inputData.userId,
-        runId: inputData.runId,
-      })
-
-      let generatedText = ""
-      let designPhilosophyMarkdown: string | null = null
-
-      try {
-        const response = await posterDesignerAgent.generate(
-          buildPhilosophyPrompt({
-            brandName,
-            selectedConcept: {
-              id: selectedConcept.id,
-              conceptName: selectedConcept.conceptName,
-              rationaleMd: selectedConcept.rationaleMd,
-            },
-            selectedLogoSvg: iconOnlySelectedLogoSvg,
-          }),
-          {
-            requestContext,
-            toolChoice: "none",
-          }
-        )
-        generatedText = response.text ?? ""
-        designPhilosophyMarkdown = normalizePhilosophyMarkdown(generatedText)
-      } catch {
-        designPhilosophyMarkdown = null
-      }
-
-      if (!designPhilosophyMarkdown && generatedText.trim()) {
-        try {
-          const repaired = await posterDesignerAgent.generate(
-            buildPhilosophyRepairPrompt({
-              brandName,
-              selectedConcept: {
-                id: selectedConcept.id,
-                conceptName: selectedConcept.conceptName,
-                rationaleMd: selectedConcept.rationaleMd,
-              },
-              selectedLogoSvg: iconOnlySelectedLogoSvg,
-              invalidOutput: generatedText.slice(0, 8000),
-            }),
-            {
-              requestContext,
-              toolChoice: "none",
-            }
-          )
-          designPhilosophyMarkdown = normalizePhilosophyMarkdown(
-            repaired.text ?? ""
-          )
-        } catch {
-          designPhilosophyMarkdown = null
-        }
-      }
-
       const finalPhilosophy =
-        designPhilosophyMarkdown ??
+        normalizePhilosophyMarkdown(inputData.designPhilosophyMarkdown) ??
         createFallbackPhilosophyMarkdown({
           brandName,
         })

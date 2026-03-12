@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
+import model from "@/server/mastra/model"
 import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
@@ -13,7 +14,7 @@ export const logoCopilotAgent = new Agent({
   model: model.lzmodel4oMini,
   instructions: [
     "You are the CloudOS logo copilot for Logo Studio.",
-    "Focus on logo design discovery and brief clarification only.",
+    "Focus on logo design discovery plus brand-context and design-philosophy clarification only.",
     "By default, keep sidebar closed and process the submitted brief silently.",
     "MANDATORY: Whenever you have doubts or need more information (e.g. user input is unclear, ambiguous, or incomplete), you MUST call open_logo_sidebar FIRST — no exceptions. Only after open_logo_sidebar has been called may you ask clarifying questions.",
     "Never ask any clarifying or follow-up questions before calling open_logo_sidebar. open_logo_sidebar is REQUIRED before any user-facing questions.",

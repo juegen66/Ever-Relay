@@ -16,6 +16,13 @@ import type {
 } from "@/components/logo-workspace"
 import { useLogoDesignBriefSubmit } from "@/features/desktop-copilot/hooks/use-logo-design-brief-submit"
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
+import { canvasApi } from "@/lib/api/modules/canvas"
+import {
+  openCanvasProjectInSession,
+  waitForCanvasSessionReady,
+  insertSvgIntoActiveCanvasSession,
+} from "@/lib/canvas-session"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import type { LogoDesignAsset, LogoDesignRun } from "@/shared/contracts/logo-design"
 
 const EMPTY_BRIEF: BriefState = {
@@ -95,6 +102,10 @@ function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message.trim() ? error.message : fallback
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}
+
 function asRecord(value: unknown) {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>
@@ -169,6 +180,7 @@ export function LogoStudioApp() {
   const [loadingSelectedRun, setLoadingSelectedRun] = useState(false)
   const [runningAction, setRunningAction] = useState<"copilot" | null>(null)
 
+  const [importingAssetId, setImportingAssetId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showAllRecent, setShowAllRecent] = useState(false)
 
@@ -354,6 +366,73 @@ export function LogoStudioApp() {
     }
   }, [loadRuns, loadSelectedRun, selectedRunId])
 
+  const handleImportToCanvas = useCallback(async (asset: LogoDesignAsset) => {
+    if (!selectedRunId || importingAssetId) return
+    const run = runs.find((r) => r.id === selectedRunId)
+
+    setImportingAssetId(asset.id)
+    setError(null)
+
+    try {
+      // 1. Fetch SVG text
+      const url = logoDesignApi.getAssetUrl(selectedRunId, asset.id)
+      const response = await fetch(url, { credentials: "include" })
+      if (!response.ok) {
+        throw new Error("Failed to fetch SVG asset")
+      }
+      const svgText = await response.text()
+
+      if (!svgText.trim().toLowerCase().startsWith("<svg")) {
+        throw new Error("Asset is not valid SVG")
+      }
+
+      // 2. Build a descriptive project title
+      const brandName = run ? extractBrandName(run) : "Logo"
+      const assetLabel = asset.assetType === "poster_svg" ? "Poster" : "Logo"
+      const projectTitle = `${brandName} — ${assetLabel}`
+
+      // 3. Create a new Canvas project
+      const project = await canvasApi.createProject({ title: projectTitle })
+
+      // 4. Open Canvas app window (will focus if already open)
+      useDesktopWindowStore.getState().openApp("canvas")
+
+      // 5. Wait for canvas session to register
+      const sessionReady = await waitForCanvasSessionReady(4000)
+      if (!sessionReady) {
+        throw new Error("Canvas app did not become ready in time")
+      }
+
+      // 6. Open the newly created project in the editor
+      const opened = await openCanvasProjectInSession({ projectId: project.id })
+      if (!opened.ok) {
+        throw new Error(opened.error)
+      }
+
+      // 7. Wait for the editor to mount and become ready
+      let inserted = false
+      for (let attempt = 0; attempt < 16; attempt++) {
+        await sleep(300)
+        const result = await insertSvgIntoActiveCanvasSession({ svg: svgText })
+        if (result.ok) {
+          inserted = true
+          break
+        }
+        if (result.error && !result.error.includes("not ready")) {
+          throw new Error(result.error)
+        }
+      }
+
+      if (!inserted) {
+        throw new Error("Canvas editor did not become ready after opening the project")
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to import to canvas")
+    } finally {
+      setImportingAssetId(null)
+    }
+  }, [selectedRunId, importingAssetId, runs])
+
   const workspaceMain = (
     <div className="px-5 pb-6 pt-4">
       {error ? (
@@ -412,6 +491,8 @@ export function LogoStudioApp() {
             refreshing={loadingRuns}
             onBack={backToWorkspace}
             onRefresh={refreshView}
+            onImportToCanvas={handleImportToCanvas}
+            importingAssetId={importingAssetId}
           />
         }
         sidebar={null}

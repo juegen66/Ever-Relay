@@ -1,22 +1,10 @@
-import { readFileSync } from "fs"
-import { join } from "path"
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
-import {
-  createCanvasProjectTool,
-  listCanvasProjectsTool,
-  updateCanvasProjectTool,
-} from "@/server/mastra/tools"
+import model from "@/server/mastra/model"
 
 export const BRAND_DESIGNER_AGENT_ID = "brand_designer_agent"
-
-const brandLogoGenerationSkillPath = join(process.cwd(), "skills/brand-logo-generation/SKILL.md")
-const brandLogoGenerationPrompt = readFileSync(brandLogoGenerationSkillPath, "utf-8").replace(
-  /^---[\s\S]*?---\n/,
-  ""
-)
 
 const brandDesignerRequestContextSchema = z.object({
   userId: z.string().min(1),
@@ -31,19 +19,15 @@ export const brandDesignerAgent = new Agent({
   memory: createAgentMemory(),
   requestContextSchema: brandDesignerRequestContextSchema,
   instructions: [
-    "You are the brand design agent. Create logos, color palettes, typography systems, and brand guidelines.",
+    "You are the brand design agent.",
+    "Translate the provided canonical design philosophy into one coherent logo system.",
     "Output structured JSON only.",
     "Never output markdown fences or <think> tags.",
-    "Return exactly one logo system object, not an array.",
-    "The object must include conceptName, rationaleMd, and logoSvg.full/icon/wordmark (all valid SVG strings).",
+    "Return exactly one top-level JSON object that matches the caller's schema.",
+    "If the caller asks for lockups or concept arrays, obey that schema exactly.",
     "Do not output planning-only keys such as goal, assumptions, brandPositioning, or logoSystemDirection.",
     "Also include optional colorPalette, typography, and top-level brandGuidelines.",
-    "Follow the brand-logo-generation skill guidance strictly:",
-    brandLogoGenerationPrompt,
+    "When the caller provides canvas-design source text and a canonical philosophy, treat them as the primary creative authority.",
+    "The caller will provide the exact JSON schema and SVG lockup contract. Obey that contract strictly.",
   ].join("\n\n"),
-  tools: {
-    // listCanvasProjects: listCanvasProjectsTool,
-    // createCanvasProject: createCanvasProjectTool,
-    // updateCanvasProject: updateCanvasProjectTool,
-  },
 })

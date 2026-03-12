@@ -9,7 +9,7 @@
     "lint": "eslint ./fronted",
     "mastra:dev": "pnpm exec mastra dev -d server/mastra",
     "mastra:studio": "pnpm exec mastra studio --server-port 4111 --port 4112",
-    "inngest:dev": "pnpm exec inngest dev",
+    "inngest:dev": "npx --yes inngest-cli@latest dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -107,12 +107,12 @@
     "@types/react-dom": "19.2.3",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
-    "inngest-cli": "^1.17.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "inngest-cli": "^1.17.5",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "5.7.3",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6"
+    "typescript": "5.7.3"
   },
   "pnpm": {
     "overrides": {
@@ -120,7 +120,8 @@
       "@types/react-dom": "19.2.3"
     },
     "onlyBuiltDependencies": [
-      "sharp"
+      "sharp",
+      "inngest-cli"
     ]
   }
 }

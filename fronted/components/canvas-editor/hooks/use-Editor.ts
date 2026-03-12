@@ -430,25 +430,30 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
                     }
                 }
 
-                const groupSvgElements = (fabric.util as {
-                    groupSVGElements?: (elements: fabric.Object[], groupOptions?: Record<string, unknown>) => fabric.Object
-                }).groupSVGElements
+                // Compute a bounding box across all parsed objects so we can
+                // scale and center them as a cohesive unit.
+                let minX = Infinity
+                let minY = Infinity
+                let maxX = -Infinity
+                let maxY = -Infinity
+                for (const obj of svgObjects) {
+                    const b = obj.getBoundingRect()
+                    minX = Math.min(minX, b.left)
+                    minY = Math.min(minY, b.top)
+                    maxX = Math.max(maxX, b.left + b.width)
+                    maxY = Math.max(maxY, b.top + b.height)
+                }
 
-                const svgObject = groupSvgElements
-                    ? groupSvgElements(svgObjects, loaded.options as Record<string, unknown>)
-                    : svgObjects[0]
-
-                const bounds = svgObject.getBoundingRect()
-                const objectWidth = Math.max(1, bounds.width)
-                const objectHeight = Math.max(1, bounds.height)
+                const groupWidth = Math.max(1, maxX - minX)
+                const groupHeight = Math.max(1, maxY - minY)
                 const workspaceWidth = workspace.width ?? 1
                 const workspaceHeight = workspace.height ?? 1
 
                 const maxDisplayWidth = workspaceWidth * 0.9
                 const maxDisplayHeight = workspaceHeight * 0.9
                 const fitScale = Math.min(
-                    maxDisplayWidth / objectWidth,
-                    maxDisplayHeight / objectHeight,
+                    maxDisplayWidth / groupWidth,
+                    maxDisplayHeight / groupHeight,
                     1,
                 )
 
@@ -457,15 +462,34 @@ const buildEditor = (canvas: fabric.Canvas, config: BuildEditorConfig) => {
                     : 1
                 const finalScale = Math.max(0.01, fitScale * requestedScale)
 
-                svgObject.set({
-                    originX: "center",
-                    originY: "center",
-                })
-                svgObject.scale(finalScale)
-                centerObjectInWorkspace(svgObject, workspace)
+                // Calculate offset to center all objects in workspace
+                const workspaceBounds = workspace.getBoundingRect()
+                const centerX = workspaceBounds.left + workspaceWidth / 2
+                const centerY = workspaceBounds.top + workspaceHeight / 2
+                const groupCenterX = (minX + maxX) / 2
+                const groupCenterY = (minY + maxY) / 2
+                const offsetX = centerX - groupCenterX * finalScale
+                const offsetY = centerY - groupCenterY * finalScale
 
-                canvas.add(svgObject)
-                canvas.setActiveObject(svgObject)
+                // Add each SVG element as an individual Fabric object
+                for (const obj of svgObjects) {
+                    const objBounds = obj.getBoundingRect()
+                    obj.set({
+                        left: objBounds.left * finalScale + offsetX,
+                        top: objBounds.top * finalScale + offsetY,
+                    })
+                    obj.scale((obj.scaleX ?? 1) * finalScale)
+                    canvas.add(obj)
+                }
+
+                // Select all inserted objects together
+                if (svgObjects.length === 1) {
+                    canvas.setActiveObject(svgObjects[0])
+                } else {
+                    const selection = new fabric.ActiveSelection(svgObjects, { canvas })
+                    canvas.setActiveObject(selection)
+                }
+
                 canvas.requestRenderAll()
                 config.recordHistory()
 

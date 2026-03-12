@@ -23,6 +23,7 @@ agentvibecoding420-main/
 
 # Cursor and docs (local/planning)
 .cursor/
+.factory/
 docs/
 skills/
 article/

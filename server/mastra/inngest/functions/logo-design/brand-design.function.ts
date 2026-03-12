@@ -1,10 +1,14 @@
 import { createHash } from "node:crypto"
+
 import { createStep } from "@mastra/inngest"
+
 import { brandDesignerAgent } from "@/server/mastra/agents/brand-designer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
+import { canvasDesignLogoFusionBlock } from "@/server/mastra/prompts/logo-workflow-prompt"
 import { logoDesignService } from "@/server/modules/logo-design/logo-design.service"
+
 import {
   logoDesignBriefOutputSchema,
   logoDesignConceptOutputSchema,
@@ -320,11 +324,15 @@ function buildBrandOutputFromConcepts(inputData: {
 function buildConceptsPrompt(inputData: {
   prompt: string
   logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
   brandBrief?: Record<string, unknown>
 }) {
   const parts = [
-    "You are in step 2 of a strict logo workflow.",
+    "You are in step 2 of a canvas-first logo workflow.",
     "Generate exactly 3 SVG lockups for the same brand identity.",
+    "Treat the canonical design philosophy as the primary creative authority.",
+    "Use the factual brand context only as a grounding layer.",
+    "The output must feel like three lockups of one aesthetic movement, not three unrelated concept directions.",
     "Return JSON only. No markdown. No code fences. No extra prose.",
     "JSON shape:",
     JSON.stringify({
@@ -360,9 +368,13 @@ function buildConceptsPrompt(inputData: {
     "- icon_with_wordmark SVG: must include both graphics and <text>/<tspan>",
     "- wordmark_only SVG: must include <text>/<tspan> and must NOT include graphics tags (path/circle/ellipse/rect/polygon/polyline/line/use/image)",
     "- selectedConceptId must match one concept id",
+    "- all three SVGs must express the same philosophy and subtle conceptual thread",
     "- keep all outputs aligned with the brief constraints",
+    "Relevant canvas-design source text to preserve wherever applicable:",
+    canvasDesignLogoFusionBlock,
     `Original prompt: ${inputData.prompt}`,
-    `Logo brief markdown:\n${inputData.logoBriefMarkdown}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
   ]
   if (inputData.brandBrief) {
     parts.push(`Structured brand brief: ${JSON.stringify(inputData.brandBrief)}`)
@@ -373,6 +385,7 @@ function buildConceptsPrompt(inputData: {
 function buildConceptsRepairPrompt(inputData: {
   prompt: string
   logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
   invalidOutput: string
   validationHint?: string
   brandBrief?: Record<string, unknown>
@@ -400,9 +413,13 @@ function buildConceptsRepairPrompt(inputData: {
     "- icon_with_wordmark must include both text and graphics",
     "- wordmark_only must include text and no graphics tags",
     "- selectedConceptId must match one concept id",
+    "- all three SVGs must express the same philosophy and subtle conceptual thread",
     inputData.validationHint ? `Validation hint: ${inputData.validationHint}` : "",
+    "Relevant canvas-design source text to preserve wherever applicable:",
+    canvasDesignLogoFusionBlock,
     `Original prompt: ${inputData.prompt}`,
-    `Logo brief markdown:\n${inputData.logoBriefMarkdown}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
     inputData.brandBrief ? `Structured brand brief: ${JSON.stringify(inputData.brandBrief)}` : "",
     `Invalid output to repair: ${inputData.invalidOutput}`,
   ]
@@ -452,6 +469,7 @@ function buildFallbackConcepts(inputData: {
 async function generateConceptsWithRecovery(inputData: {
   prompt: string
   logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
   brandBrief?: Record<string, unknown>
   requestContext: RunRequestContext
 }) {
@@ -464,6 +482,7 @@ async function generateConceptsWithRecovery(inputData: {
       buildConceptsPrompt({
         prompt: inputData.prompt,
         logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
         brandBrief: inputData.brandBrief,
       }),
       {
@@ -497,6 +516,7 @@ async function generateConceptsWithRecovery(inputData: {
         buildConceptsRepairPrompt({
           prompt: inputData.prompt,
           logoBriefMarkdown: inputData.logoBriefMarkdown,
+          designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
           brandBrief: inputData.brandBrief,
           invalidOutput: initialText.slice(0, 8000),
           validationHint,
@@ -532,7 +552,7 @@ async function generateConceptsWithRecovery(inputData: {
 
 export const brandDesignStep = createStep({
   id: "logo_brand_design",
-  description: "Generate 3 SVG logo concepts (in-memory) using brand-logo-generation skill",
+  description: "Generate 3 SVG logo lockups from the canonical design philosophy",
   inputSchema: logoDesignBriefOutputSchema,
   outputSchema: logoDesignConceptOutputSchema,
   execute: async ({ inputData }) => {
@@ -584,6 +604,7 @@ export const brandDesignStep = createStep({
       const generated = await generateConceptsWithRecovery({
         prompt: inputData.prompt,
         logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
         brandBrief: inputData.brandBrief as Record<string, unknown> | undefined,
         requestContext,
       })
@@ -603,6 +624,7 @@ export const brandDesignStep = createStep({
         status: "running",
         resultJson: {
           logoBriefMarkdown: inputData.logoBriefMarkdown,
+          designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
           logoConcepts,
           selectedConceptId: selectedConcept.id,
           brand: {

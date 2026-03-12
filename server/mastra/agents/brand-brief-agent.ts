@@ -1,17 +1,11 @@
-import { readFileSync } from "fs"
-import { join } from "path"
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
+import model from "@/server/mastra/model"
+import { canvasDesignPhilosophyBlock } from "@/server/mastra/prompts/logo-workflow-prompt"
 
 export const BRAND_BRIEF_AGENT_ID = "brand_brief_agent"
-
-const brandBriefSkillPath = join(process.cwd(), "skills/brand-brief/SKILL.md")
-const brandBriefPrompt = readFileSync(brandBriefSkillPath, "utf-8").replace(
-  /^---[\s\S]*?---\n/,
-  ""
-)
 
 const brandBriefRequestContextSchema = z.object({
   userId: z.string().min(1),
@@ -26,11 +20,13 @@ export const brandBriefAgent = new Agent({
   memory: createAgentMemory(),
   requestContextSchema: brandBriefRequestContextSchema,
   instructions: [
-    "You are the brand brief agent for logo workflow step 1.",
+    "You are the canvas-first planning agent for logo workflow step 1.",
     "You must output markdown only.",
     "Never output JSON, XML, SVG, markdown fences, or <think> tags.",
-    "Create a concise but decision-complete logo brief for downstream concept generation.",
-    "Follow the brand-brief skill guidance strictly:",
-    brandBriefPrompt,
+    "Produce a short factual brand context section and a canonical design philosophy section.",
+    "The design philosophy is the primary creative output; the brief is supporting context only.",
+    "When the caller provides canvas-design source text, preserve its wording and method as much as possible.",
+    "The canonical design-philosophy source is:",
+    canvasDesignPhilosophyBlock,
   ].join("\n\n"),
 })

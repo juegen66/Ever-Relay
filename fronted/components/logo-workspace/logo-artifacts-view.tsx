@@ -1,7 +1,6 @@
 "use client"
 
-import { ArrowLeft, Loader2, RefreshCcw } from "lucide-react"
-import Image from "next/image"
+import { ArrowLeft, ArrowUpRight, Loader2, RefreshCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
@@ -14,6 +13,9 @@ interface LogoArtifactsViewProps {
   refreshing: boolean
   onBack: () => void
   onRefresh: () => void
+  onImportToCanvas?: (asset: LogoDesignAsset) => void
+  importingAssetId?: string | null
+  importError?: string | null
 }
 
 type ArtifactSet = {
@@ -132,6 +134,8 @@ function ArtifactCard({
   runId,
   selected = false,
   displayVariant = "framed",
+  onImportToCanvas,
+  importingAssetId,
 }: {
   title: string
   subtitle: string
@@ -140,15 +144,14 @@ function ArtifactCard({
   runId: string
   selected?: boolean
   displayVariant?: ArtifactDisplayVariant
+  onImportToCanvas?: (asset: LogoDesignAsset) => void
+  importingAssetId?: string | null
 }) {
+  const isImporting = asset != null && importingAssetId === asset.id
   const mediaContainerClass =
     displayVariant === "clean"
       ? "mx-auto mt-8 flex h-[172px] w-full items-center justify-center overflow-hidden"
       : "mx-auto mt-8 flex h-[136px] w-[136px] items-center justify-center overflow-hidden rounded-[14px] border border-black/10 bg-[#f3f4f7]"
-  const mediaImageClass =
-    displayVariant === "clean"
-      ? "h-full w-full object-contain"
-      : "h-full w-full object-contain p-1.5"
 
   return (
     <article
@@ -164,11 +167,11 @@ function ArtifactCard({
 
       <div className={`${mediaContainerClass} relative`}>
         {asset ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element -- auth API requires browser cookies; next/image server fetch causes 401
+          <img
             src={logoDesignApi.getAssetUrl(runId, asset.id)}
             alt={title}
-            fill
-            className={mediaImageClass}
+            className={`absolute inset-0 size-full object-contain ${displayVariant === "framed" ? "p-1.5" : ""}`}
           />
         ) : (
           <span className="px-3 text-center text-[11px] text-[#8b8f98]">Missing asset</span>
@@ -179,7 +182,87 @@ function ArtifactCard({
         <p className="text-[13px] font-semibold uppercase tracking-[0.04em] text-[#22252d]">{title}</p>
         <p className={`text-[11px] ${selected ? "text-[#5f5be6]" : "text-[#9ca0a8]"}`}>{subtitle}</p>
       </div>
+
+      {onImportToCanvas && (
+        <button
+          type="button"
+          disabled={!asset || isImporting}
+          onClick={() => asset && onImportToCanvas(asset)}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-[#d8dbe3] bg-transparent px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#5f5be6] transition-all duration-200 ease-out hover:-translate-y-px hover:border-[#5f5be6] hover:bg-[#f0f0ff] hover:shadow-[0_4px_12px_rgba(95,91,230,0.1)] disabled:pointer-events-none disabled:opacity-40"
+        >
+          {isImporting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          )}
+          Open in Canvas
+        </button>
+      )}
     </article>
+  )
+}
+
+function PosterEditorialPreview({
+  asset,
+  runId,
+  onImportToCanvas,
+  importingAssetId,
+}: {
+  asset: LogoDesignAsset | null
+  runId: string
+  onImportToCanvas?: (asset: LogoDesignAsset) => void
+  importingAssetId?: string | null
+}) {
+  const isImporting = asset != null && importingAssetId === asset.id
+
+  return (
+    <div className="mt-10 flex flex-1 flex-col">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8b8e96]">Poster Composition</p>
+          <p className="mt-1 text-[12px] text-[#6f7382]">Embedded artifact preview</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {onImportToCanvas && (
+            <button
+              type="button"
+              disabled={!asset || isImporting}
+              onClick={() => asset && onImportToCanvas(asset)}
+              className="flex items-center gap-1.5 rounded-full border border-[#d8dbe3] bg-transparent px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#5f5be6] transition-all duration-200 ease-out hover:-translate-y-px hover:border-[#5f5be6] hover:bg-[#f0f0ff] hover:shadow-[0_4px_12px_rgba(95,91,230,0.1)] disabled:pointer-events-none disabled:opacity-40"
+            >
+              {isImporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              )}
+              Open in Canvas
+            </button>
+          )}
+          <div className="rounded-full border border-[#d8dbe3] bg-white/80 px-3 py-1 text-[11px] font-medium text-[#6f7382]">
+            1 / 1
+          </div>
+        </div>
+      </div>
+
+      <div className="relative flex min-h-[320px] flex-1 items-center justify-center overflow-hidden rounded-[28px] border border-[#dfe2ea] bg-[linear-gradient(180deg,#f8f8f5_0%,#f0f2f6_100%)] p-4 shadow-[0_20px_45px_rgba(31,35,43,0.08)] md:min-h-[420px] md:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(95,91,230,0.12),_transparent_48%)]" />
+        <div className="absolute inset-[14px] rounded-[22px] border border-white/70" />
+
+        {asset ? (
+          // eslint-disable-next-line @next/next/no-img-element -- auth API requires browser cookies; next/image server fetch causes 401
+          <img
+            src={logoDesignApi.getAssetUrl(runId, asset.id)}
+            alt="Poster"
+            className="relative z-10 size-full object-contain"
+          />
+        ) : (
+          <div className="relative z-10 max-w-[260px] text-center">
+            <p className="text-sm font-medium text-[#505664]">Poster asset is not available for this run.</p>
+            <p className="mt-2 text-xs leading-5 text-[#868c98]">Once generated, the poster will appear here as the visual anchor for this concept.</p>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -190,6 +273,9 @@ export function LogoArtifactsView({
   refreshing,
   onBack,
   onRefresh,
+  onImportToCanvas,
+  importingAssetId,
+  importError,
 }: LogoArtifactsViewProps) {
   if (loading && !run) {
     return (
@@ -236,6 +322,11 @@ export function LogoArtifactsView({
   return (
     <main className="min-h-full bg-[#f5f5f4] px-5 py-6 md:px-8">
       <div className="mx-auto max-w-[1180px]">
+        {importError ? (
+          <div className="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {importError}
+          </div>
+        ) : null}
         <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Button type="button" variant="ghost" className="h-9 gap-2 px-3 text-[#4f5563]" onClick={onBack}>
@@ -276,6 +367,8 @@ export function LogoArtifactsView({
             asset={artifactSet.full}
             runId={run.id}
             displayVariant="clean"
+            onImportToCanvas={onImportToCanvas}
+            importingAssetId={importingAssetId}
           />
           <ArtifactCard
             title={metadata.conceptName.toUpperCase()}
@@ -285,6 +378,8 @@ export function LogoArtifactsView({
             asset={artifactSet.icon}
             runId={run.id}
             displayVariant="framed"
+            onImportToCanvas={onImportToCanvas}
+            importingAssetId={importingAssetId}
           />
           <ArtifactCard
             title="WORDMARK"
@@ -292,11 +387,13 @@ export function LogoArtifactsView({
             asset={artifactSet.wordmark}
             runId={run.id}
             displayVariant="clean"
+            onImportToCanvas={onImportToCanvas}
+            importingAssetId={importingAssetId}
           />
         </section>
 
         <section className="mt-8 grid gap-0 overflow-hidden rounded-[30px] border border-[#e4e5e8] bg-[#fbfbfc] md:grid-cols-[1.15fr_0.85fr]">
-          <div className="border-b border-[#eaebef] px-8 py-10 md:border-b-0 md:border-r">
+          <div className="border-b border-[#eaebef] px-8 py-10 md:flex md:h-full md:flex-col md:border-b-0 md:border-r">
             <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-[#5f5be6]">Editorial Perspective</p>
             <h2 className="mt-6 text-[52px] leading-[0.98] text-[#21242a]" style={{ fontFamily: "Georgia, Times, serif" }}>
               The Rationale
@@ -310,6 +407,9 @@ export function LogoArtifactsView({
             <p className="mt-8 whitespace-pre-wrap text-[22px] leading-[1.42] text-[#252831]" style={{ fontFamily: "Georgia, Times, serif" }}>
               {metadata.logoRationale}
             </p>
+
+            <PosterEditorialPreview asset={artifactSet.poster} runId={run.id} onImportToCanvas={onImportToCanvas} importingAssetId={importingAssetId} />
+
             <p className="mt-6 whitespace-pre-wrap text-[18px] leading-[1.56] text-[#8a8e99]" style={{ fontFamily: "Georgia, Times, serif" }}>
               {metadata.posterRationale}
             </p>
@@ -366,25 +466,6 @@ export function LogoArtifactsView({
               </div>
               <p className="mt-4 whitespace-pre-wrap text-[13px] leading-6 text-[#707682]">{metadata.philosophy}</p>
             </div>
-          </div>
-        </section>
-
-        <section className="mt-8 overflow-hidden rounded-[30px] border border-[#e4e5e8] bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8b8e96]">Poster Artifact</p>
-            <p className="text-[12px] font-medium text-[#6f7382]">1 / 1</p>
-          </div>
-          <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-[20px] border border-[#1d2028]/10 bg-[#f3f4f6]">
-            {artifactSet.poster ? (
-              <Image
-                src={logoDesignApi.getAssetUrl(run.id, artifactSet.poster.id)}
-                alt="Poster"
-                fill
-                className="object-contain"
-              />
-            ) : (
-              <span className="text-sm text-[#8b9099]">Poster asset is not available for this run.</span>
-            )}
           </div>
         </section>
       </div>
