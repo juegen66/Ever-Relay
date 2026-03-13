@@ -27,7 +27,7 @@ type FolderNativeDragStartDetail = {
 }
 
 const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
-  { app: "vibecoding", title: "Build Complete", message: "Landing page draft generated and ready for review.", time: "now", iconColor: "#22c55e" },
+  { app: "Coding Apps", title: "Sandbox Ready", message: "Your latest coding workspace is ready to continue in the sidebar.", time: "now", iconColor: "#22c55e" },
   { app: "Canvas", title: "Project Synced", message: "Latest edits are saved to your active canvas project.", time: "2m ago", iconColor: "#ff7a00" },
   { app: "Finder", title: "Desktop Ready", message: "Your workspace files are available from Finder.", time: "5m ago", iconColor: "#1e90ff" },
 ]

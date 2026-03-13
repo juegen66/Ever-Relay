@@ -14,7 +14,7 @@ const APP_TITLES: Record<string, string> = {
   finder: "Finder",
   canvas: "Canvas",
   logo: "Logo Studio",
-  vibecoding: "vibecoding",
+  vibecoding: "Coding Apps",
   textedit: "TextEdit",
 }
 

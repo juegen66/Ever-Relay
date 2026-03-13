@@ -1,4 +1,5 @@
 import { z } from "zod"
+
 import { apiSuccessSchema } from "./common"
 
 export const workflowRunStageSchema = z.enum([
@@ -38,6 +39,7 @@ export const workflowRunSchema = z.object({
   id: z.string().uuid(),
   userId: z.string(),
   projectId: z.string().nullable(),
+  workflowType: z.literal("app-build"),
   stage: workflowRunStageSchema,
   status: workflowRunStatusSchema,
   prompt: z.string(),
@@ -71,4 +73,3 @@ export const buildsContracts = {
     responseSchema: getBuildStatusResponseSchema,
   },
 } as const
-

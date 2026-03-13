@@ -24,7 +24,7 @@ const tuzimodel = createOpenAI({
   baseURL: process.env.TUZI_BASE_URL ?? "https://api.tu-zi.com/v1",
 })
 
-const lzmodel4oMini = lzmodel.chat("glm-5")
+const lzmodel4oMini = lzmodel.chat("gpt-4o-mini")
 const tuzimodel4oMini = tuzimodel.chat("gpt-4o-mini")
 
 const model = {

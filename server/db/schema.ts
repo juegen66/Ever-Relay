@@ -165,7 +165,7 @@ export const WORKFLOW_RUN_STATUSES = [
 
 export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
-export const WORKFLOW_RUN_TYPES = ["app-build", "logo-design"] as const
+export const WORKFLOW_RUN_TYPES = ["app-build", "logo-design", "coding-agent"] as const
 export type WorkflowRunType = (typeof WORKFLOW_RUN_TYPES)[number]
 
 export const workflowRuns = pgTable(
@@ -249,5 +249,30 @@ export const userSandboxes = pgTable(
   },
   (table) => ({
     sandboxIdUniqueIdx: uniqueIndex("user_sandboxes_sandbox_id_unique_idx").on(table.sandboxId),
+  })
+)
+
+export const CODING_APP_STATUSES = ["active", "archived"] as const
+export type CodingAppStatus = (typeof CODING_APP_STATUSES)[number]
+
+export const codingApps = pgTable(
+  "coding_apps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    sandboxId: text("sandbox_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    status: text("status").$type<CodingAppStatus>().notNull().default("active"),
+    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userUpdatedIdx: index("coding_apps_user_updated_idx").on(table.userId, table.updatedAt),
+    userStatusIdx: index("coding_apps_user_status_idx").on(table.userId, table.status),
+    sandboxIdUniqueIdx: uniqueIndex("coding_apps_sandbox_id_unique_idx").on(table.sandboxId),
+    threadIdUniqueIdx: uniqueIndex("coding_apps_thread_id_unique_idx").on(table.threadId),
   })
 )

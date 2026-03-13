@@ -10,6 +10,8 @@ export function useStartNewCopilotChat() {
   const { reset, stopGeneration, isLoading } = useCopilotChat()
   const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
   const startNewCopilotThread = useDesktopAgentStore((state) => state.startNewCopilotThread)
+  const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
+  const clearActiveCodingApp = useDesktopAgentStore((state) => state.clearActiveCodingApp)
 
   return useCallback(() => {
     if (isLoading) {
@@ -17,7 +19,21 @@ export function useStartNewCopilotChat() {
     }
 
     reset()
+
+    if (activeCodingApp) {
+      clearActiveCodingApp({ freshMainThread: true })
+      return
+    }
+
     setCopilotAgentMode("main")
     startNewCopilotThread()
-  }, [isLoading, reset, setCopilotAgentMode, startNewCopilotThread, stopGeneration])
+  }, [
+    activeCodingApp,
+    clearActiveCodingApp,
+    isLoading,
+    reset,
+    setCopilotAgentMode,
+    startNewCopilotThread,
+    stopGeneration,
+  ])
 }

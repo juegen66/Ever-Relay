@@ -18,6 +18,7 @@ import type {
   PrepareHandoffBody,
 } from "@/shared/contracts/copilot-handoff"
 import {
+  CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
@@ -30,6 +31,7 @@ import {
 
 const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
   [DESKTOP_COPILOT_AGENT]: "main",
+  [CODING_COPILOT_AGENT]: "coding",
   [LOGO_COPILOT_AGENT]: "logo",
 }
 
@@ -370,7 +372,12 @@ export function useAgentHandoffTools() {
   const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   const sourceAgentId = useMemo(
-    () => (copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT),
+    () =>
+      copilotAgentMode === "logo"
+        ? LOGO_COPILOT_AGENT
+        : copilotAgentMode === "coding"
+          ? CODING_COPILOT_AGENT
+          : DESKTOP_COPILOT_AGENT,
     [copilotAgentMode]
   )
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, type ReactNode } from "react"
 
 import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
@@ -9,10 +9,13 @@ import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
+import { CodingPromptEventBridge } from "@/features/desktop-copilot/components/coding-prompt-event-bridge"
+import { CodingPromptInjector } from "@/features/desktop-copilot/components/coding-prompt-injector"
 import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
+  CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
   LOGO_COPILOT_AGENT,
@@ -27,9 +30,14 @@ function DesktopCopilotHeader() {
   const { labels } = useChatContext()
   const startNewChat = useStartNewCopilotChat()
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
+  const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
 
   const handleStartNewChat = () => {
-    const shouldStartNewChat = window.confirm("Start a new chat? This clears the current conversation view.")
+    const shouldStartNewChat = window.confirm(
+      activeCodingApp
+        ? `Leave ${activeCodingApp.name} and return to the main desktop copilot chat?`
+        : "Start a new chat? This clears the current conversation view."
+    )
     if (!shouldStartNewChat) {
       return
     }
@@ -39,10 +47,17 @@ function DesktopCopilotHeader() {
 
   return (
     <div className="copilotKitHeader">
-      <div>{labels.title}</div>
+      <div className="flex min-w-0 flex-col">
+        <div>{labels.title}</div>
+        {activeCodingApp && (
+          <div className="truncate text-[11px] font-medium uppercase tracking-[0.08em] text-emerald-700">
+            {activeCodingApp.name}
+          </div>
+        )}
+      </div>
       <div className="copilotKitHeaderControls">
         <Button size="sm" variant="outline" onClick={handleStartNewChat}>
-          New Chat
+          {activeCodingApp ? "Main Chat" : "New Chat"}
         </Button>
         <Button
           size="icon"
@@ -60,9 +75,17 @@ function DesktopCopilotHeader() {
 function SidebarOpenStateSync() {
   const { open, setOpen } = useChatContext()
   const desiredOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
+  const lastSyncedRef = useRef<boolean | null>(null)
 
   useEffect(() => {
-    if (open === desiredOpen) return
+    if (open === desiredOpen) {
+      lastSyncedRef.current = null
+      return
+    }
+    // Avoid loop: if we just synced to desiredOpen but open hasn't updated yet, skip
+    if (lastSyncedRef.current === desiredOpen) return
+
+    lastSyncedRef.current = desiredOpen
     setOpen(desiredOpen)
   }, [desiredOpen, open, setOpen])
 
@@ -98,7 +121,12 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
-  const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
+  const activeAgent =
+    copilotAgentMode === "logo"
+      ? LOGO_COPILOT_AGENT
+      : copilotAgentMode === "coding"
+        ? CODING_COPILOT_AGENT
+        : DESKTOP_COPILOT_AGENT
   const copilotSidebarOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
@@ -162,18 +190,28 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProviderProps) {
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
-  const activeAgent = copilotAgentMode === "logo" ? LOGO_COPILOT_AGENT : DESKTOP_COPILOT_AGENT
+  const activeAgent =
+    copilotAgentMode === "logo"
+      ? LOGO_COPILOT_AGENT
+      : copilotAgentMode === "coding"
+        ? CODING_COPILOT_AGENT
+        : DESKTOP_COPILOT_AGENT
 
   return (
-    <CopilotKit
-      runtimeUrl={DESKTOP_COPILOT_ENDPOINT}
-      credentials="include"
-      agent={activeAgent}
-      threadId={copilotThreadId}
-      showDevConsole={process.env.NODE_ENV !== "production"}
-    >
-      <BrandBriefInjector />
-      <DesktopCopilotBridge desktop={desktop}>{children}</DesktopCopilotBridge>
-    </CopilotKit>
+    <>
+      <CodingPromptEventBridge />
+      <CopilotKit
+        key={copilotThreadId}
+        runtimeUrl={DESKTOP_COPILOT_ENDPOINT}
+        credentials="include"
+        agent={activeAgent}
+        threadId={copilotThreadId}
+        showDevConsole={process.env.NODE_ENV !== "production"}
+      >
+        <BrandBriefInjector />
+        <CodingPromptInjector />
+        <DesktopCopilotBridge desktop={desktop}>{children}</DesktopCopilotBridge>
+      </CopilotKit>
+    </>
   )
 }

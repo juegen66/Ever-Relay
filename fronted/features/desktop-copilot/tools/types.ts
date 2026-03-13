@@ -100,6 +100,83 @@ export const TRIGGER_BUILD_PARAMS: ToolParameter[] = [
   { name: "projectId", type: "string", description: "Optional project id for scoped build context.", required: false },
 ]
 
+export const TRIGGER_CODING_WORKFLOW_PARAMS: ToolParameter[] = [
+  {
+    name: "report",
+    type: "object",
+    description:
+      "Structured coding report with keys: goal, currentState, clarifications, implementationPlan, constraints, acceptanceCriteria, sandboxTask.",
+    required: true,
+  },
+  {
+    name: "appId",
+    type: "string",
+    description: "Optional coding app id. If omitted, the currently active coding app is used.",
+    required: false,
+  },
+]
+
+export const OPEN_CODING_SIDEBAR_PARAMS: ToolParameter[] = [
+  {
+    name: "reason",
+    type: "string",
+    description: "Optional reason for opening the coding sidebar.",
+    required: false,
+  },
+]
+
+export const SET_CODING_PROJECT_STATUS_PARAMS: ToolParameter[] = [
+  {
+    name: "status",
+    type: "string",
+    description:
+      "One of: reviewing_request, needs_clarification, ready_for_confirmation.",
+    required: true,
+  },
+  {
+    name: "summary",
+    type: "string",
+    description: "Optional short summary shown in the Vibecoding workspace.",
+    required: false,
+  },
+  {
+    name: "appId",
+    type: "string",
+    description: "Optional coding app id. If omitted, the currently active coding app is used.",
+    required: false,
+  },
+]
+
+export const CREATE_CODING_APP_PARAMS: ToolParameter[] = [
+  {
+    name: "name",
+    type: "string",
+    description: "Name for the new coding app workspace.",
+    required: true,
+  },
+  {
+    name: "description",
+    type: "string",
+    description: "Optional short description for what this coding app is for.",
+    required: false,
+  },
+]
+
+export const ACTIVATE_CODING_APP_PARAMS: ToolParameter[] = [
+  {
+    name: "appId",
+    type: "string",
+    description: "Coding app id to activate in the sidebar.",
+    required: false,
+  },
+  {
+    name: "name",
+    type: "string",
+    description: "Coding app name to activate when appId is unknown.",
+    required: false,
+  },
+]
+
 export const CONFIRM_LOGO_BRIEF_PARAMS: ToolParameter[] = [
   { name: "fullPrompt", type: "string", description: "Final prompt for logo design workflow.", required: true },
   {

@@ -1,20 +1,27 @@
 import { Workspace } from "@mastra/core/workspace"
 import { E2BSandbox } from "@mastra/e2b"
+
+import { codingAppsService } from "@/server/modules/coding-apps/coding-apps.service"
 import { sandboxBindingsService } from "@/server/modules/sandbox/sandbox-bindings.service"
 
-export interface BuildWorkspaceScope {
+export interface WorkspaceScope {
   userId: string
   projectId?: string | null
   runId?: string
 }
 
-function toScopeLabel(scope: BuildWorkspaceScope) {
+export interface WorkspaceKindConfig {
+  idPrefix: string
+  name: string
+}
+
+function toScopeLabel(scope: WorkspaceScope) {
   const projectPart = scope.projectId ? `project:${scope.projectId}` : "project:none"
   const runPart = scope.runId ? `run:${scope.runId}` : "run:none"
   return `user:${scope.userId} ${projectPart} ${runPart}`
 }
 
-export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
+async function createScopedWorkspace(scope: WorkspaceScope, config: WorkspaceKindConfig) {
   if (!scope.userId) {
     throw new Error("Cannot create workspace without userId")
   }
@@ -23,8 +30,8 @@ export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
   const label = toScopeLabel(scope)
 
   return new Workspace({
-    id: `build-workspace-${scope.userId}-${scope.runId ?? "adhoc"}`,
-    name: `Build Workspace (${scope.userId})`,
+    id: `${config.idPrefix}-${scope.userId}-${scope.runId ?? "adhoc"}`,
+    name: `${config.name} (${scope.userId})`,
     sandbox: new E2BSandbox({
       id: binding.sandboxId,
       timeout: 300_000,
@@ -33,6 +40,47 @@ export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
         CLOUDOS_PROJECT_ID: scope.projectId ?? "",
         CLOUDOS_RUN_ID: scope.runId ?? "",
         CLOUDOS_SANDBOX_ID: binding.sandboxId,
+      },
+      instructions: ({ defaultInstructions }) => {
+        return `${defaultInstructions}\n\nWorkspace scope: ${label}`
+      },
+    }),
+  })
+}
+
+export type BuildWorkspaceScope = WorkspaceScope
+export interface CodingWorkspaceScope {
+  userId: string
+  appId: string
+  runId?: string
+}
+
+export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
+  return createScopedWorkspace(scope, {
+    idPrefix: "build-workspace",
+    name: "Build Workspace",
+  })
+}
+
+export async function createCodingWorkspace(scope: CodingWorkspaceScope) {
+  const app = await codingAppsService.getAppByIdForUser(scope.appId, scope.userId)
+  if (!app) {
+    throw new Error(`Coding app not found for workspace: ${scope.appId}`)
+  }
+
+  const label = `user:${scope.userId} app:${scope.appId} run:${scope.runId ?? "none"}`
+
+  return new Workspace({
+    id: `coding-workspace-${scope.userId}-${scope.appId}-${scope.runId ?? "adhoc"}`,
+    name: `Coding Workspace (${app.name})`,
+    sandbox: new E2BSandbox({
+      id: app.sandboxId,
+      timeout: 300_000,
+      env: {
+        CLOUDOS_USER_ID: scope.userId,
+        CLOUDOS_CODING_APP_ID: scope.appId,
+        CLOUDOS_RUN_ID: scope.runId ?? "",
+        CLOUDOS_SANDBOX_ID: app.sandboxId,
       },
       instructions: ({ defaultInstructions }) => {
         return `${defaultInstructions}\n\nWorkspace scope: ${label}`

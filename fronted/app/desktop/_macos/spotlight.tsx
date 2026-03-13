@@ -13,7 +13,7 @@ const ALL_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "logo", name: "Logo Studio", category: "Applications" },
-  { id: "vibecoding", name: "vibecoding", category: "Applications" },
+  { id: "vibecoding", name: "Coding Apps", category: "Applications" },
 ]
 
 export function Spotlight() {

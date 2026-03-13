@@ -29,7 +29,7 @@ const APP_NAMES: Record<AppId, string> = {
   finder: "Finder",
   canvas: "Canvas",
   logo: "Logo Studio",
-  vibecoding: "vibecoding",
+  vibecoding: "Coding Apps",
   textedit: "TextEdit",
 }
 

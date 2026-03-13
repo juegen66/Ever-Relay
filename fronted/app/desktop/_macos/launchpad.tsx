@@ -8,7 +8,7 @@ const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }
   { id: "finder", name: "Finder", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)", letter: "F" },
   { id: "canvas", name: "Canvas", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)", letter: "C" },
   { id: "logo", name: "Logo Studio", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", letter: "LG" },
-  { id: "vibecoding", name: "vibecoding", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "V" },
+  { id: "vibecoding", name: "Coding Apps", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "CA" },
 ]
 
 export function Launchpad() {

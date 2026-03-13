@@ -12,3 +12,8 @@ export {
 } from "./canvas-write"
 export { executeSandboxCommandTool } from "./sandbox/execute"
 export { renderSvgToPngTool } from "./render"
+export {
+  listProjectFilesTool,
+  readProjectFileTool,
+  searchProjectCodeTool,
+} from "./project-code"

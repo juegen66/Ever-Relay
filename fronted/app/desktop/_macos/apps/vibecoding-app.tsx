@@ -1,639 +1,521 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import {
   ArrowLeft,
-  ArrowUp,
-  ChevronRight,
-  Code2,
-  ExternalLink,
-  Eye,
-  FolderOpen,
+  ArrowUpRight,
+  Clock3,
+  FileCode2,
   Loader2,
-  RefreshCcw,
+  MessageSquare,
+  Plus,
   Sparkles,
-  Wand2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { useCodingProjectSubmit } from "@/features/desktop-copilot/hooks/use-coding-project-submit"
+import { codingRunsApi } from "@/lib/api/modules/coding-runs"
+import { useCodingAppsStore } from "@/lib/stores/coding-apps-store"
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+  useCodingWorkspaceStore,
+  type CodingWorkspaceEntry,
+  type CodingWorkspacePhase,
+} from "@/lib/stores/coding-workspace-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { cn } from "@/lib/utils"
 
-type AppView = "dashboard" | "workspace"
-type WorkspaceTab = "preview" | "code"
+type ViewMode = "home" | "workspace"
 
-interface Project {
-  id: string
-  name: string
-  updatedAt: string
-  description: string
-}
-
-interface ProjectFragment {
-  id: string
-  title: string
-  html: string
-  files: Record<string, string>
-}
-
-interface ChatMessage {
-  id: string
-  role: "assistant" | "user"
-  kind: "text" | "result"
-  content: string
-  fragmentId?: string
-  time: string
-}
-
-const PROJECTS: Project[] = [
+const PHASE_META: Record<
+  CodingWorkspacePhase,
   {
-    id: "p1",
-    name: "Landing Relaunch",
-    updatedAt: "2m ago",
-    description: "Conversion-first homepage with high-contrast hero and social proof.",
+    label: string
+    tone: string
+    chip: string
+  }
+> = {
+  reviewing_request: {
+    label: "Reviewing request",
+    tone: "Analyzing the first request and deciding whether follow-up questions are needed.",
+    chip: "bg-[#f4ede3] text-[#7a5b2f]",
   },
-  {
-    id: "p2",
-    name: "Creator Studio",
-    updatedAt: "19m ago",
-    description: "Workspace layout for prompt-driven page generation.",
+  needs_clarification: {
+    label: "Needs clarification",
+    tone: "Open the sidebar and answer the follow-up questions so the plan can be finalized.",
+    chip: "bg-[#fff1de] text-[#a35c11]",
   },
-  {
-    id: "p3",
-    name: "Product Intro",
-    updatedAt: "1h ago",
-    description: "Feature storytelling page with modular cards and CTA flow.",
+  ready_for_confirmation: {
+    label: "Ready for confirmation",
+    tone: "The final implementation report is ready in the sidebar and is waiting for explicit approval.",
+    chip: "bg-[#e7f3ea] text-[#236041]",
   },
-]
-
-function buildHtml(title: string, subtitle: string, accent: string) {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title}</title>
-    <style>
-      :root { --accent: ${accent}; --bg: #f6f7fb; --ink: #0f172a; --muted: #64748b; }
-      * { box-sizing: border-box; }
-      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
-      .wrap { max-width: 1040px; margin: 0 auto; padding: 40px 24px 80px; }
-      .hero { border-radius: 24px; padding: 36px; background: linear-gradient(135deg, #0f172a, #1e293b); color: white; }
-      .hero h1 { margin: 0 0 8px; font-size: 42px; }
-      .hero p { margin: 0; color: rgba(255,255,255,.82); font-size: 16px; line-height: 1.6; }
-      .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-      .chip { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.24); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
-      .grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
-      .card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 18px; }
-      .badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 15%, white); color: var(--accent); font-size: 11px; font-weight: 700; }
-      .cta { margin-top: 18px; border-radius: 16px; background: var(--accent); color: white; border: none; padding: 11px 16px; font-weight: 700; }
-      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .hero h1 { font-size: 32px; } }
-    </style>
-  </head>
-  <body>
-    <main class="wrap">
-      <section class="hero">
-        <h1>${title}</h1>
-        <p>${subtitle}</p>
-        <div class="chips">
-          <span class="chip">Fast Iteration</span>
-          <span class="chip">Prompt Driven</span>
-          <span class="chip">Production Look</span>
-        </div>
-      </section>
-      <section class="grid">
-        <article class="card">
-          <span class="badge">Section A</span>
-          <h3>Hero Narrative</h3>
-          <p>Focus on promise and user value in one concise screen.</p>
-        </article>
-        <article class="card">
-          <span class="badge">Section B</span>
-          <h3>Feature Story</h3>
-          <p>Three key capabilities with direct outcomes.</p>
-        </article>
-        <article class="card">
-          <span class="badge">Section C</span>
-          <h3>Action Block</h3>
-          <p>Single call to action with low-friction next step.</p>
-        </article>
-      </section>
-      <button class="cta">Continue Editing</button>
-    </main>
-  </body>
-</html>`
-}
-
-const PROJECT_CONTENT: Record<string, { fragments: ProjectFragment[]; seedMessages: ChatMessage[] }> = {
-  p1: {
-    fragments: [
-      {
-        id: "p1-f1",
-        title: "Hero-first layout",
-        html: buildHtml("Launch Faster", "A focused landing page structure inspired by Lovable workflows.", "#0ea5e9"),
-        files: {
-          "app/page.tsx": `export default function Page() {
-  return <main>Landing Relaunch</main>
-}`,
-          "app/globals.css": `.hero { border-radius: 24px; }`,
-        },
-      },
-    ],
-    seedMessages: [
-      {
-        id: "p1-m1",
-        role: "assistant",
-        kind: "text",
-        content: "I prepared a clean first pass with hero, feature cards, and CTA flow.",
-        time: "09:21",
-      },
-      {
-        id: "p1-m2",
-        role: "assistant",
-        kind: "result",
-        content: "Open this version",
-        fragmentId: "p1-f1",
-        time: "09:21",
-      },
-    ],
+  workflow_running: {
+    label: "Workflow running",
+    tone: "The confirmed report is executing in the project sandbox.",
+    chip: "bg-[#e8eef9] text-[#315c98]",
   },
-  p2: {
-    fragments: [
-      {
-        id: "p2-f1",
-        title: "Workspace shell",
-        html: buildHtml("Build With Prompts", "Left prompt workflow + right preview shell for rapid iteration.", "#22c55e"),
-        files: {
-          "components/workspace.tsx": `export function Workspace() {
-  return <div>Workspace Shell</div>
-}`,
-          "styles/workspace.css": `.workspace { display: grid; }`,
-        },
-      },
-    ],
-    seedMessages: [
-      {
-        id: "p2-m1",
-        role: "assistant",
-        kind: "text",
-        content: "I created the base workspace look. We can iterate section by section.",
-        time: "08:58",
-      },
-      {
-        id: "p2-m2",
-        role: "assistant",
-        kind: "result",
-        content: "Open generated workspace",
-        fragmentId: "p2-f1",
-        time: "08:58",
-      },
-    ],
+  workflow_completed: {
+    label: "Workflow completed",
+    tone: "The latest workflow finished. Open the sidebar to review the result summary.",
+    chip: "bg-[#edf5e6] text-[#3f6b2a]",
   },
-  p3: {
-    fragments: [
-      {
-        id: "p3-f1",
-        title: "Product intro page",
-        html: buildHtml("Tell The Product Story", "Benefit-led structure with sections that map directly to user intent.", "#8b5cf6"),
-        files: {
-          "app/product/page.tsx": `export default function ProductIntro() {
-  return <section>Product Intro</section>
-}`,
-          "app/product/sections.ts": `export const sections = ["hero", "features", "cta"]`,
-        },
-      },
-    ],
-    seedMessages: [
-      {
-        id: "p3-m1",
-        role: "assistant",
-        kind: "text",
-        content: "Here is a product intro baseline with a stronger narrative arc.",
-        time: "07:42",
-      },
-      {
-        id: "p3-m2",
-        role: "assistant",
-        kind: "result",
-        content: "Open intro preview",
-        fragmentId: "p3-f1",
-        time: "07:42",
-      },
-    ],
+  workflow_failed: {
+    label: "Workflow failed",
+    tone: "The latest workflow failed. Open the sidebar to inspect the report and retry.",
+    chip: "bg-[#fae8e3] text-[#9a3d2c]",
   },
 }
 
-const PROMPT_SUGGESTIONS = [
-  "Make hero section bolder and more premium",
-  "Use a cleaner feature grid with larger cards",
-  "Add stronger CTA wording for conversion",
-  "Improve spacing for mobile screens",
-]
+function formatLastOpenedAt(value: string | null) {
+  if (!value) {
+    return "Never opened"
+  }
 
-function nowLabel() {
-  const now = new Date()
-  return now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+  const timestamp = new Date(value).getTime()
+  if (!Number.isFinite(timestamp)) {
+    return "Unknown"
+  }
+
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000))
+  if (diffMinutes < 1) {
+    return "Opened just now"
+  }
+  if (diffMinutes < 60) {
+    return `Opened ${diffMinutes}m ago`
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) {
+    return `Opened ${diffHours}h ago`
+  }
+
+  const diffDays = Math.floor(diffHours / 24)
+  return `Opened ${diffDays}d ago`
+}
+
+function summarizePrompt(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim()
+  if (!normalized) {
+    return fallback
+  }
+
+  return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized
+}
+
+function formatRunStage(stage: string | null) {
+  if (!stage) {
+    return "No workflow run yet"
+  }
+
+  return stage
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
+function getPhaseMeta(entry: CodingWorkspaceEntry | null) {
+  if (!entry) {
+    return {
+      label: "Project ready",
+      tone: "Open the sidebar to continue shaping or executing this project.",
+      chip: "bg-white/70 text-[#5e564b]",
+    }
+  }
+
+  return PHASE_META[entry.phase]
+}
+
+function toErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  return "Unknown error"
 }
 
 export function VibecodingApp() {
-  const [view, setView] = useState<AppView>("dashboard")
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
-  const [fragments, setFragments] = useState<ProjectFragment[]>([])
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [activeFragmentId, setActiveFragmentId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("preview")
+  const apps = useCodingAppsStore((state) => state.apps)
+  const loading = useCodingAppsStore((state) => state.loading)
+  const error = useCodingAppsStore((state) => state.error)
+  const loadApps = useCodingAppsStore((state) => state.loadApps)
+  const activateApp = useCodingAppsStore((state) => state.activateApp)
+
+  const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
+  const workspaceEntries = useCodingWorkspaceStore((state) => state.entries)
+  const syncRunState = useCodingWorkspaceStore((state) => state.syncRunState)
+  const { submitProject } = useCodingProjectSubmit()
+
+  const [viewMode, setViewMode] = useState<ViewMode>(activeCodingApp ? "workspace" : "home")
   const [prompt, setPrompt] = useState("")
-  const [isThinking, setIsThinking] = useState(false)
-  const [previewKey, setPreviewKey] = useState(0)
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
-  const replyTimerRef = useRef<number | null>(null)
-  const messageBottomRef = useRef<HTMLDivElement>(null)
-
-  const activeProject = useMemo(() => {
-    return PROJECTS.find((project) => project.id === activeProjectId) ?? null
-  }, [activeProjectId])
-
-  const activeFragment = useMemo(() => {
-    return fragments.find((fragment) => fragment.id === activeFragmentId) ?? null
-  }, [fragments, activeFragmentId])
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    messageBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-  }, [messages, isThinking])
+    void loadApps()
+  }, [loadApps])
 
   useEffect(() => {
-    const filePaths = activeFragment ? Object.keys(activeFragment.files) : []
-    queueMicrotask(() => setSelectedFilePath(filePaths[0] ?? null))
-  }, [activeFragmentId, activeFragment])
+    if (!activeCodingApp) {
+      setViewMode("home")
+    }
+  }, [activeCodingApp])
+
+  const activeWorkspaceEntry = activeCodingApp ? workspaceEntries[activeCodingApp.id] ?? null : null
+  const activePhaseMeta = getPhaseMeta(activeWorkspaceEntry)
 
   useEffect(() => {
+    if (
+      !activeCodingApp ||
+      !activeWorkspaceEntry?.runId ||
+      activeWorkspaceEntry.phase !== "workflow_running"
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    const syncActiveRun = async () => {
+      try {
+        const run = await codingRunsApi.getRun(activeWorkspaceEntry.runId as string)
+        if (cancelled) {
+          return
+        }
+
+        syncRunState({
+          appId: activeCodingApp.id,
+          runId: run.id,
+          stage: run.stage,
+          status: run.status,
+        })
+      } catch {}
+    }
+
+    void syncActiveRun()
+    const interval = window.setInterval(() => {
+      void syncActiveRun()
+    }, 4000)
+
     return () => {
-      if (replyTimerRef.current !== null) {
-        window.clearTimeout(replyTimerRef.current)
-      }
+      cancelled = true
+      window.clearInterval(interval)
     }
-  }, [])
+  }, [
+    activeCodingApp,
+    activeWorkspaceEntry?.phase,
+    activeWorkspaceEntry?.runId,
+    syncRunState,
+  ])
 
-  const openProject = (projectId: string) => {
-    const content = PROJECT_CONTENT[projectId]
-    if (!content) return
+  const projects = useMemo(
+    () =>
+      apps.map((app) => ({
+        ...app,
+        workspace: workspaceEntries[app.id] ?? null,
+      })),
+    [apps, workspaceEntries]
+  )
 
-    setActiveProjectId(projectId)
-    setFragments(content.fragments)
-    setMessages(content.seedMessages)
-    setActiveFragmentId(content.fragments[0]?.id ?? null)
-    setActiveTab("preview")
-    setPrompt("")
-    setIsThinking(false)
-    setPreviewKey((value) => value + 1)
-    setView("workspace")
-  }
-
-  const handleSendPrompt = () => {
-    const userInput = prompt.trim()
-    if (!userInput || isThinking) return
-
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      kind: "text",
-      content: userInput,
-      time: nowLabel(),
+  const handleSubmit = async () => {
+    const nextPrompt = prompt.trim()
+    if (!nextPrompt || submitting) {
+      return
     }
 
-    setMessages((prev) => [...prev, userMessage])
-    setPrompt("")
-    setIsThinking(true)
+    setSubmitting(true)
+    setSubmitError(null)
 
-    replyTimerRef.current = window.setTimeout(() => {
-      const fragmentId = `f-${Date.now()}`
-      const fragmentTitle = `${userInput.split(" ").slice(0, 4).join(" ")}`
-      const accentPalette = ["#0ea5e9", "#8b5cf6", "#22c55e", "#f97316"]
-      const accent = accentPalette[fragments.length % accentPalette.length]
-
-      const generatedFragment: ProjectFragment = {
-        id: fragmentId,
-        title: fragmentTitle || "Generated iteration",
-        html: buildHtml("Generated Iteration", userInput, accent),
-        files: {
-          "app/page.tsx": `export default function Page() {
-  return <main>${userInput.replace(/</g, "&lt;")}</main>
-}`,
-          "styles/section.css": `.section { padding: 24px; border-radius: 16px; }`,
-        },
-      }
-
-      const assistantText: ChatMessage = {
-        id: `assistant-text-${Date.now()}`,
-        role: "assistant",
-        kind: "text",
-        content: "Updated. I generated a new variation using your prompt.",
-        time: nowLabel(),
-      }
-      const assistantResult: ChatMessage = {
-        id: `assistant-result-${Date.now() + 1}`,
-        role: "assistant",
-        kind: "result",
-        content: "Open generated version",
-        fragmentId,
-        time: nowLabel(),
-      }
-
-      setFragments((prev) => [...prev, generatedFragment])
-      setMessages((prev) => [...prev, assistantText, assistantResult])
-      setActiveFragmentId(fragmentId)
-      setActiveTab("preview")
-      setPreviewKey((value) => value + 1)
-      setIsThinking(false)
-      replyTimerRef.current = null
-    }, 900)
+    try {
+      await submitProject(nextPrompt)
+      setPrompt("")
+      setViewMode("workspace")
+    } catch (error) {
+      setSubmitError(toErrorMessage(error))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const activeCode = useMemo(() => {
-    if (!activeFragment || !selectedFilePath) return ""
-    return activeFragment.files[selectedFilePath] ?? ""
-  }, [activeFragment, selectedFilePath])
-
-  if (view === "dashboard") {
-    return (
-      <div className="h-full overflow-auto bg-[#f5f7fb] text-slate-900">
-        <div className="mx-auto max-w-6xl p-5">
-          <header className="rounded-2xl border border-black/5 bg-white p-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 text-sm font-bold text-white">
-                V
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">vibecoding</h2>
-                <p className="text-sm text-slate-500">Lovable-style prompt to UI workspace</p>
-              </div>
-              <div className="ml-auto">
-                <Button onClick={() => openProject(PROJECTS[0].id)}>
-                  <Wand2 />
-                  Open Workspace
-                </Button>
-              </div>
-            </div>
-          </header>
-
-          <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-            {PROJECTS.map((project) => (
-              <article key={project.id} className="rounded-xl border border-black/5 bg-white p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">{project.name}</h3>
-                    <p className="mt-1 text-xs text-slate-500">{project.description}</p>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                    {project.updatedAt}
-                  </span>
-                </div>
-                <Button className="mt-4 w-full" variant="secondary" onClick={() => openProject(project.id)}>
-                  <FolderOpen />
-                  Open Project
-                </Button>
-              </article>
-            ))}
-          </section>
-        </div>
-      </div>
-    )
+  const handleActivateProject = async (appId: string) => {
+    try {
+      await activateApp(appId)
+      setViewMode("workspace")
+      setSubmitError(null)
+    } catch (error) {
+      setSubmitError(toErrorMessage(error))
+    }
   }
+
+  const activePrompt = summarizePrompt(
+    activeWorkspaceEntry?.lastPrompt ?? activeCodingApp?.description,
+    "No original request saved for this project yet."
+  )
 
   return (
-    <div className="h-full bg-[#f8f9fb]">
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={35} minSize={22} className="min-h-0 border-r border-black/5 bg-white">
-          <div className="flex h-full min-h-0 flex-col">
-            <header className="flex items-center gap-2 border-b border-black/5 px-3 py-2">
-              <Button size="sm" variant="ghost" onClick={() => setView("dashboard")}>
-                <ArrowLeft />
-              </Button>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{activeProject?.name ?? "Project"}</p>
-                <p className="truncate text-xs text-slate-500">Prompt-driven builder</p>
+    <div className="h-full overflow-auto bg-[#efe7dc] text-[#1d1a17]">
+      <div className="relative min-h-full overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(248,246,241,0.95)_0%,rgba(223,216,248,0.72)_24%,rgba(230,173,154,0.76)_68%,rgba(196,106,79,0.82)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-[-12%] top-[-18%] h-[54%] rounded-full bg-[radial-gradient(circle,rgba(176,199,255,0.7)_0%,rgba(176,199,255,0)_70%)] blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-18%] right-[-8%] h-[48%] w-[34%] rounded-full bg-[radial-gradient(circle,rgba(255,232,189,0.5)_0%,rgba(255,232,189,0)_70%)] blur-3xl" />
+
+        <div className="relative z-10 mx-auto flex min-h-full max-w-7xl flex-col px-5 pb-5 pt-5">
+          {viewMode === "workspace" && activeCodingApp ? (
+            <section className="flex min-h-full flex-1 flex-col">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  variant="ghost"
+                  className="h-10 rounded-full border border-white/45 bg-white/35 px-4 text-[#4b4338] hover:bg-white/55"
+                  onClick={() => setViewMode("home")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  All projects
+                </Button>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/45 bg-white/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6d6357]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Active project
+                </div>
               </div>
-            </header>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
-              <div className="space-y-4">
-                {messages.map((message) => {
-                  if (message.role === "user") {
-                    return (
-                      <div key={message.id} className="flex justify-end">
-                        <div className="max-w-[85%] rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-800">
-                          {message.content}
-                        </div>
-                      </div>
-                    )
-                  }
+              <div className="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[minmax(0,1.1fr)_380px]">
+                <div className="max-w-3xl">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-[#6f6559]">
+                    Vibecoding Workspace
+                  </p>
+                  <h1 className="mt-4 font-serif text-[44px] leading-[0.98] tracking-[-0.04em] text-[#1e1812] sm:text-[60px]">
+                    {activeCodingApp.name}
+                  </h1>
+                  <p className="mt-5 max-w-2xl text-[16px] leading-8 text-[#52483e]">
+                    {activePrompt}
+                  </p>
 
-                  const linkedFragment = message.fragmentId
-                    ? fragments.find((fragment) => fragment.id === message.fragmentId) ?? null
-                    : null
-
-                  return (
-                    <div key={message.id} className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-900 text-[10px] font-bold text-white">
-                          V
-                        </div>
-                        <span className="font-medium text-slate-700">vibecoding</span>
-                        <span>{message.time}</span>
-                      </div>
-                      <p className="pl-7 text-sm text-slate-700">{message.content}</p>
-                      {message.kind === "result" && linkedFragment && (
-                        <button
-                          onClick={() => {
-                            setActiveFragmentId(linkedFragment.id)
-                            setActiveTab("preview")
-                            setPreviewKey((value) => value + 1)
-                          }}
-                          className={cn(
-                            "ml-7 flex w-[calc(100%-1.75rem)] items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
-                            activeFragmentId === linkedFragment.id
-                              ? "border-sky-500 bg-sky-50 text-sky-700"
-                              : "border-black/10 bg-slate-50 hover:bg-slate-100",
-                          )}
-                        >
-                          <Code2 className="h-4 w-4" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{linkedFragment.title}</p>
-                            <p className="text-xs opacity-80">Preview</p>
-                          </div>
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      )}
+                  <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-[#61584d]">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/45 px-3 py-1.5">
+                      <Clock3 className="h-4 w-4" />
+                      {formatLastOpenedAt(activeCodingApp.lastOpenedAt)}
                     </div>
-                  )
-                })}
-
-                {isThinking && (
-                  <div className="flex items-center gap-2 pl-7 text-sm text-slate-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Thinking and generating...
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/45 px-3 py-1.5">
+                      <FileCode2 className="h-4 w-4" />
+                      {formatRunStage(activeWorkspaceEntry?.runStage ?? null)}
+                    </div>
                   </div>
-                )}
+                </div>
 
-                <div ref={messageBottomRef} />
-              </div>
-            </div>
+                <div className="rounded-[30px] border border-white/55 bg-[rgba(249,244,236,0.84)] p-6 shadow-[0_24px_70px_rgba(61,44,28,0.12)] backdrop-blur-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#7a6f62]">
+                        Current phase
+                      </p>
+                      <h2 className="mt-3 text-[30px] font-semibold leading-[1.05] text-[#201a15]">
+                        {activePhaseMeta.label}
+                      </h2>
+                    </div>
+                    <span
+                      className={cn(
+                        "rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]",
+                        activePhaseMeta.chip
+                      )}
+                    >
+                      {activePhaseMeta.label}
+                    </span>
+                  </div>
 
-            <div className="border-t border-black/5 p-3">
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {PROMPT_SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setPrompt(suggestion)}
-                    className="rounded-full border border-black/10 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600 transition-colors hover:bg-slate-100"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
+                  <p className="mt-4 text-sm leading-7 text-[#5e5447]">
+                    {activeWorkspaceEntry?.summary ?? activePhaseMeta.tone}
+                  </p>
 
-              <div className="rounded-xl border border-black/10 bg-white p-2">
-                <textarea
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                      event.preventDefault()
-                      handleSendPrompt()
-                    }
-                  }}
-                  placeholder="Describe what you want to build..."
-                  rows={2}
-                  className="w-full resize-none border-none bg-transparent p-1 text-sm outline-none"
-                />
-                <div className="flex items-center justify-between px-1 pt-1">
-                  <p className="text-[10px] text-slate-400">Cmd/Ctrl + Enter to submit</p>
+                  <div className="mt-6 space-y-3">
+                    <div className="rounded-[22px] border border-white/70 bg-white/65 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a7c6b]">
+                        Original request
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[#4f463c]">
+                        {summarizePrompt(activeCodingApp.description, "No request captured.")}
+                      </p>
+                    </div>
+
+                    <div className="rounded-[22px] border border-white/70 bg-white/65 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8a7c6b]">
+                        Latest workflow
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[#4f463c]">
+                        Stage: {formatRunStage(activeWorkspaceEntry?.runStage ?? null)}
+                        <br />
+                        Status: {activeWorkspaceEntry?.runStatus ?? "No run yet"}
+                      </p>
+                    </div>
+                  </div>
+
                   <Button
-                    size="icon"
-                    className="h-8 w-8 rounded-full"
-                    disabled={isThinking || !prompt.trim()}
-                    onClick={handleSendPrompt}
+                    className="mt-6 h-12 w-full rounded-2xl bg-[#1f1a14] text-white hover:bg-[#332920]"
+                    onClick={() => setCopilotSidebarOpen(true)}
                   >
-                    {isThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                    <MessageSquare className="h-4 w-4" />
+                    Open sidebar
                   </Button>
                 </div>
               </div>
-            </div>
-          </div>
-        </ResizablePanel>
+            </section>
+          ) : (
+            <>
+              <section className="flex min-h-[58vh] flex-col items-center justify-center px-2 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/40 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6c645b]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Vibecoding
+                </div>
+                <h1 className="mt-7 max-w-4xl font-serif text-[44px] leading-[0.96] tracking-[-0.05em] text-[#1b1612] sm:text-[64px]">
+                  Start with one sentence.
+                </h1>
+                <p className="mt-4 max-w-2xl text-[16px] leading-8 text-[#564d43]">
+                  Describe what you want to build. We&apos;ll create a new project immediately,
+                  then continue through the right sidebar only when clarification or confirmation
+                  is needed.
+                </p>
 
-        <ResizableHandle withHandle />
-
-        <ResizablePanel defaultSize={65} minSize={45} className="min-h-0">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as WorkspaceTab)}
-            className="flex h-full min-h-0 flex-col gap-0"
-          >
-            <div className="flex items-center gap-2 border-b border-black/5 bg-white px-2 py-2">
-              <TabsList className="h-8 p-0">
-                <TabsTrigger value="preview" className="h-8 gap-1 rounded-md">
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </TabsTrigger>
-                <TabsTrigger value="code" className="h-8 gap-1 rounded-md">
-                  <Code2 className="h-4 w-4" />
-                  Code
-                </TabsTrigger>
-              </TabsList>
-              <div className="ml-auto flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setPreviewKey((value) => value + 1)}>
-                  <RefreshCcw />
-                </Button>
-                <Button size="sm" onClick={() => setActiveTab("preview")}>
-                  Continue editing
-                </Button>
-              </div>
-            </div>
-
-            <TabsContent value="preview" className="mt-0 flex-1 min-h-0">
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="flex items-center gap-2 border-b border-black/5 bg-white px-3 py-2 text-xs text-slate-600">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="font-medium">{activeFragment?.title ?? "No fragment selected"}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-auto h-7 px-2 text-xs"
-                    disabled={!activeFragment}
-                    onClick={() => {
-                      if (!activeFragment) return
-                      const blobUrl = URL.createObjectURL(new Blob([activeFragment.html], { type: "text/html" }))
-                      window.open(blobUrl, "_blank")
-                      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+                <div className="mt-8 w-full max-w-3xl rounded-[30px] border border-white/55 bg-[rgba(248,243,235,0.88)] p-4 shadow-[0_26px_80px_rgba(71,48,30,0.14)] backdrop-blur-xl">
+                  <Textarea
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    placeholder="Ask Vibecoding to build a responsive marketing site, a docs app, an AI dashboard..."
+                    className="min-h-[132px] resize-none border-0 bg-transparent px-3 py-3 text-[17px] leading-8 text-[#231c16] shadow-none placeholder:text-[#827768] focus-visible:ring-0"
+                    onKeyDown={(event) => {
+                      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                        event.preventDefault()
+                        void handleSubmit()
+                      }
                     }}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open
-                  </Button>
-                </div>
+                  />
 
-                <div className="flex-1 min-h-0 bg-white">
-                  {activeFragment ? (
-                    <iframe
-                      key={`${activeFragment.id}-${previewKey}`}
-                      className="h-full w-full"
-                      sandbox="allow-forms allow-scripts allow-same-origin"
-                      srcDoc={activeFragment.html}
-                      title={activeFragment.title}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                      Select a generated result to preview.
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#d9cfc2] px-2 pt-4">
+                    <div className="inline-flex items-center gap-2 text-sm text-[#6c645b]">
+                      <Plus className="h-4 w-4" />
+                      New project
+                    </div>
+                    <Button
+                      className="h-11 rounded-full bg-[#1f1a14] px-5 text-white hover:bg-[#342920]"
+                      disabled={submitting || !prompt.trim()}
+                      onClick={() => void handleSubmit()}
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Creating project
+                        </>
+                      ) : (
+                        <>
+                          Create project
+                          <ArrowUpRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {submitError && (
+                    <div className="mt-3 rounded-2xl border border-[#e0b0a5] bg-[#fff0ec] px-4 py-3 text-left text-sm text-[#9a4437]">
+                      {submitError}
                     </div>
                   )}
                 </div>
-              </div>
-            </TabsContent>
+              </section>
 
-            <TabsContent value="code" className="mt-0 flex-1 min-h-0">
-              <div className="grid h-full min-h-0 grid-cols-[220px_minmax(0,1fr)]">
-                <aside className="overflow-y-auto border-r border-black/5 bg-white p-2">
-                  <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Files</p>
-                  <div className="space-y-1">
-                    {activeFragment && Object.keys(activeFragment.files).map((filePath) => (
-                      <button
-                        key={filePath}
-                        onClick={() => setSelectedFilePath(filePath)}
-                        className={cn(
-                          "w-full truncate rounded-md px-2 py-1.5 text-left text-xs transition-colors",
-                          selectedFilePath === filePath
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-50 text-slate-700 hover:bg-slate-100",
-                        )}
-                      >
-                        {filePath}
-                      </button>
-                    ))}
+              <section className="mt-auto rounded-[32px] border border-white/55 bg-[rgba(248,243,235,0.9)] p-5 shadow-[0_24px_70px_rgba(61,44,28,0.12)] backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#847664]">
+                      My projects
+                    </p>
+                    <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-[#201a15]">
+                      Pick up where you left off.
+                    </h2>
                   </div>
-                </aside>
+                  <div className="rounded-full border border-white/55 bg-white/55 px-3 py-1 text-sm text-[#61584d]">
+                    {loading ? "Refreshing..." : `${projects.length} projects`}
+                  </div>
+                </div>
 
-                <section className="min-h-0 overflow-auto bg-[#0f172a] p-4">
-                  <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-slate-100">
-                    {activeCode || "// No file selected"}
-                  </pre>
-                </section>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+                {error && (
+                  <div className="mt-4 rounded-2xl border border-[#e0b0a5] bg-[#fff0ec] px-4 py-3 text-sm text-[#9a4437]">
+                    {error}
+                  </div>
+                )}
+
+                {loading && !projects.length ? (
+                  <div className="mt-5 flex items-center justify-center rounded-[26px] border border-dashed border-[#d3c8bb] bg-white/45 px-6 py-12 text-[#665c50]">
+                    <div className="inline-flex items-center gap-3 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading projects
+                    </div>
+                  </div>
+                ) : !projects.length ? (
+                  <div className="mt-5 rounded-[26px] border border-dashed border-[#d3c8bb] bg-white/45 px-6 py-12 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-[#1f1a14] text-white">
+                      <FileCode2 className="h-6 w-6" />
+                    </div>
+                    <p className="mt-4 text-lg font-semibold text-[#231c16]">
+                      No projects yet
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-[#665c50]">
+                      Start with one request above. A fresh coding project will be created
+                      immediately and the sidebar will take over only when needed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                    {projects.map((app) => {
+                      const phaseMeta = getPhaseMeta(app.workspace)
+                      const isActive = activeCodingApp?.id === app.id
+
+                      return (
+                        <button
+                          key={app.id}
+                          type="button"
+                          onClick={() => void handleActivateProject(app.id)}
+                          className={cn(
+                            "rounded-[26px] border p-5 text-left transition-all",
+                            isActive
+                              ? "border-[#d4b194] bg-[#fff7f1] shadow-[0_18px_44px_rgba(109,74,44,0.12)]"
+                              : "border-white/65 bg-white/60 hover:border-[#dbc0ab] hover:bg-[#fff8f1]"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-lg font-semibold text-[#201a15]">{app.name}</p>
+                              <p className="mt-2 text-sm leading-7 text-[#5d5448]">
+                                {summarizePrompt(
+                                  app.workspace?.lastPrompt ?? app.description,
+                                  "Open this project to continue in the sidebar."
+                                )}
+                              </p>
+                            </div>
+                            <span
+                              className={cn(
+                                "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                                phaseMeta.chip
+                              )}
+                            >
+                              {phaseMeta.label}
+                            </span>
+                          </div>
+
+                          <div className="mt-5 flex items-center justify-between text-sm text-[#6d6357]">
+                            <span>{formatLastOpenedAt(app.lastOpenedAt)}</span>
+                            <span className="inline-flex items-center gap-1 font-medium text-[#2d261f]">
+                              Open
+                              <ArrowUpRight className="h-4 w-4" />
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

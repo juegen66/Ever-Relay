@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray } from "drizzle-orm"
+
 import { db } from "@/server/core/database"
 import { workflowRuns } from "@/server/db/schema"
 
@@ -33,6 +34,7 @@ export class BuildsService {
         userId: input.userId,
         prompt: input.prompt,
         projectId: input.projectId ?? null,
+        workflowType: "app-build",
         stage: "queued",
         status: "running",
       })
@@ -49,13 +51,20 @@ export class BuildsService {
 
   async getRunByIdForUser(id: string, userId: string) {
     return db.query.workflowRuns.findFirst({
-      where: and(eq(workflowRuns.id, id), eq(workflowRuns.userId, userId)),
+      where: and(
+        eq(workflowRuns.id, id),
+        eq(workflowRuns.userId, userId),
+        eq(workflowRuns.workflowType, "app-build")
+      ),
     })
   }
 
   async listRecentRunsByUser(userId: string, limit = 20) {
     return db.query.workflowRuns.findMany({
-      where: eq(workflowRuns.userId, userId),
+      where: and(
+        eq(workflowRuns.userId, userId),
+        eq(workflowRuns.workflowType, "app-build")
+      ),
       orderBy: [desc(workflowRuns.createdAt)],
       limit,
     })
@@ -65,6 +74,7 @@ export class BuildsService {
     const runs = await db.query.workflowRuns.findMany({
       where: and(
         eq(workflowRuns.userId, userId),
+        eq(workflowRuns.workflowType, "app-build"),
         inArray(workflowRuns.status, ACTIVE_STATUSES)
       ),
       columns: {

@@ -1,8 +1,9 @@
 import { Agent } from "@mastra/core/agent"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
-import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
+import model from "@/server/mastra/model"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
+import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
 import { DESKTOP_COPILOT_AGENT } from "@/shared/copilot/constants"
 
 export const desktopAgent = new Agent({
@@ -13,6 +14,9 @@ export const desktopAgent = new Agent({
     "Use available tools whenever possible instead of guessing.",
     "For cross-agent delegation, call handoff_to_agent directly.",
     "Cross-agent handoff must keep the same thread id. Context digest is generated on backend and old context is logically discarded before transfer.",
+    "For codebase implementation, coding workflow, or repo-inspection tasks, first check the active coding app context.",
+    "If there is no active coding app, first guide the user to the vibecoding app so they can create or activate one there. If the user explicitly asks you to do it directly, you may use create_coding_app or activate_coding_app.",
+    "Only once a coding app is active should you hand off to coding_agent, because coding work must stay inside that app's thread and sandbox.",
     "Do not call start_new_chat_thread unless the user explicitly asks for a brand-new chat context.",
     "For read-only questions, prefer list_desktop_items and list_canvas_projects.",
     "For desktop write operations, create can run directly via frontend tool, while rename/delete must use frontend human-in-the-loop tools and wait for approval.",

@@ -2,9 +2,14 @@
 
 import { create } from "zustand"
 
+import type { CodingApp } from "@/shared/contracts/coding-apps"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
 
-export type CopilotAgentMode = "main" | "logo"
+export type CopilotAgentMode = "main" | "logo" | "coding"
+export type ActiveCodingApp = Pick<
+  CodingApp,
+  "id" | "name" | "description" | "threadId" | "sandboxId" | "status" | "lastOpenedAt"
+>
 
 export function createCopilotThreadId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -18,10 +23,14 @@ export function createCopilotThreadId() {
   })
 }
 
+const initialMainCopilotThreadId = createCopilotThreadId()
+
 interface DesktopAgentStore {
   copilotSidebarOpen: boolean
   copilotAgentMode: CopilotAgentMode
+  mainCopilotThreadId: string
   copilotThreadId: string
+  activeCodingApp: ActiveCodingApp | null
   silentAgentId: string | null
   silentThreadId: string
   silentRunning: boolean
@@ -30,6 +39,9 @@ interface DesktopAgentStore {
   setCopilotSidebarOpen: (open: boolean) => void
   setCopilotAgentMode: (mode: CopilotAgentMode) => void
   startNewCopilotThread: () => void
+  setActiveCodingApp: (app: ActiveCodingApp) => void
+  syncActiveCodingApp: (app: ActiveCodingApp) => void
+  clearActiveCodingApp: (options?: { freshMainThread?: boolean }) => void
   queueSilentPredictionRun: () => string
   finishSilentPredictionRun: () => void
   resetSilentPredictionSession: () => void
@@ -38,7 +50,9 @@ interface DesktopAgentStore {
 export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
   copilotSidebarOpen: false,
   copilotAgentMode: "main",
-  copilotThreadId: createCopilotThreadId(),
+  mainCopilotThreadId: initialMainCopilotThreadId,
+  copilotThreadId: initialMainCopilotThreadId,
+  activeCodingApp: null,
   silentAgentId: null,
   silentThreadId: createCopilotThreadId(),
   silentRunning: false,
@@ -46,7 +60,49 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
   silentRunRequestId: 0,
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
   setCopilotAgentMode: (mode) => set({ copilotAgentMode: mode }),
-  startNewCopilotThread: () => set({ copilotThreadId: createCopilotThreadId() }),
+  startNewCopilotThread: () =>
+    set((state) => {
+      const nextMainThreadId = createCopilotThreadId()
+
+      if (state.activeCodingApp) {
+        return {
+          mainCopilotThreadId: nextMainThreadId,
+        }
+      }
+
+      return {
+        mainCopilotThreadId: nextMainThreadId,
+        copilotThreadId: nextMainThreadId,
+      }
+    }),
+  setActiveCodingApp: (app) =>
+    set({
+      activeCodingApp: app,
+      copilotAgentMode: "coding",
+      copilotThreadId: app.threadId,
+    }),
+  syncActiveCodingApp: (app) =>
+    set((state) =>
+      state.activeCodingApp?.id === app.id
+        ? {
+            activeCodingApp: app,
+            copilotThreadId: app.threadId,
+          }
+        : {}
+    ),
+  clearActiveCodingApp: (options) =>
+    set((state) => {
+      const nextMainThreadId = options?.freshMainThread
+        ? createCopilotThreadId()
+        : state.mainCopilotThreadId
+
+      return {
+        mainCopilotThreadId: nextMainThreadId,
+        activeCodingApp: null,
+        copilotThreadId: nextMainThreadId,
+        copilotAgentMode: state.copilotAgentMode === "coding" ? "main" : state.copilotAgentMode,
+      }
+    }),
   queueSilentPredictionRun: () => {
     const threadId = createCopilotThreadId()
     set((state) => ({
