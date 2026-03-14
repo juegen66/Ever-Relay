@@ -1,8 +1,8 @@
 import { Agent } from "@mastra/core/agent"
 import { z } from "zod"
-import model from "@/server/mastra/model"
+
 import { createAgentMemory } from "@/server/mastra/memory"
-import { createBuildWorkspace } from "@/server/mastra/workspace"
+import model from "@/server/mastra/model"
 import {
   createCanvasProjectTool,
   createDesktopItemTool,
@@ -13,6 +13,7 @@ import {
   updateCanvasProjectTool,
   updateFileContentTool,
 } from "@/server/mastra/tools"
+import { createBuildWorkspace } from "@/server/mastra/workspace"
 
 export const BUILDER_AGENT_ID = "builder_agent"
 

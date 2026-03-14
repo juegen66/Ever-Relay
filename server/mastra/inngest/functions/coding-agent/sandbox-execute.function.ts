@@ -1,6 +1,6 @@
 import { createStep } from "@mastra/inngest"
 
-import { codingWorkerAgent } from "@/server/mastra/agents/coding-worker-agent"
+import { codingWorkerAgent } from "@/server/mastra/agents/vibecoding/coding-worker-agent"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
 import { codingRunsService } from "@/server/modules/coding-runs/coding-runs.service"
 

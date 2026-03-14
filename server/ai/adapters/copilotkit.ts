@@ -3,7 +3,7 @@ import { CopilotRuntime } from "@copilotkit/runtime"
 import { RequestContext, MASTRA_RESOURCE_ID_KEY } from "@mastra/core/request-context"
 
 import { mastra } from "@/server/mastra"
-import { PREDICTION_AGENT_ID } from "@/server/mastra/agents/prediction-agent"
+import { PREDICTION_AGENT_ID } from "@/server/mastra/agents/shared/prediction-agent"
 import {
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,

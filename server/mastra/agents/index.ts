@@ -4,31 +4,28 @@ import {
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
-import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./brand-brief-agent"
-import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./brand-designer-agent"
-import { builderAgent, BUILDER_AGENT_ID } from "./builder-agent"
-import {
-  codingCopilotAgent,
-} from "./coding-copilot-agent"
-import {
-  codingReviewerAgent,
-  CODING_REVIEWER_AGENT_ID,
-} from "./coding-reviewer-agent"
-import {
-  codingWorkerAgent,
-  CODING_WORKER_AGENT_ID,
-} from "./coding-worker-agent"
 import {
   contextCompressionAgent,
   CONTEXT_COMPRESSION_AGENT_ID,
-} from "./context-compression-agent"
-import { desktopAgent } from "./desktop-agent"
-import { logoCopilotAgent } from "./logo-copilot-agent"
-import { plannerAgent, PLANNER_AGENT_ID } from "./planner-agent"
-import { posterDesignerAgent, POSTER_DESIGNER_AGENT_ID } from "./poster-designer-agent"
-import { predictionAgent, PREDICTION_AGENT_ID } from "./prediction-agent"
-import { reviewerAgent, REVIEWER_AGENT_ID } from "./reviewer-agent"
-
+} from "./shared/context-compression-agent"
+import { desktopAgent } from "./shared/desktop-agent"
+import { predictionAgent, PREDICTION_AGENT_ID } from "./shared/prediction-agent"
+import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./logo-studio/brand-brief-agent"
+import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./logo-studio/brand-designer-agent"
+import { logoCopilotAgent } from "./logo-studio/logo-copilot-agent"
+import { posterDesignerAgent, POSTER_DESIGNER_AGENT_ID } from "./logo-studio/poster-designer-agent"
+import { builderAgent, BUILDER_AGENT_ID } from "./vibecoding/builder-agent"
+import { codingCopilotAgent } from "./vibecoding/coding-copilot-agent"
+import {
+  codingReviewerAgent,
+  CODING_REVIEWER_AGENT_ID,
+} from "./vibecoding/coding-reviewer-agent"
+import {
+  codingWorkerAgent,
+  CODING_WORKER_AGENT_ID,
+} from "./vibecoding/coding-worker-agent"
+import { plannerAgent, PLANNER_AGENT_ID } from "./vibecoding/planner-agent"
+import { reviewerAgent, REVIEWER_AGENT_ID } from "./vibecoding/reviewer-agent"
 
 export const agents = {
   [DESKTOP_COPILOT_AGENT]: desktopAgent,

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 
 import { createStep } from "@mastra/inngest"
 
-import { brandDesignerAgent } from "@/server/mastra/agents/brand-designer-agent"
+import { brandDesignerAgent } from "@/server/mastra/agents/logo-studio/brand-designer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"

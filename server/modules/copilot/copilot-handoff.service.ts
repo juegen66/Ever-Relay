@@ -9,7 +9,7 @@ import {
   type HandoffMetadata,
   type HandoffReport,
 } from "@/shared/copilot/handoff"
-import { compressContext } from "@/server/mastra/agents/context-compression-agent"
+import { compressContext } from "@/server/mastra/agents/shared/context-compression-agent"
 import {
   formatMessageForDigest,
   inferTask,

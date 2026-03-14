@@ -1,6 +1,6 @@
 import { createStep } from "@mastra/inngest"
 
-import { brandBriefAgent } from "@/server/mastra/agents/brand-brief-agent"
+import { brandBriefAgent } from "@/server/mastra/agents/logo-studio/brand-brief-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"

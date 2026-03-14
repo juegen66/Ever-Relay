@@ -1,6 +1,6 @@
 import { createStep } from "@mastra/inngest"
 
-import { codingReviewerAgent } from "@/server/mastra/agents/coding-reviewer-agent"
+import { codingReviewerAgent } from "@/server/mastra/agents/vibecoding/coding-reviewer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import {
   CODING_AGENT_COMPLETED_EVENT,

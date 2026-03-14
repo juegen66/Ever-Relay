@@ -1,6 +1,6 @@
 import { createStep } from "@mastra/inngest"
 
-import { posterDesignerAgent } from "@/server/mastra/agents/poster-designer-agent"
+import { posterDesignerAgent } from "@/server/mastra/agents/logo-studio/poster-designer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
