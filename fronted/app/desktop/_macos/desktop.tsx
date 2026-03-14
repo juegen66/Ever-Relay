@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { usePathname } from "next/navigation"
 
 import { toDesktopFolder } from "@/lib/desktop-items"
+import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopItemsQuery } from "@/lib/query/files"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
@@ -34,6 +35,7 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 
 export function Desktop() {
   const pathname = usePathname()
+  const track = useTrackAction()
   const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/workflow"
 
   const windows = useDesktopWindowStore((state) => state.windows)
@@ -117,6 +119,7 @@ export function Desktop() {
 
       if ((e.metaKey || e.ctrlKey) && e.key === " ") {
         e.preventDefault()
+        track({ type: "keyboard_shortcut", shortcut: "Cmd+Space", action: "toggle_spotlight" })
         toggleSpotlight()
       }
       if (e.key === "Escape") {
@@ -126,7 +129,7 @@ export function Desktop() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSpotlight, closeTransientUi, isFullscreenOverlayRoute])
+  }, [toggleSpotlight, closeTransientUi, isFullscreenOverlayRoute, track])
 
   useEffect(() => {
     const handleResize = () => {
@@ -159,6 +162,12 @@ export function Desktop() {
     desktopItemsRef.current = desktopFolders
     moveItemToDesktopAtRef.current = moveItemToDesktopAt
   }, [desktopFolders, moveItemToDesktopAt])
+
+  useEffect(() => {
+    if (showAboutMac) {
+      track({ type: "dialog_opened", dialogId: "about-mac" })
+    }
+  }, [showAboutMac, track])
 
   useEffect(() => {
     const isDesktopBackgroundTarget = (x: number, y: number) => {
@@ -207,9 +216,13 @@ export function Desktop() {
     }
   }, [])
 
-  const dismissNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }, [])
+  const dismissNotification = useCallback(
+    (id: string) => {
+      track({ type: "notification_dismissed", notificationId: id })
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    },
+    [track]
+  )
 
   const folderViewerProps = useMemo(
     () => ({
@@ -294,7 +307,10 @@ export function Desktop() {
           key={folder.id}
           folder={folder}
           selected={selectedFolderId === folder.id}
-          onSelect={() => setSelectedFolderId(folder.id)}
+          onSelect={() => {
+            track({ type: "desktop_icon_selected", itemId: folder.id, itemName: folder.name })
+            setSelectedFolderId(folder.id)
+          }}
           onDoubleClick={() => {
             if (folder.itemType === "folder") {
               openFolderWindow(folder.id, folder.name)
@@ -347,7 +363,14 @@ export function Desktop() {
 
       {showLaunchpad && <Launchpad />}
 
-      {showAboutMac && <AboutMac onClose={() => setShowAboutMac(false)} />}
+      {showAboutMac && (
+        <AboutMac
+          onClose={() => {
+            track({ type: "dialog_closed", dialogId: "about-mac" })
+            setShowAboutMac(false)
+          }}
+        />
+      )}
 
       {notifications.length > 0 && (
         <NotificationPopup

@@ -34,12 +34,38 @@ function actionLabel(action: DesktopAction) {
       return `Edited file: ${action.fileId}`
     case "window_closed":
       return `Closed: ${action.title ?? action.appId}`
+    case "window_focused":
+      return `Focused: ${action.appId}`
+    case "window_minimized":
+      return `Minimized: ${action.appId}`
+    case "window_maximized":
+      return `Maximized: ${action.appId}`
     case "spotlight_searched":
       return `Searched: "${action.query}"`
     case "canvas_project_opened":
       return `Canvas: ${action.projectName ?? action.projectId}`
     case "context_menu_action":
       return `Menu: ${action.action}`
+    case "dock_item_clicked":
+      return `Dock: ${action.itemName}`
+    case "launchpad_app_clicked":
+      return `Launchpad: ${action.appName}`
+    case "menubar_action":
+      return `MenuBar ${action.menu}: ${action.action}`
+    case "control_center_toggled":
+      return `Control: ${action.control}=${action.value}`
+    case "desktop_icon_selected":
+      return `Selected: ${action.itemName}`
+    case "desktop_icon_context_menu":
+      return `Icon menu: ${action.action}`
+    case "notification_dismissed":
+      return `Dismissed: ${action.notificationId}`
+    case "dialog_opened":
+      return `Dialog opened: ${action.dialogId}`
+    case "dialog_closed":
+      return `Dialog closed: ${action.dialogId}`
+    case "keyboard_shortcut":
+      return `Shortcut: ${action.shortcut}`
     default:
       return "unknown action"
   }

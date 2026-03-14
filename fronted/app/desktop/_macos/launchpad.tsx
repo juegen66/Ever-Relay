@@ -1,6 +1,7 @@
 "use client"
 
 import type { AppId } from "@/lib/desktop/types"
+import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
@@ -12,6 +13,7 @@ const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }
 ]
 
 export function Launchpad() {
+  const track = useTrackAction()
   const onOpenApp = useDesktopWindowStore((state) => state.openApp)
   const onClose = useDesktopUIStore((state) => state.closeLaunchpad)
 
@@ -52,6 +54,7 @@ export function Launchpad() {
             key={app.id}
             className="flex flex-col items-center gap-2 group"
             onClick={() => {
+              track({ type: "launchpad_app_clicked", appId: app.id, appName: app.name })
               onOpenApp(app.id)
               onClose()
             }}

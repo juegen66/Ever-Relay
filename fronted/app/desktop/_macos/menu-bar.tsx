@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation"
 
 import { authClient } from "@/lib/auth/auth-client"
 import type { AppId } from "@/lib/desktop/types"
+import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useUserStore } from "@/lib/stores/user-store"
@@ -98,6 +99,7 @@ const VIEW_MENU: MenuItem[] = [
 
 export function MenuBar() {
   const router = useRouter()
+  const track = useTrackAction()
   const currentUser = useUserStore((state) => state.currentUser)
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
@@ -137,19 +139,23 @@ export function MenuBar() {
   const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
   const appName = activeApp ? APP_NAMES[activeApp] : "Finder"
 
-  const handleMenuAction = useCallback(async (action?: string) => {
-    setOpenMenu(null)
-    if (action === "about") setShowAboutMac(true)
-    if (action === "logout") {
-      await authClient.signOut()
-      useUserStore.getState().clearCurrentUser()
-      router.push("/")
-    }
-  }, [setShowAboutMac, router])
+  const handleMenuAction = useCallback(
+    async (menu: string, action?: string, label?: string) => {
+      setOpenMenu(null)
+      track({ type: "menubar_action", menu, action: action ?? label ?? "" })
+      if (action === "about") setShowAboutMac(true)
+      if (action === "logout") {
+        await authClient.signOut()
+        useUserStore.getState().clearCurrentUser()
+        router.push("/")
+      }
+    },
+    [setShowAboutMac, router, track]
+  )
 
   const userName = currentUser?.username || "User"
 
-  const renderMenu = (items: MenuItem[]) => (
+  const renderMenu = (items: MenuItem[], menuName: string) => (
     <div
       className="absolute top-full left-0 mt-0 min-w-[220px] py-1 z-[10002]"
       style={{
@@ -168,7 +174,7 @@ export function MenuBar() {
         return (
           <button
             key={`item-${i}`}
-            onClick={() => handleMenuAction(menuItem.action)}
+            onClick={() => handleMenuAction(menuName, menuItem.action, menuItem.label)}
             className="flex w-full items-center justify-between px-4 py-1 text-[13px] text-[#262626] hover:bg-[#0058d0] hover:text-white transition-colors"
           >
             <span>{menuItem.action === "logout" ? `Log Out ${userName}...` : menuItem.label}</span>
@@ -212,7 +218,7 @@ export function MenuBar() {
           >
             <Apple className="h-[13px] w-[13px] fill-white" />
           </button>
-          {openMenu === "apple" && renderMenu(APPLE_MENU)}
+          {openMenu === "apple" && renderMenu(APPLE_MENU, "apple")}
         </div>
 
         {/* App Name */}
@@ -235,7 +241,7 @@ export function MenuBar() {
           >
             File
           </button>
-          {openMenu === "file" && renderMenu(FILE_MENU)}
+          {openMenu === "file" && renderMenu(FILE_MENU, "file")}
         </div>
 
         {/* Edit Menu */}
@@ -247,7 +253,7 @@ export function MenuBar() {
           >
             Edit
           </button>
-          {openMenu === "edit" && renderMenu(EDIT_MENU)}
+          {openMenu === "edit" && renderMenu(EDIT_MENU, "edit")}
         </div>
 
         {/* View Menu */}
@@ -259,7 +265,7 @@ export function MenuBar() {
           >
             View
           </button>
-          {openMenu === "view" && renderMenu(VIEW_MENU)}
+          {openMenu === "view" && renderMenu(VIEW_MENU, "view")}
         </div>
 
         <button
@@ -301,7 +307,11 @@ export function MenuBar() {
         <div className="relative">
           <button
             className="rounded p-1 opacity-80 transition-colors hover:bg-white/10"
-            onClick={() => setShowControlCenter(!showControlCenter)}
+            onClick={() => {
+              const next = !showControlCenter
+              track({ type: "control_center_toggled", control: "panel", value: next })
+              setShowControlCenter(next)
+            }}
           >
             <svg className="h-[13px] w-[13px]" viewBox="0 0 16 16" fill="white">
               <rect x="1" y="1" width="6" height="6" rx="1.5" />
@@ -326,6 +336,7 @@ export function MenuBar() {
 }
 
 function ControlCenter() {
+  const track = useTrackAction()
   const [wifi, setWifi] = useState(true)
   const [bluetooth, setBluetooth] = useState(true)
   const [airdrop, setAirdrop] = useState(false)
@@ -352,7 +363,11 @@ function ControlCenter() {
         <div className="rounded-xl bg-white/70 p-3 space-y-2.5">
           <button
             className="flex items-center gap-2.5 w-full"
-            onClick={() => setWifi(!wifi)}
+            onClick={() => {
+              const next = !wifi
+              track({ type: "control_center_toggled", control: "wifi", value: next })
+              setWifi(next)
+            }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${wifi ? "bg-[#007aff]" : "bg-[#ccc]"}`}>
               <Wifi className="h-4 w-4 text-white" />
@@ -364,7 +379,11 @@ function ControlCenter() {
           </button>
           <button
             className="flex items-center gap-2.5 w-full"
-            onClick={() => setBluetooth(!bluetooth)}
+            onClick={() => {
+              const next = !bluetooth
+              track({ type: "control_center_toggled", control: "bluetooth", value: next })
+              setBluetooth(next)
+            }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${bluetooth ? "bg-[#007aff]" : "bg-[#ccc]"}`}>
               <Bluetooth className="h-4 w-4 text-white" />
@@ -376,7 +395,11 @@ function ControlCenter() {
           </button>
           <button
             className="flex items-center gap-2.5 w-full"
-            onClick={() => setAirdrop(!airdrop)}
+            onClick={() => {
+              const next = !airdrop
+              track({ type: "control_center_toggled", control: "airdrop", value: next })
+              setAirdrop(next)
+            }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${airdrop ? "bg-[#007aff]" : "bg-[#ccc]"}`}>
               <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -396,7 +419,11 @@ function ControlCenter() {
         <div className="flex flex-col gap-2">
           <button
             className="flex items-center gap-2.5 rounded-xl bg-white/70 p-3"
-            onClick={() => setFocus(!focus)}
+            onClick={() => {
+              const next = !focus
+              track({ type: "control_center_toggled", control: "focus", value: next })
+              setFocus(next)
+            }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${focus ? "bg-[#5e5ce6]" : "bg-[#ccc]"}`}>
               <Moon className="h-4 w-4 text-white" />
@@ -408,7 +435,11 @@ function ControlCenter() {
           </button>
           <button
             className="flex items-center gap-2.5 rounded-xl bg-white/70 p-3"
-            onClick={() => setDarkMode(!darkMode)}
+            onClick={() => {
+              const next = !darkMode
+              track({ type: "control_center_toggled", control: "darkMode", value: next })
+              setDarkMode(next)
+            }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-full ${darkMode ? "bg-[#5e5ce6]" : "bg-[#ccc]"}`}>
               {darkMode ? <Moon className="h-4 w-4 text-white" /> : <Sun className="h-4 w-4 text-white" />}
@@ -441,7 +472,11 @@ function ControlCenter() {
           min="0"
           max="100"
           value={brightness}
-          onChange={(e) => setBrightness(Number(e.target.value))}
+          onChange={(e) => {
+            const val = Number(e.target.value)
+            track({ type: "control_center_toggled", control: "brightness", value: val })
+            setBrightness(val)
+          }}
           className="w-full accent-[#007aff] h-1"
         />
       </div>
@@ -457,7 +492,11 @@ function ControlCenter() {
           min="0"
           max="100"
           value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
+          onChange={(e) => {
+            const val = Number(e.target.value)
+            track({ type: "control_center_toggled", control: "volume", value: val })
+            setVolume(val)
+          }}
           className="w-full accent-[#007aff] h-1"
         />
       </div>

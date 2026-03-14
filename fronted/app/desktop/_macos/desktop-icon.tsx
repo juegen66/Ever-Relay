@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { Folder, Pencil, Trash2, FolderOpen, Info, FileText, File, FileImage, FileCode, FileSpreadsheet } from "lucide-react"
 
 import type { DesktopFolder, DesktopItemType } from "@/lib/desktop/types"
+import { useTrackAction } from "@/lib/hooks/use-track-action"
 
 interface DesktopIconProps {
   folder: DesktopFolder
@@ -53,6 +54,7 @@ export function DesktopIcon({
   onMoveIntoFolder,
   allDesktopItems,
 }: DesktopIconProps) {
+  const track = useTrackAction()
   const [editing, setEditing] = useState(folder.isNew ?? false)
   const [name, setName] = useState(folder.name)
   const [dragging, setDragging] = useState(false)
@@ -329,6 +331,7 @@ export function DesktopIcon({
                   key={item.action}
                   onClick={(e) => {
                     e.stopPropagation()
+                    track({ type: "desktop_icon_context_menu", itemId: folder.id, action: item.action })
                     setFolderMenu(null)
                     if (item.action === "open") onDoubleClick()
                     if (item.action === "rename") setEditing(true)

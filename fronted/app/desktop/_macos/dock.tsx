@@ -6,6 +6,7 @@ import { Bot, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-r
 import { usePathname, useRouter } from "next/navigation"
 
 import type { AppId } from "@/lib/desktop/types"
+import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
 import type { LucideIcon } from "lucide-react"
@@ -42,6 +43,7 @@ const DOCK_ITEMS: DockItem[] = [
 export function Dock() {
   const router = useRouter()
   const pathname = usePathname()
+  const track = useTrackAction()
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const openWindows = useDesktopWindowStore((state) => state.windows)
   const bouncingApp = useDesktopWindowStore((state) => state.bouncingApp)
@@ -131,6 +133,7 @@ export function Dock() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
+                    track({ type: "dock_item_clicked", itemId: item.id, itemName: item.name })
                     if (item.kind === "route") {
                       router.push(pathname === item.href ? "/desktop" : item.href)
                       return
