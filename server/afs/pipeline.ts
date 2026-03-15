@@ -50,7 +50,7 @@ function estimateTokens(text: string): number {
  *   const constructor = new ContextConstructor()
  *   const context = await constructor.build('user-123', {
  *     task: '预测用户下一步操作',
- *     sources: ['/memory/fact', '/memory/experiential'],
+ *     sources: ['Desktop/Memory/user', 'Desktop/Memory/note'],
  *     tokenBudget: 3000
  *   })
  */
@@ -411,7 +411,7 @@ export interface PipelineResult {
  * 使用示例：
  *   const result = await runPipeline('user-123', {
  *     task: '预测用户下一步',
- *     sources: ['/memory', '/history'],
+ *     sources: ['Desktop/Memory/user', 'Desktop/History/actions'],
  *     generate: async (prompt) => await agent.generate(prompt)
  *   })
  */

@@ -22,7 +22,7 @@ export function useLongTermMemory() {
         const [factsRes, patternsRes, episodesRes] = await Promise.all([
           afsList("Desktop/Memory/user", 20),
           afsList("Desktop/Memory/note", 20),
-          afsList("Desktop/History/prediction-runs", 10),
+          afsList("Desktop/Memory/note", 10),
         ])
         setFacts(factsRes.nodes)
         setPatterns(patternsRes.nodes)
