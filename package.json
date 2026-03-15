@@ -120,7 +120,12 @@
       "@types/react-dom": "19.2.3"
     },
     "onlyBuiltDependencies": [
-      "sharp"
+      "sharp",
+      "esbuild",
+      "better-sqlite3",
+      "@scarf/scarf",
+      "protobufjs",
+      "unrs-resolver"
     ]
   }
 }
