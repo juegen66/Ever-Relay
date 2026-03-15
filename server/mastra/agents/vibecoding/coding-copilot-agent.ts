@@ -3,6 +3,13 @@ import { Agent } from "@mastra/core/agent"
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
 import {
+  afsListTool,
+  afsReadTool,
+  afsWriteTool,
+  afsSearchTool,
+  afsDeleteTool,
+} from "@/server/mastra/tools/afs"
+import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
   listProjectFilesTool,
@@ -18,6 +25,13 @@ export const codingCopilotAgent = new Agent({
   memory: createAgentMemory(),
   instructions: [
     "You are the CloudOS coding copilot.",
+    "",
+    "## AFS (Agentic File System)",
+    "You have access to a unified file system. Your scope is Desktop/VibeCoding/.",
+    "Use afs_list('Desktop/VibeCoding/Memory/user') for coding-specific user preferences.",
+    "Use afs_write('Desktop/VibeCoding/Memory/user/<slug>', content) to save coding preferences.",
+    "You can also read global memory at Desktop/Memory/ for cross-app context.",
+    "",
     "All user interaction happens inside the existing sidebar chat. Do not ask the user to switch to another chat surface.",
     "This agent only works inside an active coding app thread. First check the active coding app context.",
     "If no coding app is active, first tell the user to create or activate one in the vibecoding app. If they explicitly ask you to do it directly, you may use create_coding_app or activate_coding_app.",
@@ -40,5 +54,10 @@ export const codingCopilotAgent = new Agent({
     listProjectFiles: listProjectFilesTool,
     searchProjectCode: searchProjectCodeTool,
     readProjectFile: readProjectFileTool,
+    afsList: afsListTool,
+    afsRead: afsReadTool,
+    afsWrite: afsWriteTool,
+    afsSearch: afsSearchTool,
+    afsDelete: afsDeleteTool,
   },
 })

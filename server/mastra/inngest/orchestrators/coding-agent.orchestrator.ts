@@ -8,6 +8,7 @@ import {
   codingWorkflowInputSchema,
 } from "@/server/mastra/inngest/functions/coding-agent/schemas"
 import { validateCodingRunStep } from "@/server/mastra/inngest/functions/coding-agent/validate.function"
+import { distillMemoryStep } from "@/server/mastra/inngest/functions/memory/distill.function"
 
 const { createWorkflow } = init(inngest)
 
@@ -15,7 +16,7 @@ export const CODING_AGENT_WORKFLOW_ID = "coding-agent"
 
 export const codingAgentWorkflow = createWorkflow({
   id: CODING_AGENT_WORKFLOW_ID,
-  description: "CloudOS coding workflow: report ingest -> sandbox execute -> validate",
+  description: "CloudOS coding workflow: report ingest -> sandbox execute -> validate -> distill memory",
   inputSchema: codingWorkflowInputSchema,
   outputSchema: codingValidateOutputSchema,
   concurrency: {
@@ -26,4 +27,5 @@ export const codingAgentWorkflow = createWorkflow({
   .then(ingestCodingReportStep)
   .then(executeCodingSandboxStep)
   .then(validateCodingRunStep)
+  .then(distillMemoryStep)
   .commit()

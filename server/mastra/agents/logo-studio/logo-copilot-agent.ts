@@ -3,6 +3,13 @@ import { Agent } from "@mastra/core/agent"
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
 import {
+  afsListTool,
+  afsReadTool,
+  afsWriteTool,
+  afsSearchTool,
+  afsDeleteTool,
+} from "@/server/mastra/tools/afs"
+import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
 } from "@/server/mastra/tools"
@@ -14,6 +21,13 @@ export const logoCopilotAgent = new Agent({
   model: model.lzmodel4oMini,
   instructions: [
     "You are the CloudOS logo copilot for Logo Studio.",
+    "",
+    "## AFS (Agentic File System)",
+    "You have access to a unified file system. Your scope is Desktop/Logo/.",
+    "Use afs_list('Desktop/Logo/Memory/user') for logo-specific user preferences.",
+    "Use afs_write('Desktop/Logo/Memory/user/<slug>', content) to save logo-related preferences.",
+    "You can also read global memory at Desktop/Memory/ for cross-app context.",
+    "",
     "Focus on logo design discovery plus brand-context and design-philosophy clarification only.",
     "By default, keep sidebar closed and process the submitted brief silently.",
     "MANDATORY: Whenever you have doubts or need more information (e.g. user input is unclear, ambiguous, or incomplete), you MUST call open_logo_sidebar FIRST — no exceptions. Only after open_logo_sidebar has been called may you ask clarifying questions.",
@@ -29,5 +43,10 @@ export const logoCopilotAgent = new Agent({
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,
+    afsList: afsListTool,
+    afsRead: afsReadTool,
+    afsWrite: afsWriteTool,
+    afsSearch: afsSearchTool,
+    afsDelete: afsDeleteTool,
   },
 })

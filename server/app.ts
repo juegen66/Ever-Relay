@@ -14,6 +14,7 @@ import { registerFilesRoutes } from "@/server/modules/files/files.route"
 import { registerHealthRoutes } from "@/server/modules/health/health.route"
 import { registerImageProcessingRoutes } from "@/server/modules/image-processing/image-processing.route"
 import { registerInngestRoutes } from "@/server/modules/inngest/inngest.route"
+import { registerAfsRoutes } from "@/server/modules/afs/afs.route"
 import { registerLogoDesignRoutes } from "@/server/modules/logo-design/logo-design.route"
 import type { ServerBindings } from "@/server/types"
 
@@ -22,6 +23,7 @@ export const serverApp = new Hono<ServerBindings>()
 serverApp.use("*", requestIdMiddleware)
 serverApp.use("*", loggerMiddleware)
 
+registerAfsRoutes(serverApp)
 registerAuthRoutes(serverApp)
 registerCanvasRoutes(serverApp)
 registerCodingAppsRoutes(serverApp)

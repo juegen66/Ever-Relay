@@ -2,6 +2,7 @@
 
 import { useCopilotReadable } from "@copilotkit/react-core"
 
+import { useLongTermMemory } from "@/hooks/use-long-term-memory"
 import { useWorkingMemory } from "@/hooks/use-working-memory"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
@@ -16,6 +17,7 @@ export function DesktopAgentContextProvider() {
   const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
 
   useWorkingMemory()
+  const { facts, patterns, episodes } = useLongTermMemory()
 
   useCopilotReadable({
     description: "Current desktop window state",
@@ -65,6 +67,19 @@ export function DesktopAgentContextProvider() {
             lastOpenedAt: activeCodingApp.lastOpenedAt ?? null,
           }
         : null,
+    },
+  })
+
+  useCopilotReadable({
+    description:
+      "Long-term user memory from AFS (Agentic File System). " +
+      "User memories are preferences/habits from Desktop/Memory/user. " +
+      "Notes are observations and session summaries from Desktop/Memory/note. " +
+      "Use these to personalize predictions.",
+    value: {
+      userMemories: facts.map((n) => ({ path: n.path, content: n.content, confidence: n.metadata?.confidence })),
+      notes: patterns.map((n) => ({ path: n.path, content: n.content, confidence: n.metadata?.confidence })),
+      recentNotes: episodes.map((n) => ({ path: n.path, content: n.content })),
     },
   })
 

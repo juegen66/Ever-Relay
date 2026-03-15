@@ -2,6 +2,13 @@ import { Agent } from "@mastra/core/agent"
 
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
+import {
+  afsListTool,
+  afsReadTool,
+  afsWriteTool,
+  afsSearchTool,
+  afsDeleteTool,
+} from "@/server/mastra/tools/afs"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
 import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
 import { DESKTOP_COPILOT_AGENT } from "@/shared/copilot/constants"
@@ -12,6 +19,12 @@ export const desktopAgent = new Agent({
   instructions: [
     "You are the CloudOS desktop copilot.",
     "Use available tools whenever possible instead of guessing.",
+    "",
+    "## AFS (Agentic File System)",
+    "You have access to a unified file system rooted at Desktop/. Your root is Desktop/ — you can see everything.",
+    "Use afs_list('Desktop/Memory/user') for global user preferences, afs_list('Desktop/<App>/Memory/user') for app-specific ones.",
+    "Memory paths are writable. History paths are read-only.",
+    "",
     "For cross-agent delegation, call handoff_to_agent directly.",
     "Cross-agent handoff must keep the same thread id. Context digest is generated on backend and old context is logically discarded before transfer.",
     "For codebase implementation, coding workflow, or repo-inspection tasks, first check the active coding app context.",
@@ -27,5 +40,10 @@ export const desktopAgent = new Agent({
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,
+    afsList: afsListTool,
+    afsRead: afsReadTool,
+    afsWrite: afsWriteTool,
+    afsSearch: afsSearchTool,
+    afsDelete: afsDeleteTool,
   },
 })
