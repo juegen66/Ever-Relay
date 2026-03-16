@@ -1,9 +1,11 @@
 import { createStep } from "@mastra/inngest"
-import { posterDesignerAgent } from "@/server/mastra/agents/poster-designer-agent"
+
+import { posterDesignerAgent } from "@/server/mastra/agents/logo-studio/poster-designer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
 import { logoDesignService } from "@/server/modules/logo-design/logo-design.service"
+
 import {
   logoDesignFinalOutputSchema,
   logoDesignPhilosophyOutputSchema,
@@ -41,8 +43,8 @@ function buildPosterPrompt(inputData: {
     "- keep typography minimal and composition clean",
     `Original prompt: ${inputData.prompt}`,
     `Selected concept: ${inputData.selectedConceptName}`,
-    `Logo brief markdown:\n${inputData.logoBriefMarkdown}`,
-    `Design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
     `Selected logo SVG:\n${inputData.selectedLogoSvg}`,
   ].join("\n\n")
 }
@@ -66,8 +68,8 @@ function buildPosterRepairPrompt(inputData: {
     "posterSvg must be complete SVG markup with <svg>...</svg>",
     `Original prompt: ${inputData.prompt}`,
     `Selected concept: ${inputData.selectedConceptName}`,
-    `Logo brief markdown:\n${inputData.logoBriefMarkdown}`,
-    `Design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
     `Selected logo SVG:\n${inputData.selectedLogoSvg}`,
     `Invalid output to repair: ${inputData.invalidOutput}`,
   ].join("\n\n")

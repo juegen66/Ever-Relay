@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 
-import type { DesktopFolder, DesktopItemType } from "@/app/desktop/components/macos/desktop-icon"
+import type { DesktopFolder, DesktopItemType } from "@/lib/desktop/types"
 import {
   buildCreateFileParams,
   getDefaultDesktopPosition,

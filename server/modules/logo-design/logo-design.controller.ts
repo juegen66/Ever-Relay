@@ -1,27 +1,30 @@
 import { createHash, randomUUID } from "node:crypto"
-import type { Context } from "hono"
+
+import { requireUserId } from "@/server/lib/http/auth"
+import { fail, ok } from "@/server/lib/http/response"
+import { inngest } from "@/server/mastra/inngest/client"
+import { LOGO_DESIGN_REQUESTED_EVENT } from "@/server/mastra/inngest/events"
+import { logoDesignWorkflow } from "@/server/mastra/inngest/orchestrators/logo-design.orchestrator"
+import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
+import type { ServerBindings } from "@/server/types"
 import type {
   CreateLogoDesignParams,
   LogoDesignAssetIdParams,
   LogoDesignAssetType,
   LogoDesignRunIdParams,
 } from "@/shared/contracts/logo-design"
-import { LOGO_DESIGN_REQUESTED_EVENT } from "@/server/mastra/inngest/events"
-import { inngest } from "@/server/mastra/inngest/client"
-import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
-import { logoDesignWorkflow } from "@/server/mastra/inngest/orchestrators/logo-design.orchestrator"
-import { requireUserId } from "@/server/lib/http/auth"
-import { fail, ok } from "@/server/lib/http/response"
-import type { ServerBindings } from "@/server/types"
+
 import { logoDesignService } from "./logo-design.service"
+
+import type { Context } from "hono"
 
 const LOGO_DESIGN_CONCURRENCY_LIMIT = 2
 const LOGO_DESIGN_STAGE_PROGRESS: Record<string, { current: number; total: number; label: string }> = {
   queued: { current: 0, total: 4, label: "排队中..." },
-  planning: { current: 1, total: 4, label: "正在生成品牌简报..." },
+  planning: { current: 1, total: 4, label: "正在提炼品牌上下文与设计哲学..." },
   brand_designing: { current: 2, total: 4, label: "正在产出 3 个 Logo SVG 概念..." },
-  poster_designing: { current: 3, total: 4, label: "正在生成设计哲学与海报 SVG..." },
-  persisting: { current: 3, total: 4, label: "正在生成设计哲学与海报 SVG..." },
+  poster_designing: { current: 3, total: 4, label: "正在生成海报 SVG..." },
+  persisting: { current: 3, total: 4, label: "正在生成海报 SVG..." },
   complete: { current: 4, total: 4, label: "已完成" },
   failed: { current: 0, total: 4, label: "失败" },
 }
@@ -156,6 +159,7 @@ function collectVirtualAssets(run: {
     asString(asRecord(run.planJson)?.logoBriefMarkdown)
   const designPhilosophyMarkdown =
     asString(result.designPhilosophyMarkdown) ??
+    asString(asRecord(run.planJson)?.designPhilosophyMarkdown) ??
     asString(poster?.philosophyMd)
 
   const fullSvg =

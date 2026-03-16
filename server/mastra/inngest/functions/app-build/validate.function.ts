@@ -1,5 +1,5 @@
 import { createStep } from "@mastra/inngest"
-import { reviewerAgent } from "@/server/mastra/agents/reviewer-agent"
+import { reviewerAgent } from "@/server/mastra/agents/vibecoding/reviewer-agent"
 import { inngest } from "@/server/mastra/inngest/client"
 import {
   APP_BUILD_COMPLETED_EVENT,

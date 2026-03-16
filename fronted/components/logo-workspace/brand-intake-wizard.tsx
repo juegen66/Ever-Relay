@@ -16,9 +16,10 @@ import {
   Users,
 } from "lucide-react"
 
-import type { BriefState } from "@/components/logo-workspace/types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+
+import type { BriefState } from "./types"
 
 const BRAND_TYPE_OPTIONS = [
   { id: "Technology Company", icon: Cpu },

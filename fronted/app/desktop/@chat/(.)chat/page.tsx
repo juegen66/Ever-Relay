@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { FullscreenCopilotChat } from "@/app/desktop/_ai/ui/fullscreen-copilot-chat"
-import { DesktopAuthGate } from "@/app/desktop/components/macos/desktop-auth-gate"
+import { DesktopAuthGate } from "@/app/desktop/_macos/desktop-auth-gate"
 import { getServerDesktopUser } from "@/server/lib/auth/get-server-desktop-user"
 
 export default async function InterceptedDesktopChatPage() {

@@ -54,3 +54,29 @@ export type LogoDesignRequestedData = z.infer<typeof logoDesignRequestedDataSche
 export type LogoDesignCompletedData = z.infer<typeof logoDesignCompletedDataSchema>
 export type LogoDesignFailedData = z.infer<typeof logoDesignFailedDataSchema>
 
+export const CODING_AGENT_REQUESTED_EVENT = "coding.agent.requested" as const
+export const CODING_AGENT_COMPLETED_EVENT = "coding.agent.completed" as const
+export const CODING_AGENT_FAILED_EVENT = "coding.agent.failed" as const
+
+export const codingAgentRequestedDataSchema = z.object({
+  runId: z.string().min(1),
+  userId: z.string().min(1),
+  appId: z.string().uuid(),
+  report: z.record(z.string(), z.unknown()),
+})
+
+export const codingAgentCompletedDataSchema = z.object({
+  runId: z.string().min(1),
+  userId: z.string().min(1),
+  summary: z.string().optional(),
+})
+
+export const codingAgentFailedDataSchema = z.object({
+  runId: z.string().min(1),
+  userId: z.string().min(1),
+  error: z.string().min(1),
+})
+
+export type CodingAgentRequestedData = z.infer<typeof codingAgentRequestedDataSchema>
+export type CodingAgentCompletedData = z.infer<typeof codingAgentCompletedDataSchema>
+export type CodingAgentFailedData = z.infer<typeof codingAgentFailedDataSchema>

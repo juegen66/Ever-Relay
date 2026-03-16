@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 
-import type { AppId, WindowState } from "@/app/desktop/components/macos/types"
+import type { AppId, WindowState } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
@@ -214,18 +214,25 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
 
     useDesktopActionLogStore.getState().logAction({ type: "file_opened", fileId, fileName })
   },
-  focusWindow: (id) =>
-    set((state) => {
-      if (state.activeWindowId === id) return state
-
-      return {
-        windows: state.windows.map((w) =>
-          w.id === id ? { ...w, zIndex: state.nextZIndex } : w
-        ),
-        activeWindowId: id,
-        nextZIndex: state.nextZIndex + 1,
-      }
-    }),
+  focusWindow: (id) => {
+    const state = get()
+    if (state.activeWindowId === id) return
+    const win = state.windows.find((w) => w.id === id)
+    if (win) {
+      useDesktopActionLogStore.getState().logAction({
+        type: "window_focused",
+        windowId: id,
+        appId: win.appId,
+      })
+    }
+    set((s) => ({
+      windows: s.windows.map((w) =>
+        w.id === id ? { ...w, zIndex: s.nextZIndex } : w
+      ),
+      activeWindowId: id,
+      nextZIndex: s.nextZIndex + 1,
+    }))
+  },
   closeWindow: (id) => {
     const win = get().windows.find((w) => w.id === id)
     if (win) {
@@ -240,12 +247,29 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       activeWindowId: state.activeWindowId === id ? null : state.activeWindowId,
     }))
   },
-  minimizeWindow: (id) =>
+  minimizeWindow: (id) => {
+    const win = get().windows.find((w) => w.id === id)
+    if (win) {
+      useDesktopActionLogStore.getState().logAction({
+        type: "window_minimized",
+        windowId: id,
+        appId: win.appId,
+      })
+    }
     set((state) => ({
       windows: state.windows.map((w) => (w.id === id ? { ...w, minimized: true } : w)),
       activeWindowId: state.activeWindowId === id ? null : state.activeWindowId,
-    })),
-  maximizeWindow: (id) =>
+    }))
+  },
+  maximizeWindow: (id) => {
+    const win = get().windows.find((w) => w.id === id)
+    if (win) {
+      useDesktopActionLogStore.getState().logAction({
+        type: "window_maximized",
+        windowId: id,
+        appId: win.appId,
+      })
+    }
     set((state) => ({
       windows: state.windows.map((w) => {
         if (w.id !== id) return w
@@ -265,7 +289,8 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
           prevBounds: { x: w.x, y: w.y, width: w.width, height: w.height },
         }
       }),
-    })),
+    }))
+  },
   updateWindowPosition: (id, x, y) =>
     set((state) => ({
       windows: state.windows.map((w) => (w.id === id ? { ...w, x, y } : w)),

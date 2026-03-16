@@ -2,11 +2,13 @@ import { serve } from "@mastra/inngest"
 import type { Hono } from "hono"
 import { mastra } from "@/server/mastra"
 import { inngest } from "@/server/mastra/inngest/client"
+import { afsMemoryDecayFunction } from "@/server/mastra/inngest/functions/memory/decay.function"
 import type { ServerBindings } from "@/server/types"
 
 const inngestHandler = serve({
   mastra,
   inngest,
+  functions: [afsMemoryDecayFunction],
 })
 
 export function registerInngestRoutes(app: Hono<ServerBindings>) {

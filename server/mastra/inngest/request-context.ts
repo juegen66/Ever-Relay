@@ -8,6 +8,7 @@ export interface BuildRunContextInput {
   userId: string
   runId?: string
   projectId?: string | null
+  appId?: string | null
 }
 
 export function createBuildRunRequestContext(input: BuildRunContextInput) {
@@ -17,6 +18,7 @@ export function createBuildRunRequestContext(input: BuildRunContextInput) {
   requestContext.set("userId", input.userId)
   requestContext.set("runId", input.runId ?? "")
   requestContext.set("projectId", input.projectId ?? null)
+  requestContext.set("appId", input.appId ?? null)
   requestContext.set(MASTRA_RESOURCE_ID_KEY, input.userId)
   requestContext.set(MASTRA_THREAD_ID_KEY, threadId)
   return requestContext

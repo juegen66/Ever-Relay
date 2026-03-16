@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 
 import { DesktopCopilotProvider } from "@/app/desktop/_ai/providers/desktop-copilot-provider"
-import { Desktop } from "@/app/desktop/components/macos/desktop"
+import { Desktop } from "@/app/desktop/_macos/desktop"
 
 interface DesktopLayoutProps {
   children: ReactNode

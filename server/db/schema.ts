@@ -165,7 +165,7 @@ export const WORKFLOW_RUN_STATUSES = [
 
 export type WorkflowRunStatus = (typeof WORKFLOW_RUN_STATUSES)[number]
 
-export const WORKFLOW_RUN_TYPES = ["app-build", "logo-design"] as const
+export const WORKFLOW_RUN_TYPES = ["app-build", "logo-design", "coding-agent"] as const
 export type WorkflowRunType = (typeof WORKFLOW_RUN_TYPES)[number]
 
 export const workflowRuns = pgTable(
@@ -249,5 +249,126 @@ export const userSandboxes = pgTable(
   },
   (table) => ({
     sandboxIdUniqueIdx: uniqueIndex("user_sandboxes_sandbox_id_unique_idx").on(table.sandboxId),
+  })
+)
+
+// ---------------------------------------------------------------------------
+// AFS v2 — Unified path-based file system
+//
+// Two tables: afs_memory (writable) + afs_history (append-only)
+// Path protocol: Desktop/<scope>/<kind>/<bucket>/<subpath>/<name>
+// ---------------------------------------------------------------------------
+
+export const AFS_SCOPES = ["Desktop", "Canvas", "Logo", "VibeCoding"] as const
+export type AfsScope = (typeof AFS_SCOPES)[number]
+
+export const AFS_MEMORY_BUCKETS = ["user", "note"] as const
+export type AfsMemoryBucket = (typeof AFS_MEMORY_BUCKETS)[number]
+
+export const AFS_HISTORY_BUCKETS = ["actions", "sessions", "prediction-runs", "workflow-runs", "canvas-activity"] as const
+export type AfsHistoryBucket = (typeof AFS_HISTORY_BUCKETS)[number]
+
+export const AFS_SOURCE_TYPES = ["prediction_agent", "workflow_curator", "manual", "system"] as const
+export type AfsSourceType = (typeof AFS_SOURCE_TYPES)[number]
+
+export const afsMemory = pgTable(
+  "afs_memory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    scope: text("scope").$type<AfsScope>().notNull().default("Desktop"),
+    bucket: text("bucket").$type<AfsMemoryBucket>().notNull().default("user"),
+    path: text("path").notNull().default("/"),
+    name: text("name").notNull(),
+    content: text("content").notNull(),
+    contentType: text("content_type"),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    confidence: integer("confidence").notNull().default(80),
+    sourceType: text("source_type").$type<AfsSourceType>().notNull().default("prediction_agent"),
+    accessCount: integer("access_count").notNull().default(0),
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userScopeBucketIdx: index("afs_memory_user_scope_bucket_idx").on(table.userId, table.scope, table.bucket),
+    userScopeBucketPathNameIdx: uniqueIndex("afs_memory_user_scope_bucket_path_name_idx").on(
+      table.userId, table.scope, table.bucket, table.path, table.name
+    ),
+    userConfidenceIdx: index("afs_memory_user_confidence_idx").on(table.userId, table.confidence),
+    deletedIdx: index("afs_memory_deleted_idx").on(table.deletedAt),
+  })
+)
+
+export const afsHistory = pgTable(
+  "afs_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    scope: text("scope").$type<AfsScope>().notNull().default("Desktop"),
+    bucket: text("bucket").$type<AfsHistoryBucket>().notNull().default("actions"),
+    path: text("path").notNull().default("/"),
+    name: text("name").notNull(),
+    actionType: text("action_type"),
+    content: text("content").notNull(),
+    status: text("status"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userScopeBucketCreatedIdx: index("afs_history_user_scope_bucket_created_idx").on(
+      table.userId, table.scope, table.bucket, table.createdAt
+    ),
+    userActionTypeIdx: index("afs_history_user_action_type_idx").on(table.userId, table.actionType),
+  })
+)
+
+
+
+export const afsTransactionLogs = pgTable(
+  "afs_transaction_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actor: text("actor").notNull(),
+    operation: text("operation").notNull(),
+    path: text("path").notNull(),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    actorCreatedIdx: index("afs_tx_logs_actor_created_idx").on(table.actor, table.createdAt),
+    pathIdx: index("afs_tx_logs_path_idx").on(table.path),
+  })
+)
+
+// ---------------------------------------------------------------------------
+// Coding apps
+// ---------------------------------------------------------------------------
+
+export const CODING_APP_STATUSES = ["active", "archived"] as const
+export type CodingAppStatus = (typeof CODING_APP_STATUSES)[number]
+
+export const codingApps = pgTable(
+  "coding_apps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    sandboxId: text("sandbox_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    status: text("status").$type<CodingAppStatus>().notNull().default("active"),
+    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userUpdatedIdx: index("coding_apps_user_updated_idx").on(table.userId, table.updatedAt),
+    userStatusIdx: index("coding_apps_user_status_idx").on(table.userId, table.status),
+    sandboxIdUniqueIdx: uniqueIndex("coding_apps_sandbox_id_unique_idx").on(table.sandboxId),
+    threadIdUniqueIdx: uniqueIndex("coding_apps_thread_id_unique_idx").on(table.threadId),
   })
 )

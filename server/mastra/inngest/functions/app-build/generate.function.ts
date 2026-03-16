@@ -1,5 +1,5 @@
 import { createStep } from "@mastra/inngest"
-import { builderAgent } from "@/server/mastra/agents/builder-agent"
+import { builderAgent } from "@/server/mastra/agents/vibecoding/builder-agent"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
 import { buildsService } from "@/server/modules/builds/builds.service"
 import { buildGenerateOutputSchema, buildPlanOutputSchema } from "./schemas"
