@@ -21,6 +21,9 @@ agentvibecoding420-main/
 # Mastra build output
 .mastra/
 
+# Test coverage
+coverage/
+
 # Cursor and docs (local/planning)
 .cursor/
 .factory/
