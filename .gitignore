@@ -9,6 +9,7 @@ node_modules/
 .next/
 fronted/.next/
 tsconfig.tsbuildinfo
+.env
 .env*.local
 .DS_Store
 .idea/

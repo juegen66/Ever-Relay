@@ -49,6 +49,22 @@ export const ADD_SVG_TO_CANVAS_PARAMS: ToolParameter[] = [
   { name: "height", type: "number", description: "Optional generated SVG height (120-2400).", required: false },
 ]
 
+export const RENDER_ARTIFACT_PARAMS: ToolParameter[] = [
+  {
+    name: "html",
+    type: "string",
+    description:
+      "The complete HTML document string to display. This should be the final message-html-builder style artifact, not a prompt for image generation. Pass the actual HTML markup.",
+    required: true,
+  },
+  {
+    name: "title",
+    type: "string",
+    description: "Optional title shown above the artifact.",
+    required: false,
+  },
+]
+
 export const CREATE_ITEM_PARAMS: ToolParameter[] = [
   { name: "name", type: "string", description: "Display name for the new item", required: true },
   { name: "itemType", type: "string", description: "folder|text|image|code|spreadsheet|generic", required: false },

@@ -4,6 +4,9 @@ import { E2BSandbox } from "@mastra/e2b"
 import { codingAppsService } from "@/server/modules/coding-apps/coding-apps.service"
 import { sandboxBindingsService } from "@/server/modules/sandbox/sandbox-bindings.service"
 
+const MESSAGE_HTML_BUILDER_SKILL_PATH =
+  "/Users/qiaodailong/.codex/skills/message-html-builder"
+
 export interface WorkspaceScope {
   userId: string
   projectId?: string | null
@@ -59,6 +62,15 @@ export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
   return createScopedWorkspace(scope, {
     idPrefix: "build-workspace",
     name: "Build Workspace",
+  })
+}
+
+export function createDesktopSkillWorkspace() {
+  return new Workspace({
+    id: "desktop-skill-workspace",
+    name: "Desktop Skill Workspace",
+    skills: [MESSAGE_HTML_BUILDER_SKILL_PATH],
+    bm25: true,
   })
 }
 

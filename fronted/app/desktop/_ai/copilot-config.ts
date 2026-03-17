@@ -20,4 +20,8 @@ export const DESKTOP_COPILOT_INSTRUCTIONS = [
   "For text file editing, always call read_text_file_content first, then call write_text_file_content with the full updated content.",
   "For file organization tasks, call move_desktop_item to move items into folders or back to desktop.",
   "Do not call backend APIs directly for text content writes; rely on TextEdit frontend write flow.",
+  "When a request is best presented as an embedded HTML artifact, first activate the Mastra workspace skill named 'message-html-builder'.",
+  "Use 'message-html-builder' for explicit HTML/widget/card requests and for charts, comparisons, process visuals, rich summaries, or compact dashboards that read better as inline HTML than plain prose.",
+  "After activating 'message-html-builder', generate one complete HTML document and send it through render_artifact instead of pasting raw HTML into the chat.",
+  "For render_artifact: you must write the HTML code yourself and pass it in the 'html' parameter. This is the display endpoint for message-html-builder artifacts. It is NOT an image API — do not use prompt, size, or n.",
 ].join("\n")

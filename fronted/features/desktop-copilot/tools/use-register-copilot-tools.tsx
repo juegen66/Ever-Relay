@@ -10,6 +10,7 @@ import {
 } from "@/shared/copilot/constants"
 
 import { useAgentHandoffTools } from "./use-agent-handoff-tools"
+import { useArtifactTools } from "./use-artifact-tools"
 import { useBuildTools } from "./use-build-tools"
 import { useCanvasTools } from "./use-canvas-tools"
 import { useCodingAppTools } from "./use-coding-app-tools"
@@ -23,6 +24,7 @@ import { useTextEditTools } from "./use-textedit-tools"
 /** Mounts tools for main_agent (desktop mode). */
 function DesktopAgentToolsMount() {
   useDesktopCoreTools()
+  useArtifactTools()
   useCanvasTools()
   useTextEditTools()
   useBuildTools()
@@ -42,6 +44,7 @@ function LogoAgentToolsMount() {
 
 function CodingAgentToolsMount() {
   useDesktopCoreTools()
+  useArtifactTools()
   useCodingAppTools()
   useCodingTools()
   useAgentHandoffTools()
