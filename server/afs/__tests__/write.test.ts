@@ -83,7 +83,7 @@ describe("write", () => {
 
     expect(result.content).toBe("old\n---\nnew")
     expect(result.metadata?.confidence).toBe(85)
-    expect(db.update).toHaveBeenCalled()
+    expect(db.update).toHaveBeenCalledTimes(2)
   })
 
   it("3. merge confidence capped at 100", async () => {

@@ -94,8 +94,18 @@ export const afsWriteResponseSchema = apiSuccessSchema(afsNodeSchema)
 
 export const afsSearchQuerySchema = z.object({
   query: z.string().min(1),
+  mode: z.enum(["exact", "semantic"]).default("exact"),
   scope: z.string().optional(),
+  pathPrefix: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+}).superRefine((value, ctx) => {
+  if (value.mode === "semantic" && !value.pathPrefix) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "pathPrefix is required when mode is semantic",
+      path: ["pathPrefix"],
+    })
+  }
 })
 
 export type AfsSearchQuery = z.infer<typeof afsSearchQuerySchema>

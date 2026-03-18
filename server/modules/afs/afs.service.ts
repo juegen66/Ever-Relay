@@ -24,8 +24,12 @@ export class AfsService {
     return afs.delete(userId, path)
   }
 
-  search(userId: string, query: string, scope?: string, limit?: number) {
-    return afs.search(userId, query, { scope, limit })
+  search(
+    userId: string,
+    query: string,
+    options?: { mode?: "exact" | "semantic"; scope?: string; pathPrefix?: string; limit?: number }
+  ) {
+    return afs.search(userId, query, options)
   }
 
   // ---- namespace introspection ----

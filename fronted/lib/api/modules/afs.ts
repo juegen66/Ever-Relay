@@ -26,8 +26,18 @@ export async function afsRead(path: string) {
 }
 
 export async function afsSearch(query: string, scope?: string, limit?: number) {
+  return afsSearchWithOptions({ query, scope, limit })
+}
+
+export async function afsSearchWithOptions(options: {
+  query: string
+  mode?: "exact" | "semantic"
+  scope?: string
+  pathPrefix?: string
+  limit?: number
+}) {
   const { data } = await apiClient.get<{ data: AfsSearchResponse }>("/afs/search", {
-    params: { query, scope, limit },
+    params: options,
   })
   return data.data
 }

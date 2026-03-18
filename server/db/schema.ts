@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  customType,
   index,
   integer,
   jsonb,
@@ -271,6 +272,21 @@ export type AfsHistoryBucket = (typeof AFS_HISTORY_BUCKETS)[number]
 export const AFS_SOURCE_TYPES = ["prediction_agent", "workflow_curator", "manual", "system"] as const
 export type AfsSourceType = (typeof AFS_SOURCE_TYPES)[number]
 
+const vector = customType<{ data: number[]; driverData: string; config: { dimensions: number } }>({
+  dataType(config) {
+    return `vector(${config?.dimensions ?? 1536})`
+  },
+  toDriver(value) {
+    return `[${value.join(",")}]`
+  },
+  fromDriver(value) {
+    if (typeof value !== "string") return value as number[]
+    const trimmed = value.trim().replace(/^\[/, "").replace(/\]$/, "")
+    if (!trimmed) return []
+    return trimmed.split(",").map((part) => Number(part.trim()))
+  },
+})
+
 export const afsMemory = pgTable(
   "afs_memory",
   {
@@ -326,6 +342,27 @@ export const afsHistory = pgTable(
   })
 )
 
+export const afsMemoryEmbeddings = pgTable(
+  "afs_memory_embeddings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memoryId: uuid("memory_id").notNull().references(() => afsMemory.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    model: text("model").notNull(),
+    modelVersion: text("model_version").notNull(),
+    contentHash: text("content_hash").notNull(),
+    indexedAt: timestamp("indexed_at", { withTimezone: true }).defaultNow().notNull(),
+    staleAt: timestamp("stale_at", { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  },
+  (table) => ({
+    memoryIdIdx: uniqueIndex("afs_memory_embeddings_memory_id_idx").on(table.memoryId),
+    userIdIdx: index("afs_memory_embeddings_user_id_idx").on(table.userId),
+    staleIdx: index("afs_memory_embeddings_stale_idx").on(table.staleAt),
+  })
+)
+
 
 
 export const afsTransactionLogs = pgTable(
@@ -341,6 +378,38 @@ export const afsTransactionLogs = pgTable(
   (table) => ({
     actorCreatedIdx: index("afs_tx_logs_actor_created_idx").on(table.actor, table.createdAt),
     pathIdx: index("afs_tx_logs_path_idx").on(table.path),
+  })
+)
+
+// ---------------------------------------------------------------------------
+// Copilot handoff records
+// ---------------------------------------------------------------------------
+
+export const handoffRecords = pgTable(
+  "handoff_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    handoffId: text("handoff_id").notNull(),
+    sourceAgentId: text("source_agent_id").notNull(),
+    targetAgentId: text("target_agent_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    reason: text("reason"),
+    report: jsonb("report").$type<{
+      task: string
+      contextDigest: string
+      done: string[]
+      nextSteps: string[]
+      constraints: string[]
+      artifacts: string[]
+      openQuestions: string[]
+      riskNotes: string[]
+    }>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userCreatedIdx: index("handoff_records_user_created_idx").on(table.userId, table.createdAt),
+    threadCreatedIdx: index("handoff_records_thread_created_idx").on(table.threadId, table.createdAt),
   })
 )
 

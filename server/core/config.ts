@@ -12,6 +12,21 @@ export const serverConfig = {
       "postgres://postgres:postgres@localhost:5432/postgres",
   },
 
+  afsEmbedding: {
+    apiKey: process.env.AFS_EMBEDDING_API_KEY ?? process.env.API_KEY,
+    baseUrl:
+      process.env.AFS_EMBEDDING_BASE_URL ??
+      process.env.BASE_URL,
+    model: process.env.AFS_EMBEDDING_MODEL,
+    modelVersion: process.env.AFS_EMBEDDING_MODEL_VERSION,
+    dimensions: process.env.AFS_EMBEDDING_DIMENSIONS
+      ? Number(process.env.AFS_EMBEDDING_DIMENSIONS)
+      : undefined,
+    get enabled() {
+      return Boolean(this.apiKey && this.baseUrl && this.model && this.dimensions && this.dimensions > 0)
+    },
+  },
+
   auth: {
     baseUrl:
       process.env.BETTER_AUTH_URL ??

@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto"
-import { and, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 
 import { db } from "@/server/core/database"
 import {
   afsMemory,
+  afsMemoryEmbeddings,
   afsHistory,
   AFS_SCOPES,
   AFS_MEMORY_BUCKETS,
@@ -13,6 +14,7 @@ import {
   type AfsHistoryBucket,
   type AfsSourceType,
 } from "@/server/db/schema"
+import { afsEmbeddingService } from "./embeddings"
 
 import type {
   AfsKind,
@@ -356,6 +358,7 @@ export class AFS {
         .where(eq(afsMemory.id, existing.id))
         .returning()
 
+      await afsEmbeddingService.markMemoryEmbeddingStale(updated.id)
       await this.recordTx(userId, "write", path, { merged: true })
       return this.memoryToNode(updated)
     }
@@ -408,6 +411,10 @@ export class AFS {
       )
       .returning()
 
+    if (result.length > 0) {
+      await afsEmbeddingService.markMemoryEmbeddingStale(result[0].id)
+    }
+
     await this.recordTx(userId, "delete", path)
     return result.length > 0
   }
@@ -417,8 +424,19 @@ export class AFS {
   // -----------------------------------------------------------------------
 
   async search(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
+    const mode = options?.mode ?? "exact"
+
+    if (mode === "semantic") {
+      return this.searchSemantic(userId, query, options)
+    }
+
+    return this.searchExact(userId, query, options)
+  }
+
+  private async searchExact(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
     const limit = options?.limit ?? 20
     const pattern = `%${query}%`
+    const normalizedPrefix = options?.pathPrefix ? this.normalizePathPrefix(options.pathPrefix) : undefined
 
     let scopeFilter: AfsScope | undefined
     if (options?.scope) {
@@ -426,6 +444,10 @@ export class AFS {
       if (scopeParsed.scope !== "Desktop") {
         scopeFilter = scopeParsed.scope
       }
+    }
+    const prefixScope = normalizedPrefix ? this.extractScopeFromPrefix(normalizedPrefix) : undefined
+    if (!scopeFilter && prefixScope && prefixScope !== "Desktop") {
+      scopeFilter = prefixScope
     }
 
     // Search memory
@@ -435,6 +457,9 @@ export class AFS {
       ilike(afsMemory.content, pattern),
     ]
     if (scopeFilter) memConditions.push(eq(afsMemory.scope, scopeFilter))
+    if (normalizedPrefix) {
+      memConditions.push(this.pathPrefixCondition(this.memoryFullPathExpr(), normalizedPrefix))
+    }
 
     const memRows = await db
       .select()
@@ -449,6 +474,9 @@ export class AFS {
       ilike(afsHistory.content, pattern),
     ]
     if (scopeFilter) histConditions.push(eq(afsHistory.scope, scopeFilter))
+    if (normalizedPrefix) {
+      histConditions.push(this.pathPrefixCondition(this.historyFullPathExpr(), normalizedPrefix))
+    }
 
     const histRows = await db
       .select()
@@ -468,12 +496,62 @@ export class AFS {
         .where(inArray(afsMemory.id, memRows.map((r) => r.id)))
     }
 
-    await this.recordTx(userId, "search", "/", { query, resultCount: memRows.length + histRows.length })
+    await this.recordTx(userId, "search", "/", {
+      query,
+      mode: "exact",
+      pathPrefix: normalizedPrefix,
+      resultCount: memRows.length + histRows.length,
+    })
 
     return [
       ...memRows.map((r) => this.memoryToNode(r)),
       ...histRows.map((r) => this.historyToNode(r)),
     ]
+  }
+
+  private async searchSemantic(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
+    const limit = options?.limit ?? 20
+    const normalizedPrefix = this.requireSemanticPathPrefix(options?.pathPrefix)
+    const scopeFilter = this.resolveSemanticScope(options?.scope, normalizedPrefix)
+    const queryEmbedding = await afsEmbeddingService.embedText(query)
+    const queryVector = `[${queryEmbedding.vector.join(",")}]`
+    const distanceExpr = sql<number>`${afsMemoryEmbeddings.embedding} <=> ${queryVector}::vector`
+
+    const rows = await db
+      .select({
+        memory: afsMemory,
+        distance: distanceExpr,
+      })
+      .from(afsMemoryEmbeddings)
+      .innerJoin(afsMemory, eq(afsMemoryEmbeddings.memoryId, afsMemory.id))
+      .where(and(
+        eq(afsMemoryEmbeddings.userId, userId),
+        isNull(afsMemoryEmbeddings.staleAt),
+        isNull(afsMemory.deletedAt),
+        scopeFilter ? eq(afsMemory.scope, scopeFilter) : undefined,
+        this.pathPrefixCondition(this.memoryFullPathExpr(), normalizedPrefix)
+      ))
+      .orderBy(distanceExpr, desc(afsMemory.confidence), desc(afsMemory.updatedAt))
+      .limit(limit)
+
+    if (rows.length > 0) {
+      await db
+        .update(afsMemory)
+        .set({
+          accessCount: sql`${afsMemory.accessCount} + 1`,
+          lastAccessedAt: new Date(),
+        })
+        .where(inArray(afsMemory.id, rows.map((row) => row.memory.id)))
+    }
+
+    await this.recordTx(userId, "search", "/", {
+      query,
+      mode: "semantic",
+      pathPrefix: normalizedPrefix,
+      resultCount: rows.length,
+    })
+
+    return rows.map((row) => this.memoryToNode(row.memory))
   }
 
   // -----------------------------------------------------------------------
@@ -571,6 +649,73 @@ export class AFS {
 
   private dirNode(path: string, name: string): AfsNode {
     return { path, name, type: "dir", metadata: {} }
+  }
+
+  private normalizePathPrefix(raw: string) {
+    return raw.replace(/^\/+|\/+$/g, "")
+  }
+
+  private requireSemanticPathPrefix(pathPrefix?: string) {
+    if (!pathPrefix) {
+      throw new Error("AFS: semantic search requires pathPrefix")
+    }
+
+    const normalized = this.normalizePathPrefix(pathPrefix)
+    const parsed = this.parsePath(normalized)
+    if (parsed.kind !== "memory") {
+      throw new Error(`AFS: semantic search pathPrefix must point to a Memory subtree. Got "${pathPrefix}"`)
+    }
+
+    return normalized
+  }
+
+  private extractScopeFromPrefix(pathPrefix: string): AfsScope {
+    return this.parsePath(pathPrefix).scope
+  }
+
+  private resolveSemanticScope(scope: string | undefined, pathPrefix: string): AfsScope | undefined {
+    const prefixScope = this.extractScopeFromPrefix(pathPrefix)
+    if (!scope) {
+      return prefixScope === "Desktop" ? undefined : prefixScope
+    }
+
+    const parsedScope = this.parsePath(scope).scope
+    if (parsedScope !== prefixScope) {
+      throw new Error(`AFS: semantic search scope "${scope}" conflicts with pathPrefix "${pathPrefix}"`)
+    }
+
+    return parsedScope === "Desktop" ? undefined : parsedScope
+  }
+
+  private memoryFullPathExpr() {
+    return sql<string>`concat(
+      'Desktop',
+      case when ${afsMemory.scope} <> 'Desktop' then '/' || ${afsMemory.scope} else '' end,
+      '/Memory/',
+      ${afsMemory.bucket},
+      case when ${afsMemory.path} <> '/' then ${afsMemory.path} else '' end,
+      '/',
+      ${afsMemory.name}
+    )`
+  }
+
+  private historyFullPathExpr() {
+    return sql<string>`concat(
+      'Desktop',
+      case when ${afsHistory.scope} <> 'Desktop' then '/' || ${afsHistory.scope} else '' end,
+      '/History/',
+      ${afsHistory.bucket},
+      case when ${afsHistory.path} <> '/' then ${afsHistory.path} else '' end,
+      '/',
+      ${afsHistory.name}
+    )`
+  }
+
+  private pathPrefixCondition(pathExpr: ReturnType<typeof sql<string>>, normalizedPrefix: string) {
+    return or(
+      sql`${pathExpr} = ${normalizedPrefix}`,
+      ilike(pathExpr, `${normalizedPrefix}/%`)
+    )!
   }
 
   private async recordTx(

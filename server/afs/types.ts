@@ -11,6 +11,7 @@
 import type { AfsScope, AfsMemoryBucket, AfsHistoryBucket } from "@/server/db/schema"
 
 export type AfsKind = "memory" | "history"
+export type AfsSearchMode = "exact" | "semantic"
 
 export interface ParsedPath {
   scope: AfsScope
@@ -59,6 +60,8 @@ export interface AfsWriteOptions {
 export interface AfsSearchOptions {
   limit?: number
   scope?: string
+  mode?: AfsSearchMode
+  pathPrefix?: string
 }
 
 export interface AfsTransaction {

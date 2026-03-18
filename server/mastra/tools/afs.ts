@@ -83,19 +83,35 @@ export const afsWriteTool = createTool({
 export const afsSearchTool = createTool({
   id: "afs_search",
   description:
-    "Search across AFS by keyword. Searches all scopes or a specific scope.\n" +
-    "Use scope to limit: Desktop/Canvas searches only Canvas scope.",
+    "Search across AFS in either exact or semantic mode.\n" +
+    "Use mode=exact for fast keyword search. Use mode=semantic only for Memory, and always constrain it with pathPrefix.\n" +
+    "Use scope/pathPrefix to limit the search space: Desktop/Canvas/Memory/note searches only that subtree.",
   inputSchema: z.object({
     query: z.string().describe("Keyword to search for"),
+    mode: z.enum(["exact", "semantic"]).default("exact").describe("Search mode"),
     scope: z.string().optional().describe("Optional scope path, e.g. Desktop/Canvas"),
+    pathPrefix: z.string().optional().describe("Optional subtree path. Required for semantic mode, e.g. Desktop/Canvas/Memory/note"),
     limit: z.number().int().min(1).max(100).optional().describe("Max results, default 20"),
+  }).superRefine((value, ctx) => {
+    if (value.mode === "semantic" && !value.pathPrefix) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pathPrefix"],
+        message: "pathPrefix is required when mode is semantic",
+      })
+    }
   }),
   requestContextSchema,
-  execute: async ({ query, scope, limit }, context) => {
+  execute: async ({ query, mode, scope, pathPrefix, limit }, context) => {
     const userId = context.requestContext?.get("userId") as string | undefined
     if (!userId) return { ok: false, error: "Missing authenticated user context" }
 
-    const results = await afs.search(userId, query, { scope, limit: limit ?? 20 })
+    const results = await afs.search(userId, query, {
+      mode,
+      scope,
+      pathPrefix,
+      limit: limit ?? 20,
+    })
     return { ok: true, count: results.length, results }
   },
 })
