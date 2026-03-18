@@ -10,22 +10,31 @@ import {
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
-const COPILOT_AGENT_IDS = [
+const SHARED_COPILOT_AGENT_IDS = [
   DESKTOP_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
-  PREDICTION_AGENT_ID,
 ] as const
 
-type CopilotAgentId = (typeof COPILOT_AGENT_IDS)[number]
+const PREDICTION_COPILOT_AGENT_IDS = [PREDICTION_AGENT_ID] as const
+
+type CopilotAgentId =
+  | (typeof SHARED_COPILOT_AGENT_IDS)[number]
+  | (typeof PREDICTION_COPILOT_AGENT_IDS)[number]
 type CopilotRuntimeAgents = NonNullable<
   NonNullable<ConstructorParameters<typeof CopilotRuntime>[0]>["agents"]
 >
 
-function createMastraAgent(userId: string, agentId: CopilotAgentId) {
+function createMastraAgent(
+  userId: string,
+  agentId: CopilotAgentId,
+  source: "desktop" | "prediction"
+) {
   const requestContext = new RequestContext()
   requestContext.set("userId", userId)
   requestContext.set(MASTRA_RESOURCE_ID_KEY, userId)
+  requestContext.set("agentId", agentId)
+  requestContext.set("source", source)
 
   return new MastraAgent({
     agentId,
@@ -35,12 +44,24 @@ function createMastraAgent(userId: string, agentId: CopilotAgentId) {
   })
 }
 
-export function createDesktopCopilotRuntime(userId: string) {
+function createCopilotRuntimeForAgents(
+  userId: string,
+  agentIds: readonly CopilotAgentId[],
+  source: "desktop" | "prediction"
+) {
   const agents = Object.fromEntries(
-    COPILOT_AGENT_IDS.map((agentId) => [agentId, createMastraAgent(userId, agentId)])
+    agentIds.map((agentId) => [agentId, createMastraAgent(userId, agentId, source)])
   ) as CopilotRuntimeAgents
 
   return new CopilotRuntime({
     agents,
   })
+}
+
+export function createDesktopCopilotRuntime(userId: string) {
+  return createCopilotRuntimeForAgents(userId, SHARED_COPILOT_AGENT_IDS, "desktop")
+}
+
+export function createPredictionCopilotRuntime(userId: string) {
+  return createCopilotRuntimeForAgents(userId, PREDICTION_COPILOT_AGENT_IDS, "prediction")
 }

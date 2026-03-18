@@ -9,6 +9,7 @@ import {
   afsSearchTool,
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
+import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
@@ -23,6 +24,7 @@ export const codingCopilotAgent = new Agent({
   name: "Coding Copilot Agent",
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
+  inputProcessors: [requestOriginProcessor],
   instructions: [
     "You are the CloudOS coding copilot.",
     "",

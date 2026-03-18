@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import {
   ArrowLeft,
@@ -16,8 +16,10 @@ import {
 import { useRouter } from "next/navigation"
 import { createPortal } from "react-dom"
 
+import { queueDesktopPredictionRun } from "@/app/desktop/_ai/lib/prediction-control"
 import { Button } from "@/components/ui/button"
 import { useWorkingMemory } from "@/hooks/use-working-memory"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { WorkingMemoryState } from "@/shared/contracts/working-memory"
 
@@ -78,15 +80,14 @@ function formatTimeSince(ts: number | null) {
 
 export function WorkflowDashboard() {
   const router = useRouter()
-  const timeoutRef = useRef<number | null>(null)
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<(typeof NAV_ITEMS)[number]>("Dashboard")
   const [activeSuggestion, setActiveSuggestion] = useState(0)
-  const [activeStep, setActiveStep] = useState(1)
-  const [isExecuting, setIsExecuting] = useState(false)
+  const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
 
   const { state: workingMemory } = useWorkingMemory()
 
+  const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)
@@ -94,24 +95,36 @@ export function WorkflowDashboard() {
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true))
-    return () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current)
-      }
-    }
   }, [])
 
-  const handleExecute = () => {
-    setIsExecuting(true)
-    setActiveStep(1)
-    if (timeoutRef.current !== null) {
-      window.clearTimeout(timeoutRef.current)
+  useEffect(() => {
+    if (!triggerMessage) {
+      return
     }
-    timeoutRef.current = window.setTimeout(() => {
-      setActiveStep((prev) => (prev < 2 ? prev + 1 : 2))
-      setIsExecuting(false)
-      timeoutRef.current = null
-    }, 1000)
+
+    const timeout = window.setTimeout(() => {
+      setTriggerMessage(null)
+    }, 3000)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [triggerMessage])
+
+  const handleTriggerWorkflow = () => {
+    const triggered = queueDesktopPredictionRun({ force: true })
+
+    if (triggered) {
+      setTriggerMessage("Prediction workflow started. Results will appear here shortly.")
+      return
+    }
+
+    if (silentRunning || isLoading) {
+      setTriggerMessage("Prediction workflow is already running.")
+      return
+    }
+
+    setTriggerMessage("Prediction trigger skipped. Try again in a moment.")
   }
 
   if (!mounted) {
@@ -120,6 +133,12 @@ export function WorkflowDashboard() {
 
   const hasPredictions = predictions.length > 0
   const hasSuggestions = suggestions.length > 0
+  const activeStep = isLoading ? 1 : hasPredictions || hasSuggestions ? 2 : 0
+  const workflowStatus = isLoading
+    ? "Analyzing desktop activity"
+    : hasPredictions || hasSuggestions
+      ? "Prediction results ready"
+      : "Ready"
 
   return createPortal(
     <div
@@ -253,9 +272,10 @@ export function WorkflowDashboard() {
                             : "border-black/10 bg-white text-[#2f2f2f] hover:bg-[#f8f8f8]"
                         }`}
                         variant={index === 0 ? "default" : "outline"}
-                        onClick={handleExecute}
+                        onClick={handleTriggerWorkflow}
+                        disabled={isLoading}
                       >
-                        {isExecuting ? "Executing..." : pred.actionLabel ?? "Execute"}
+                        {isLoading ? "Analyzing..." : pred.actionLabel ?? "Trigger Workflow"}
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -263,8 +283,18 @@ export function WorkflowDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="flex items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-                <p className="text-[15px] text-[#919191]">No predictions yet. Interact with the desktop to generate insights.</p>
+              <div className="flex flex-col items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+                <p className="text-[15px] text-[#919191]">
+                  No predictions yet. Trigger a prediction run to generate events and confidence scores.
+                </p>
+                <Button
+                  className="mt-5 h-11 rounded-[14px] px-6 text-[14px] font-medium"
+                  onClick={handleTriggerWorkflow}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Analyzing..." : "Trigger Workflow"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </section>
@@ -281,7 +311,7 @@ export function WorkflowDashboard() {
                   <Zap className="h-4 w-4" />
                   Active Workflow
                 </div>
-                <p className="text-[11px] font-medium text-[#9a9a9a]">{isExecuting ? "Executing: Marketing Analysis" : "Ready"}</p>
+                <p className="text-[11px] font-medium text-[#9a9a9a]">{workflowStatus}</p>
               </div>
             </div>
 
@@ -318,6 +348,11 @@ export function WorkflowDashboard() {
 
               <div className="flex min-h-[360px] items-center justify-center rounded-[24px] border border-black/10 bg-white p-8 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
                 <div className="w-full max-w-[760px]">
+                  {triggerMessage && (
+                    <div className="mb-6 rounded-2xl border border-black/10 bg-[#f8f8f8] px-4 py-3 text-[13px] text-[#666]">
+                      {triggerMessage}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     {WORKFLOW_STEPS.map((step, index) => {
                       const complete = step.id < activeStep

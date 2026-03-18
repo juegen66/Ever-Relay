@@ -9,14 +9,24 @@ import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
-export function DesktopAgentContextProvider() {
+function WorkingMemoryContextSync() {
+  useWorkingMemory()
+  return null
+}
+
+interface DesktopAgentContextProviderProps {
+  includeWorkingMemory?: boolean
+}
+
+export function DesktopAgentContextProvider({
+  includeWorkingMemory = true,
+}: DesktopAgentContextProviderProps = {}) {
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const actionLog = useDesktopActionLogStore((state) => state.actions)
   const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
 
-  useWorkingMemory()
   const { facts, patterns, episodes } = useLongTermMemory()
 
   useCopilotReadable({
@@ -48,10 +58,9 @@ export function DesktopAgentContextProvider() {
   })
 
   useCopilotReadable({
-    description: "Recent desktop actions and time",
+    description: "Recent desktop actions",
     value: {
       recentActions: actionLog,
-      currentTime: new Date().toISOString(),
     },
   })
 
@@ -83,5 +92,5 @@ export function DesktopAgentContextProvider() {
     },
   })
 
-  return null
+  return includeWorkingMemory ? <WorkingMemoryContextSync /> : null
 }

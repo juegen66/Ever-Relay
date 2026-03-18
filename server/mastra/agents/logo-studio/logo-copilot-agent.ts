@@ -9,6 +9,7 @@ import {
   afsSearchTool,
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
+import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
@@ -40,6 +41,7 @@ export const logoCopilotAgent = new Agent({
     "Do not trigger non-logo build workflows directly unless the user explicitly asks; use handoff when needed.",
   ].join("\n"),
   memory: createAgentMemory(),
+  inputProcessors: [requestOriginProcessor],
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,

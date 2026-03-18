@@ -9,6 +9,7 @@ import {
   afsSearchTool,
   afsWriteTool,
 } from "@/server/mastra/tools/afs"
+import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
 import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
@@ -92,6 +93,7 @@ export const predictionAgent = new Agent({
   ].join("\n"),
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
+  inputProcessors: [requestOriginProcessor],
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,

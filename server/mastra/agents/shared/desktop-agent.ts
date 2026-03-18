@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent"
 
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
+import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   afsListTool,
   afsReadTool,
@@ -45,6 +46,7 @@ export const desktopAgent = new Agent({
   ].join("\n"),
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
+  inputProcessors: [requestOriginProcessor],
   skillsFormat: "markdown",
   workspace: createDesktopSkillWorkspace(),
   tools: {
