@@ -7,15 +7,15 @@ import { Desktop } from "@/app/desktop/_macos/desktop"
 interface DesktopLayoutProps {
   children: ReactNode
   chat: ReactNode
-  workflow: ReactNode
+  noChatbot: ReactNode
 }
 
-export default function DesktopLayout({ children, chat, workflow }: DesktopLayoutProps) {
+export default function DesktopLayout({ children, chat, noChatbot }: DesktopLayoutProps) {
   return (
     <DesktopCopilotProvider desktop={<Desktop />}>
       {children}
       {chat}
-      {workflow}
+      {noChatbot}
       <SilentCopilotRuntime />
     </DesktopCopilotProvider>
   )

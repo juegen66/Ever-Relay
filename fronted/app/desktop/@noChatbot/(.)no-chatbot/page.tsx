@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation"
 
 import { DesktopAuthGate } from "@/app/desktop/_macos/desktop-auth-gate"
-import { WorkflowDashboard } from "@/app/desktop/_workflow/workflow-dashboard"
+import { NoChatbotDashboard } from "@/app/desktop/_no-chatbot/no-chatbot-dashboard"
 import { getServerDesktopUser } from "@/server/lib/auth/get-server-desktop-user"
 
-export default async function InterceptedDesktopWorkflowPage() {
+export default async function InterceptedDesktopNoChatbotPage() {
   const currentUser = await getServerDesktopUser()
   if (!currentUser) {
-    redirect(`/login?callbackURL=${encodeURIComponent("/desktop/workflow")}`)
+    redirect(`/login?callbackURL=${encodeURIComponent("/desktop/no-chatbot")}`)
   }
 
   return (
     <DesktopAuthGate user={currentUser}>
-      <WorkflowDashboard />
+      <NoChatbotDashboard />
     </DesktopAuthGate>
   )
 }

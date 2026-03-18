@@ -37,7 +37,7 @@ const STARTUP_NOTIFICATIONS = [
 export function Desktop() {
   const pathname = usePathname()
   const track = useTrackAction()
-  const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/workflow"
+  const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/no-chatbot"
 
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)

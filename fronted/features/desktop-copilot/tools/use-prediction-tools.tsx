@@ -4,41 +4,9 @@ import { useFrontendTool } from "@copilotkit/react-core"
 
 import { useDesktopNotificationStore } from "@/lib/stores/desktop-notification-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
-import type {
-  PredictionCard,
-  ProactivePredictionReminder,
-  SuggestionCard,
-} from "@/lib/stores/prediction-store"
+import type { PredictionCard, SuggestionCard } from "@/lib/stores/prediction-store"
 
-const PROACTIVE_REMINDER_MIN_CONFIDENCE = 90
-
-function selectProactiveReminder(
-  predictions: PredictionCard[]
-): ProactivePredictionReminder | null {
-  const topPrediction = predictions.reduce<PredictionCard | null>((best, current) => {
-    if (!best) {
-      return current
-    }
-
-    return current.confidence > best.confidence ? current : best
-  }, null)
-
-  if (!topPrediction || topPrediction.confidence < PROACTIVE_REMINDER_MIN_CONFIDENCE) {
-    return null
-  }
-
-  const title = topPrediction.actionLabel?.trim() || topPrediction.title.trim()
-  const message = topPrediction.description.trim()
-  const key = [topPrediction.id, title, topPrediction.confidence].join(":")
-
-  return {
-    key,
-    predictionId: topPrediction.id,
-    title,
-    message,
-    confidence: topPrediction.confidence,
-  }
-}
+import { selectProactiveReminder } from "./select-proactive-reminder"
 
 export function usePredictionTools() {
   const setPredictionSnapshot = usePredictionStore((state) => state.setPredictionSnapshot)
@@ -48,7 +16,7 @@ export function usePredictionTools() {
     {
       name: "update_predictions",
       description:
-        "Update the workflow dashboard with AI-generated predictions and improvement suggestions. Call this after analyzing user behavior.",
+        "Update the No Chatbot dashboard with AI-generated predictions and improvement suggestions. Call this after analyzing user behavior.",
       followUp: false,
       parameters: [
         {

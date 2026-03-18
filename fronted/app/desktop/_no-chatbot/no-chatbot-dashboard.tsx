@@ -78,7 +78,7 @@ function formatTimeSince(ts: number | null) {
   return `Updated ${Math.floor(diff / 3600)}h ago`
 }
 
-export function WorkflowDashboard() {
+export function NoChatbotDashboard() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<(typeof NAV_ITEMS)[number]>("Dashboard")
