@@ -4,16 +4,20 @@ import {
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
+import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./logo-studio/brand-brief-agent"
+import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./logo-studio/brand-designer-agent"
+import { logoCopilotAgent } from "./logo-studio/logo-copilot-agent"
+import { posterDesignerAgent, POSTER_DESIGNER_AGENT_ID } from "./logo-studio/poster-designer-agent"
 import {
   contextCompressionAgent,
   CONTEXT_COMPRESSION_AGENT_ID,
 } from "./shared/context-compression-agent"
 import { desktopAgent } from "./shared/desktop-agent"
+import {
+  memoryCuratorAgent,
+  MEMORY_CURATOR_AGENT_ID,
+} from "./shared/memory-curator-agent"
 import { predictionAgent, PREDICTION_AGENT_ID } from "./shared/prediction-agent"
-import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./logo-studio/brand-brief-agent"
-import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./logo-studio/brand-designer-agent"
-import { logoCopilotAgent } from "./logo-studio/logo-copilot-agent"
-import { posterDesignerAgent, POSTER_DESIGNER_AGENT_ID } from "./logo-studio/poster-designer-agent"
 import { builderAgent, BUILDER_AGENT_ID } from "./vibecoding/builder-agent"
 import { codingCopilotAgent } from "./vibecoding/coding-copilot-agent"
 import {
@@ -33,6 +37,7 @@ export const agents = {
   [CODING_COPILOT_AGENT]: codingCopilotAgent,
   [PREDICTION_AGENT_ID]: predictionAgent,
   [CONTEXT_COMPRESSION_AGENT_ID]: contextCompressionAgent,
+  [MEMORY_CURATOR_AGENT_ID]: memoryCuratorAgent,
   [PLANNER_AGENT_ID]: plannerAgent,
   [BUILDER_AGENT_ID]: builderAgent,
   [REVIEWER_AGENT_ID]: reviewerAgent,

@@ -17,7 +17,7 @@ export const OPEN_APP_PARAMS: ToolParameter[] = [
     name: "appId",
     type: "string",
     description:
-      "App id to open: finder|canvas|logo|vibecoding|textedit. To open a specific text file, use open_text_file.",
+      "App id to open: finder|canvas|logo|vibecoding|textedit|report. To open a specific text file, use open_text_file.",
     required: true,
   },
 ]

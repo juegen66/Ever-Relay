@@ -54,7 +54,7 @@ export function usePredictionTools() {
           useDesktopNotificationStore.getState().enqueueNotification({
             app: "Predict",
             title: proactiveReminder.title,
-            message: proactiveReminder.message,
+            message: `${proactiveReminder.message} Click the Predict Report app in the Dock to view the detailed analysis.`,
             time: "now",
             iconColor: "#0f766e",
           })

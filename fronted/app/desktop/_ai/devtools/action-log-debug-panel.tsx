@@ -77,6 +77,7 @@ export function ActionLogDebugPanel() {
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
   const actions = useDesktopActionLogStore((state) => state.actions)
   const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
+  const silentStatus = useDesktopAgentStore((state) => state.silentStatus)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
   const proactiveReminder = usePredictionStore((state) => state.proactiveReminder)
@@ -98,19 +99,24 @@ export function ActionLogDebugPanel() {
   }, [triggerMessage])
 
   const handleTriggerPredict = () => {
-    const triggered = queueDesktopPredictionRun({ force: true })
+    void queueDesktopPredictionRun({ force: true }).then((result) => {
+      if (result === "started") {
+        setTriggerMessage("Triggered background predict run.")
+        return
+      }
 
-    if (triggered) {
-      setTriggerMessage("Triggered background predict run.")
-      return
-    }
+      if (result === "restarted") {
+        setTriggerMessage("Restarted prediction with a fresh thread.")
+        return
+      }
 
-    if (silentRunning || isLoading) {
-      setTriggerMessage("Predict is already running.")
-      return
-    }
+      if (result === "running" || silentRunning || isLoading) {
+        setTriggerMessage("Predict is already running.")
+        return
+      }
 
-    setTriggerMessage("Predict trigger skipped by debounce.")
+      setTriggerMessage("Predict trigger skipped by debounce.")
+    })
   }
 
   if (!visible) {
@@ -158,7 +164,7 @@ export function ActionLogDebugPanel() {
               <button
                 type="button"
                 onClick={handleTriggerPredict}
-                disabled={isLoading}
+                disabled={silentStatus === "stopping"}
                 className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-[10px] font-medium text-white/80 transition hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Sparkles className="h-3 w-3" />

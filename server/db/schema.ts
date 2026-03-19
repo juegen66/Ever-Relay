@@ -272,6 +272,9 @@ export type AfsHistoryBucket = (typeof AFS_HISTORY_BUCKETS)[number]
 export const AFS_SOURCE_TYPES = ["prediction_agent", "workflow_curator", "manual", "system"] as const
 export type AfsSourceType = (typeof AFS_SOURCE_TYPES)[number]
 
+export const AFS_INGEST_CHECKPOINT_STATUSES = ["idle", "running", "completed", "failed"] as const
+export type AfsIngestCheckpointStatus = (typeof AFS_INGEST_CHECKPOINT_STATUSES)[number]
+
 const vector = customType<{ data: number[]; driverData: string; config: { dimensions: number } }>({
   dataType(config) {
     return `vector(${config?.dimensions ?? 1536})`
@@ -319,6 +322,8 @@ export const afsMemory = pgTable(
   })
 )
 
+export type AfsMemoryRow = typeof afsMemory.$inferSelect
+
 export const afsHistory = pgTable(
   "afs_history",
   {
@@ -360,6 +365,26 @@ export const afsMemoryEmbeddings = pgTable(
     memoryIdIdx: uniqueIndex("afs_memory_embeddings_memory_id_idx").on(table.memoryId),
     userIdIdx: index("afs_memory_embeddings_user_id_idx").on(table.userId),
     staleIdx: index("afs_memory_embeddings_stale_idx").on(table.staleAt),
+  })
+)
+
+export const afsIngestCheckpoints = pgTable(
+  "afs_ingest_checkpoints",
+  {
+    userId: text("user_id").primaryKey(),
+    lastIngestedAt: timestamp("last_ingested_at", { withTimezone: true }),
+    lastHistoryCreatedAt: timestamp("last_history_created_at", { withTimezone: true }),
+    lastHistoryId: uuid("last_history_id"),
+    lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+    status: text("status").$type<AfsIngestCheckpointStatus>().notNull().default("idle"),
+    error: text("error"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    statusUpdatedIdx: index("afs_ingest_checkpoints_status_updated_idx").on(table.status, table.updatedAt),
+    lastRunIdx: index("afs_ingest_checkpoints_last_run_idx").on(table.lastRunAt),
   })
 )
 

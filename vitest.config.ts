@@ -18,8 +18,15 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "."),
-    },
+    alias: [
+      { find: "@/app", replacement: path.resolve(__dirname, "fronted/app") },
+      { find: "@/components", replacement: path.resolve(__dirname, "fronted/components") },
+      { find: "@/features", replacement: path.resolve(__dirname, "fronted/features") },
+      { find: "@/hooks", replacement: path.resolve(__dirname, "fronted/hooks") },
+      { find: "@/lib", replacement: path.resolve(__dirname, "fronted/lib") },
+      { find: "@/server", replacement: path.resolve(__dirname, "server") },
+      { find: "@/shared", replacement: path.resolve(__dirname, "shared") },
+      { find: "@", replacement: path.resolve(__dirname, ".") },
+    ],
   },
 })

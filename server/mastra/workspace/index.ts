@@ -7,6 +7,9 @@ import { sandboxBindingsService } from "@/server/modules/sandbox/sandbox-binding
 const MESSAGE_HTML_BUILDER_SKILL_PATH =
   "/Users/qiaodailong/.codex/skills/message-html-builder"
 
+const PREDICTION_REPORT_BUILDER_SKILL_PATH =
+  "/Users/qiaodailong/.codex/skills/prediction-report-builder"
+
 export interface WorkspaceScope {
   userId: string
   projectId?: string | null
@@ -70,6 +73,15 @@ export function createDesktopSkillWorkspace() {
     id: "desktop-skill-workspace",
     name: "Desktop Skill Workspace",
     skills: [MESSAGE_HTML_BUILDER_SKILL_PATH],
+    bm25: true,
+  })
+}
+
+export function createPredictionSkillWorkspace() {
+  return new Workspace({
+    id: "prediction-skill-workspace",
+    name: "Prediction Skill Workspace",
+    skills: [PREDICTION_REPORT_BUILDER_SKILL_PATH],
     bm25: true,
   })
 }

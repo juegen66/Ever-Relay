@@ -13,6 +13,7 @@ const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
   logo: { w: 980, h: 700 },
   vibecoding: { w: 980, h: 640 },
   textedit: { w: 720, h: 520 },
+  report: { w: 900, h: 640 },
 }
 
 function getViewportSize() {

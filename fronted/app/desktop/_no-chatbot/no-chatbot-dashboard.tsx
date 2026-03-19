@@ -22,6 +22,7 @@ import { useWorkingMemory } from "@/hooks/use-working-memory"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { WorkingMemoryState } from "@/shared/contracts/working-memory"
+import { dispatchPredictionActionToCopilot } from "@/shared/copilot/prediction-action"
 
 type WorkflowStep = {
   id: number
@@ -88,6 +89,7 @@ export function NoChatbotDashboard() {
   const { state: workingMemory } = useWorkingMemory()
 
   const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
+  const silentStatus = useDesktopAgentStore((state) => state.silentStatus)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)
@@ -112,19 +114,24 @@ export function NoChatbotDashboard() {
   }, [triggerMessage])
 
   const handleTriggerWorkflow = () => {
-    const triggered = queueDesktopPredictionRun({ force: true })
+    void queueDesktopPredictionRun({ force: true }).then((result) => {
+      if (result === "started") {
+        setTriggerMessage("Prediction workflow started. Results will appear here shortly.")
+        return
+      }
 
-    if (triggered) {
-      setTriggerMessage("Prediction workflow started. Results will appear here shortly.")
-      return
-    }
+      if (result === "restarted") {
+        setTriggerMessage("Prediction workflow restarted with a fresh thread.")
+        return
+      }
 
-    if (silentRunning || isLoading) {
-      setTriggerMessage("Prediction workflow is already running.")
-      return
-    }
+      if (result === "running" || silentRunning || isLoading) {
+        setTriggerMessage("Prediction workflow is already running.")
+        return
+      }
 
-    setTriggerMessage("Prediction trigger skipped. Try again in a moment.")
+      setTriggerMessage("Prediction trigger skipped. Try again in a moment.")
+    })
   }
 
   if (!mounted) {
@@ -272,10 +279,14 @@ export function NoChatbotDashboard() {
                             : "border-black/10 bg-white text-[#2f2f2f] hover:bg-[#f8f8f8]"
                         }`}
                         variant={index === 0 ? "default" : "outline"}
-                        onClick={handleTriggerWorkflow}
-                        disabled={isLoading}
+                        onClick={() => {
+                          dispatchPredictionActionToCopilot({
+                            message: `Please help me with: ${pred.title}\n\n${pred.description}`,
+                          })
+                          router.push("/desktop")
+                        }}
                       >
-                        {isLoading ? "Analyzing..." : pred.actionLabel ?? "Trigger Workflow"}
+                        {pred.actionLabel ?? "Start"}
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -290,7 +301,7 @@ export function NoChatbotDashboard() {
                 <Button
                   className="mt-5 h-11 rounded-[14px] px-6 text-[14px] font-medium"
                   onClick={handleTriggerWorkflow}
-                  disabled={isLoading}
+                  disabled={silentStatus === "stopping"}
                 >
                   {isLoading ? "Analyzing..." : "Trigger Workflow"}
                   <ArrowRight className="h-4 w-4" />
@@ -335,8 +346,18 @@ export function NoChatbotDashboard() {
                         <p className="mt-2 text-[15px] leading-[1.4] text-[#9a9a9a]">{sug.description}</p>
                       </button>
                     ))}
-                    <button className="mt-5 h-12 w-full rounded-2xl border border-black/10 bg-[#f7f7f7] text-[12px] font-semibold uppercase tracking-[0.06em] text-[#929292] transition hover:bg-[#f1f1f1]">
-                      View all {suggestions.length} suggestions
+                    <button
+                      className="mt-5 h-12 w-full rounded-2xl border border-black/10 bg-[#f7f7f7] text-[12px] font-semibold uppercase tracking-[0.06em] text-[#929292] transition hover:bg-[#f1f1f1]"
+                      onClick={() => {
+                        const selected = suggestions[activeSuggestion]
+                        if (!selected) return
+                        dispatchPredictionActionToCopilot({
+                          message: `Please help me with this suggestion: ${selected.title}\n\n${selected.description}`,
+                        })
+                        router.push("/desktop")
+                      }}
+                    >
+                      Apply selected suggestion
                     </button>
                   </>
                 ) : (

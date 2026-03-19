@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
 import { CodingPromptEventBridge } from "@/features/desktop-copilot/components/coding-prompt-event-bridge"
 import { CodingPromptInjector } from "@/features/desktop-copilot/components/coding-prompt-injector"
+import { HandoffMetadataInjector } from "@/features/desktop-copilot/components/handoff-metadata-injector"
+import { PredictionActionInjector } from "@/features/desktop-copilot/components/prediction-action-injector"
 import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
@@ -210,6 +212,8 @@ export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProv
       >
         <BrandBriefInjector />
         <CodingPromptInjector />
+        <HandoffMetadataInjector />
+        <PredictionActionInjector />
         <DesktopCopilotBridge desktop={desktop}>{children}</DesktopCopilotBridge>
       </CopilotKit>
     </>

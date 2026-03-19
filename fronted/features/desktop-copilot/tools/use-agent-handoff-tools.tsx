@@ -3,7 +3,6 @@
 import { useCallback, useMemo } from "react"
 
 import {
-  useCopilotChat,
   useCopilotChatInternal,
   useFrontendTool,
 } from "@copilotkit/react-core"
@@ -345,31 +344,12 @@ function toSerializableMessages(messages: ChatMessage[]) {
     .filter((message): message is NonNullable<ReturnType<typeof toSerializableMessage>> => Boolean(message))
 }
 
-function formatHandoffMetadata(metadata: HandoffMetadata) {
-  return [
-    "[HANDOFF_METADATA_V1]",
-    JSON.stringify(metadata, null, 2),
-    "[/HANDOFF_METADATA_V1]",
-    "Use this metadata as the primary context for continuation.",
-  ].join("\n")
-}
-
-function nextAnimationFrame() {
-  if (typeof window === "undefined") {
-    return Promise.resolve()
-  }
-
-  return new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve())
-  })
-}
-
 export function useAgentHandoffTools() {
-  const { stopGeneration, isLoading } = useCopilotChat()
-  const { messages, setMessages, sendMessage } = useCopilotChatInternal({})
+  const { messages, setMessages } = useCopilotChatInternal({})
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
   const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
+  const queuePendingHandoff = useDesktopAgentStore((state) => state.queuePendingHandoff)
 
   const sourceAgentId = useMemo(
     () =>
@@ -443,29 +423,19 @@ export function useAgentHandoffTools() {
         }
       }
 
-      // Abort current generation and trim message list before switching agent.
-      if (isLoading) {
-        stopGeneration()
-      }
-
       const prunedMessages = pruneMessagesBeforeId(
         messages as ChatMessage[],
         truncateBeforeMessageId
       )
       setMessages(toSerializableMessages(prunedMessages) as typeof messages)
 
+      queuePendingHandoff({
+        id: crypto.randomUUID(),
+        threadId: copilotThreadId,
+        targetMode,
+        metadata: handoffMetadata,
+      })
       setCopilotAgentMode(targetMode)
-      await nextAnimationFrame()
-
-      // Handoff metadata is internal routing context, so we keep it as developer role.
-      await sendMessage(
-        {
-          id: crypto.randomUUID(),
-          role: "developer",
-          content: formatHandoffMetadata(handoffMetadata),
-        },
-        { followUp: true }
-      )
 
       return {
         ok: true,
@@ -479,13 +449,11 @@ export function useAgentHandoffTools() {
     },
     [
       copilotThreadId,
-      isLoading,
       messages,
-      sendMessage,
+      queuePendingHandoff,
       setMessages,
       setCopilotAgentMode,
       sourceAgentId,
-      stopGeneration,
     ]
   )
 
@@ -494,6 +462,7 @@ export function useAgentHandoffTools() {
       name: "handoff_to_agent",
       description:
         "Switch to another agent without changing thread id. Backend digest is injected as developer metadata before continuation.",
+      followUp: false,
       parameters: HANDOFF_TO_AGENT_PARAMS,
       handler: async (args) => {
         return handoffToAgent({

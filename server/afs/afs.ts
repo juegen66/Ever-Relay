@@ -1,19 +1,21 @@
 import { randomUUID } from "node:crypto"
+
 import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 
 import { db } from "@/server/core/database"
 import {
+  AFS_HISTORY_BUCKETS,
+  AFS_MEMORY_BUCKETS,
+  AFS_SCOPES,
+  afsHistory,
   afsMemory,
   afsMemoryEmbeddings,
-  afsHistory,
-  AFS_SCOPES,
-  AFS_MEMORY_BUCKETS,
-  AFS_HISTORY_BUCKETS,
-  type AfsScope,
-  type AfsMemoryBucket,
   type AfsHistoryBucket,
+  type AfsMemoryBucket,
+  type AfsScope,
   type AfsSourceType,
 } from "@/server/db/schema"
+
 import { afsEmbeddingService } from "./embeddings"
 
 import type {
@@ -39,7 +41,6 @@ import type {
 const VALID_SCOPES = new Set<string>(AFS_SCOPES)
 const VALID_KINDS = new Set<string>(["Memory", "History"])
 const VALID_MEMORY_BUCKETS = new Set<string>(AFS_MEMORY_BUCKETS)
-const VALID_HISTORY_BUCKETS = new Set<string>(AFS_HISTORY_BUCKETS)
 
 function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80)
@@ -344,6 +345,10 @@ export class AFS {
       const newConfidence = Math.min(100, Math.max(existing.confidence, options?.confidence ?? 80) + 5)
       const merged = `${existing.content}\n---\n${content}`
       const mergedTags = Array.from(new Set([...(existing.tags ?? []), ...(options?.tags ?? [])]))
+      const mergedMetadata = {
+        ...(existing.metadata ?? {}),
+        ...(options?.metadata ?? {}),
+      }
 
       const [updated] = await db
         .update(afsMemory)
@@ -351,6 +356,7 @@ export class AFS {
           content: merged,
           confidence: newConfidence,
           tags: mergedTags,
+          metadata: mergedMetadata,
           accessCount: existing.accessCount + 1,
           lastAccessedAt: new Date(),
           updatedAt: new Date(),

@@ -2,11 +2,9 @@ import { createHash } from "node:crypto"
 
 import { eq } from "drizzle-orm"
 
-import { db } from "@/server/core/database"
 import { serverConfig } from "@/server/core/config"
-import { afsMemory, afsMemoryEmbeddings } from "@/server/db/schema"
-
-type AfsMemoryRow = typeof afsMemory.$inferSelect
+import { db } from "@/server/core/database"
+import { afsMemoryEmbeddings, type AfsMemoryRow } from "@/server/db/schema"
 
 interface EmbeddingResponse {
   vector: number[]
@@ -28,14 +26,19 @@ export class AfsEmbeddingService {
       throw new Error("AFS embedding provider is not configured")
     }
 
-    const response = await fetch(`${serverConfig.afsEmbedding.baseUrl.replace(/\/$/, "")}/embeddings`, {
+    const baseUrl = serverConfig.afsEmbedding.baseUrl!
+    const model = serverConfig.afsEmbedding.model!
+    const modelVersion = serverConfig.afsEmbedding.modelVersion!
+    const dimensions = serverConfig.afsEmbedding.dimensions!
+
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/embeddings`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${serverConfig.afsEmbedding.apiKey}`,
       },
       body: JSON.stringify({
-        model: serverConfig.afsEmbedding.model,
+        model,
         input: text,
       }),
     })
@@ -54,28 +57,36 @@ export class AfsEmbeddingService {
     if (!vector || !Array.isArray(vector) || vector.length === 0) {
       throw new Error("AFS embedding response did not include a vector")
     }
-    if (vector.length !== serverConfig.afsEmbedding.dimensions) {
+    if (vector.length !== dimensions) {
       throw new Error(
-        `AFS embedding dimension mismatch: expected ${serverConfig.afsEmbedding.dimensions}, got ${vector.length}`
+        `AFS embedding dimension mismatch: expected ${dimensions}, got ${vector.length}`
       )
     }
 
     return {
       vector,
-      model: data.model ?? serverConfig.afsEmbedding.model,
-      modelVersion: serverConfig.afsEmbedding.modelVersion,
+      model: data.model ?? model,
+      modelVersion,
     }
   }
 
   async upsertMemoryEmbedding(memory: AfsMemoryRow, embedding?: EmbeddingResponse) {
     const contentHash = this.hashContent(memory.content)
-    const nextEmbedding = embedding ?? await this.embedText(memory.content)
-
     const existingRows = await db
       .select()
       .from(afsMemoryEmbeddings)
       .where(eq(afsMemoryEmbeddings.memoryId, memory.id))
       .limit(1)
+
+    if (
+      existingRows.length > 0 &&
+      !existingRows[0]?.staleAt &&
+      existingRows[0]?.contentHash === contentHash
+    ) {
+      return false
+    }
+
+    const nextEmbedding = embedding ?? await this.embedText(memory.content)
 
     const values = {
       memoryId: memory.id,
@@ -94,12 +105,13 @@ export class AfsEmbeddingService {
         .update(afsMemoryEmbeddings)
         .set(values)
         .where(eq(afsMemoryEmbeddings.memoryId, memory.id))
-      return
+      return true
     }
 
     await db
       .insert(afsMemoryEmbeddings)
       .values(values)
+    return true
   }
 
   async markMemoryEmbeddingStale(memoryId: string) {

@@ -18,6 +18,7 @@ import { useCodingTools } from "./use-coding-tools"
 import { useDesktopCoreTools } from "./use-desktop-core-tools"
 import { useDesktopHitlTools } from "./use-desktop-hitl-tools"
 import { useLogoTools } from "./use-logo-tools"
+import { usePredictionReportTools } from "./use-prediction-report-tools"
 import { usePredictionTools } from "./use-prediction-tools"
 import { useTextEditTools } from "./use-textedit-tools"
 
@@ -57,6 +58,7 @@ function PredictionAgentToolsMount() {
   useCanvasTools()
   useTextEditTools()
   usePredictionTools()
+  usePredictionReportTools()
   return null
 }
 

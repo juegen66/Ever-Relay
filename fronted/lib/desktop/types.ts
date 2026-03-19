@@ -1,4 +1,4 @@
-export type AppId = "finder" | "canvas" | "logo" | "vibecoding" | "textedit"
+export type AppId = "finder" | "canvas" | "logo" | "vibecoding" | "textedit" | "report"
 
 export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
 

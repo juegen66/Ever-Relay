@@ -7,6 +7,7 @@ import type { DesktopFolder, DesktopItemType, WindowState } from "@/lib/desktop/
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
+import { ReportApp } from "./apps/report-app"
 import { TextEditApp } from "./apps/textedit-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
 
@@ -16,12 +17,14 @@ const APP_TITLES: Record<string, string> = {
   logo: "Logo Studio",
   vibecoding: "Coding Apps",
   textedit: "TextEdit",
+  report: "Predict Report",
 }
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
   canvas: CanvasApp,
   logo: LogoStudioApp,
   vibecoding: VibecodingApp,
+  report: ReportApp,
 }
 
 // Dark title bar apps
