@@ -1,12 +1,22 @@
 "use client"
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
-import { MessageSquare, X } from "lucide-react"
+import { MessageSquare, Sparkles, X } from "lucide-react"
 import { usePathname } from "next/navigation"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { BrandBriefInjector } from "@/features/desktop-copilot/components/brand-brief-injector"
 import { CodingPromptEventBridge } from "@/features/desktop-copilot/components/coding-prompt-event-bridge"
@@ -33,17 +43,10 @@ function DesktopCopilotHeader() {
   const startNewChat = useStartNewCopilotChat()
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
   const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false)
 
-  const handleStartNewChat = () => {
-    const shouldStartNewChat = window.confirm(
-      activeCodingApp
-        ? `Leave ${activeCodingApp.name} and return to the main desktop copilot chat?`
-        : "Start a new chat? This clears the current conversation view."
-    )
-    if (!shouldStartNewChat) {
-      return
-    }
-
+  const handleConfirmNewChat = () => {
+    setShowNewChatDialog(false)
     startNewChat()
   }
 
@@ -58,7 +61,7 @@ function DesktopCopilotHeader() {
         )}
       </div>
       <div className="copilotKitHeaderControls">
-        <Button size="sm" variant="outline" onClick={handleStartNewChat}>
+        <Button size="sm" variant="outline" onClick={() => setShowNewChatDialog(true)}>
           {activeCodingApp ? "Main Chat" : "New Chat"}
         </Button>
         <Button
@@ -70,6 +73,27 @@ function DesktopCopilotHeader() {
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      <AlertDialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {activeCodingApp ? "Switch to Main Chat" : "Start New Chat"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {activeCodingApp
+                ? `Leave ${activeCodingApp.name} and return to the main desktop copilot chat?`
+                : "This will clear the current conversation view and start a fresh chat session."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmNewChat}>
+              {activeCodingApp ? "Switch" : "New Chat"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -106,10 +130,15 @@ function DesktopCopilotOpenButton() {
 
   return (
     <div className="fixed right-4 top-8 z-[10006]">
-      <Button size="sm" onClick={() => setCopilotSidebarOpen(true)}>
-        <MessageSquare className="h-4 w-4" />
-        Copilot
-      </Button>
+      <button
+        onClick={() => setCopilotSidebarOpen(true)}
+        className="group relative flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-white/35 hover:bg-black/55 hover:text-white hover:shadow-xl active:scale-[0.97]"
+      >
+        <span>Copilot</span>
+        <kbd className="ml-1 hidden rounded border border-white/15 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium leading-none text-white/50 sm:inline-block">
+          ⌘K
+        </kbd>
+      </button>
     </div>
   )
 }
