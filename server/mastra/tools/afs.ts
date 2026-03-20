@@ -12,7 +12,8 @@ export const afsListTool = createTool({
     "List nodes in the AFS (Agentic File System). Desktop is the root directory.\n" +
     "Path protocol: Desktop/<scope>/Memory|History/<bucket>/<subpath>/<name>\n" +
     "Scopes: Canvas, Logo, VibeCoding (sub-apps), or Desktop-level (global)\n" +
-    "Memory buckets: user, note | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n\n" +
+    "Memory buckets: user, note | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n" +
+    "Skill has no buckets — list directly: Desktop/Skill, Desktop/Canvas/Skill\n\n" +
     "Namespace:\n" + NAMESPACE_TREE + "\n\n" +
     "Pass 'Desktop/' to see top-level. Pass 'Desktop/Canvas/Memory/user' to list Canvas user memories.",
   inputSchema: z.object({
@@ -51,11 +52,12 @@ export const afsReadTool = createTool({
 export const afsWriteTool = createTool({
   id: "afs_write",
   description:
-    "Write a memory entry to AFS. Only Memory paths are writable.\n" +
-    "Path: Desktop/<scope>/Memory/<bucket>/<name>\n" +
+    "Write a memory or skill entry to AFS. Memory and Skill paths are writable.\n" +
+    "Path: Desktop/<scope>/Memory/<bucket>/<name> or Desktop/<scope>/Skill/<name>\n" +
     "Buckets: user (preferences, facts), note (observations, episodic summaries)\n" +
     "Existing entries at the same path are merged (deduplication).\n" +
-    "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference",
+    "Skill write takes description via metadata: pass metadata.description.\n" +
+    "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference, Desktop/Canvas/Skill/poster-layout",
   inputSchema: z.object({
     path: z.string().describe("Target path, e.g. Desktop/Memory/user/prefers-morning-design"),
     content: z.string().describe("Memory content text"),
@@ -84,7 +86,7 @@ export const afsSearchTool = createTool({
   id: "afs_search",
   description:
     "Search across AFS in either exact or semantic mode.\n" +
-    "Use mode=exact for fast keyword search. Use mode=semantic only for Memory, and always constrain it with pathPrefix.\n" +
+    "Use mode=exact for fast keyword search across all kinds including skills. Use mode=semantic only for Memory, and always constrain it with pathPrefix.\n" +
     "Use scope/pathPrefix to limit the search space: Desktop/Canvas/Memory/note searches only that subtree.",
   inputSchema: z.object({
     query: z.string().describe("Keyword to search for"),
@@ -119,7 +121,7 @@ export const afsSearchTool = createTool({
 export const afsDeleteTool = createTool({
   id: "afs_delete",
   description:
-    "Soft-delete a memory node. Only Memory paths can be deleted.",
+    "Soft-delete a memory or skill node. Memory and Skill paths can be deleted.",
   inputSchema: z.object({
     path: z.string().describe("Full path of the memory node to delete"),
   }),

@@ -12,6 +12,8 @@
     "inngest:dev": "npx --yes inngest-cli@latest dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed-skill-test": "npx --yes tsx scripts/seed-afs-skill-test.ts",
+    "db:seed-message-html-builder": "npx --yes tsx scripts/seed-afs-skill-message-html-builder.ts",
     "db:studio": "drizzle-kit studio",
     "article:assemble": "node scripts/assemble-article.mjs",
     "test": "vitest run",

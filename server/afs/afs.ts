@@ -10,6 +10,7 @@ import {
   afsHistory,
   afsMemory,
   afsMemoryEmbeddings,
+  afsSkill,
   type AfsHistoryBucket,
   type AfsMemoryBucket,
   type AfsScope,
@@ -39,7 +40,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const VALID_SCOPES = new Set<string>(AFS_SCOPES)
-const VALID_KINDS = new Set<string>(["Memory", "History"])
+const VALID_KINDS = new Set<string>(["Memory", "History", "Skill"])
 const VALID_MEMORY_BUCKETS = new Set<string>(AFS_MEMORY_BUCKETS)
 
 function slugify(text: string) {
@@ -91,7 +92,7 @@ export class AFS {
 
     result.depth = 1 // at scope level
 
-    // Kind: Memory or History
+    // Kind: Memory, History, or Skill
     if (idx < segments.length) {
       const kindRaw = segments[idx]
       if (VALID_KINDS.has(kindRaw)) {
@@ -102,6 +103,15 @@ export class AFS {
         return result
       }
     } else {
+      return result
+    }
+
+    // Skill has no bucket; next segment is the name directly
+    if (result.kind === "skill") {
+      if (idx < segments.length) {
+        result.name = segments[idx]
+        result.depth = 3
+      }
       return result
     }
 
@@ -133,8 +143,14 @@ export class AFS {
   buildPath(parsed: ParsedPath): string {
     const parts = ["Desktop"]
     if (parsed.scope !== "Desktop") parts.push(parsed.scope)
-    if (parsed.kind) parts.push(parsed.kind === "memory" ? "Memory" : "History")
-    if (parsed.bucket) parts.push(parsed.bucket)
+    if (parsed.kind) {
+      if (parsed.kind === "skill") {
+        parts.push("Skill")
+      } else {
+        parts.push(parsed.kind === "memory" ? "Memory" : "History")
+      }
+    }
+    if (parsed.kind !== "skill" && parsed.bucket) parts.push(parsed.bucket)
     if (parsed.subpath && parsed.subpath !== "/") {
       parts.push(...parsed.subpath.replace(/^\//, "").split("/"))
     }
@@ -155,11 +171,13 @@ export class AFS {
       for (const b of AFS_MEMORY_BUCKETS) lines.push(`      ${b}/`)
       lines.push(`    History/`)
       for (const b of AFS_HISTORY_BUCKETS) lines.push(`      ${b}/`)
+      lines.push(`    Skill/`)
     }
     lines.push(`  Memory/  (global)`)
     for (const b of AFS_MEMORY_BUCKETS) lines.push(`    ${b}/`)
     lines.push(`  History/  (global)`)
     for (const b of AFS_HISTORY_BUCKETS) lines.push(`    ${b}/`)
+    lines.push(`  Skill/  (global)`)
     return lines.join("\n")
   }
 
@@ -178,6 +196,7 @@ export class AFS {
         ...scopes.map((s) => this.dirNode(`Desktop/${s}`, s)),
         this.dirNode("Desktop/Memory", "Memory"),
         this.dirNode("Desktop/History", "History"),
+        this.dirNode("Desktop/Skill", "Skill"),
       ]
     }
 
@@ -187,11 +206,15 @@ export class AFS {
       return [
         this.dirNode(`${prefix}/Memory`, "Memory"),
         this.dirNode(`${prefix}/History`, "History"),
+        this.dirNode(`${prefix}/Skill`, "Skill"),
       ]
     }
 
-    // depth 2: kind → list buckets
+    // depth 2: kind → list buckets (or list skills)
     if (parsed.depth === 2 && !parsed.bucket) {
+      if (parsed.kind === "skill") {
+        return this.listSkills(userId, parsed, limit)
+      }
       const prefix = parsed.scope === "Desktop" ? "Desktop" : `Desktop/${parsed.scope}`
       const kindLabel = parsed.kind === "memory" ? "Memory" : "History"
       const buckets = parsed.kind === "memory" ? AFS_MEMORY_BUCKETS : AFS_HISTORY_BUCKETS
@@ -255,12 +278,33 @@ export class AFS {
     return rows.map((r) => this.historyToNode(r))
   }
 
+  private async listSkills(userId: string, parsed: ParsedPath, limit: number): Promise<AfsNode[]> {
+    const conditions = [
+      eq(afsSkill.userId, userId),
+      eq(afsSkill.scope, parsed.scope),
+      eq(afsSkill.isActive, true),
+    ]
+
+    const rows = await db
+      .select()
+      .from(afsSkill)
+      .where(and(...conditions))
+      .orderBy(desc(afsSkill.priority), desc(afsSkill.updatedAt))
+      .limit(limit)
+
+    return rows.map((r) => this.skillToNode(r))
+  }
+
   // -----------------------------------------------------------------------
   // Read
   // -----------------------------------------------------------------------
 
   async read(userId: string, path: string): Promise<AfsNode | null> {
     const parsed = this.parsePath(path)
+
+    if (parsed.kind === "skill" && parsed.name) {
+      return this.readSkill(userId, parsed)
+    }
 
     if (!parsed.kind || !parsed.bucket || !parsed.name) return null
 
@@ -311,15 +355,35 @@ export class AFS {
     return this.historyToNode(row)
   }
 
+  private async readSkill(userId: string, parsed: ParsedPath): Promise<AfsNode | null> {
+    if (!parsed.name) return null
+
+    const row = await db.query.afsSkill.findFirst({
+      where: and(
+        eq(afsSkill.userId, userId),
+        eq(afsSkill.scope, parsed.scope),
+        eq(afsSkill.name, parsed.name),
+        eq(afsSkill.isActive, true),
+      ),
+    })
+
+    if (!row) return null
+    return this.skillToNode(row)
+  }
+
   // -----------------------------------------------------------------------
-  // Write (memory only)
+  // Write (memory + skill)
   // -----------------------------------------------------------------------
 
   async write(userId: string, path: string, content: string, options?: AfsWriteOptions): Promise<AfsNode> {
     const parsed = this.parsePath(path)
 
+    if (parsed.kind === "skill" && parsed.name) {
+      return this.writeSkill(userId, parsed, content, options)
+    }
+
     if (parsed.kind !== "memory") {
-      throw new Error(`AFS: only Memory is writable. Got path "${path}"`)
+      throw new Error(`AFS: only Memory and Skill are writable. Got path "${path}"`)
     }
 
     if (!parsed.bucket || !VALID_MEMORY_BUCKETS.has(parsed.bucket)) {
@@ -389,15 +453,48 @@ export class AFS {
     return this.memoryToNode(entry)
   }
 
+  private async writeSkill(
+    userId: string,
+    parsed: ParsedPath,
+    content: string,
+    options?: AfsWriteOptions
+  ): Promise<AfsNode> {
+    const { afsSkillService } = await import("./skill")
+
+    const description = (options?.metadata?.description as string) ?? parsed.name ?? "No description"
+    const triggerWhen = (options?.metadata?.triggerWhen as string) ?? null
+    const agentId = (options?.metadata?.agentId as string) ?? null
+    const priority = typeof options?.metadata?.priority === "number" ? options.metadata.priority : 0
+
+    const row = await afsSkillService.upsertSkill(userId, {
+      agentId,
+      scope: parsed.scope,
+      name: parsed.name!,
+      description,
+      triggerWhen,
+      tags: options?.tags,
+      content,
+      priority,
+      metadata: options?.metadata,
+    })
+
+    await this.recordTx(userId, "write", this.buildPath(parsed), { kind: "skill" })
+    return this.skillToNode(row)
+  }
+
   // -----------------------------------------------------------------------
-  // Delete (memory only)
+  // Delete (memory + skill)
   // -----------------------------------------------------------------------
 
   async delete(userId: string, path: string): Promise<boolean> {
     const parsed = this.parsePath(path)
 
+    if (parsed.kind === "skill" && parsed.name) {
+      return this.deleteSkill(userId, parsed)
+    }
+
     if (parsed.kind !== "memory") {
-      throw new Error(`AFS: only Memory is deletable. Got path "${path}"`)
+      throw new Error(`AFS: only Memory and Skill are deletable. Got path "${path}"`)
     }
 
     if (!parsed.name) return false
@@ -423,6 +520,24 @@ export class AFS {
 
     await this.recordTx(userId, "delete", path)
     return result.length > 0
+  }
+
+  private async deleteSkill(userId: string, parsed: ParsedPath): Promise<boolean> {
+    if (!parsed.name) return false
+
+    const row = await db.query.afsSkill.findFirst({
+      where: and(
+        eq(afsSkill.userId, userId),
+        eq(afsSkill.scope, parsed.scope),
+        eq(afsSkill.name, parsed.name),
+      ),
+    })
+
+    if (!row) return false
+
+    await db.update(afsSkill).set({ isActive: false, updatedAt: new Date() }).where(eq(afsSkill.id, row.id))
+    await this.recordTx(userId, "delete", this.buildPath(parsed), { kind: "skill", skillId: row.id })
+    return true
   }
 
   // -----------------------------------------------------------------------
@@ -491,6 +606,24 @@ export class AFS {
       .orderBy(desc(afsHistory.createdAt))
       .limit(limit)
 
+    // Search skills
+    const skillConditions = [
+      eq(afsSkill.userId, userId),
+      eq(afsSkill.isActive, true),
+      or(
+        ilike(afsSkill.name, pattern),
+        ilike(afsSkill.content, pattern),
+        ilike(afsSkill.description, pattern),
+      ),
+    ]
+    if (scopeFilter) skillConditions.push(eq(afsSkill.scope, scopeFilter))
+
+    const skillRows = await db
+      .select()
+      .from(afsSkill)
+      .where(and(...skillConditions))
+      .limit(limit)
+
     // Bump access counts for memory results
     if (memRows.length > 0) {
       await db
@@ -506,12 +639,13 @@ export class AFS {
       query,
       mode: "exact",
       pathPrefix: normalizedPrefix,
-      resultCount: memRows.length + histRows.length,
+      resultCount: memRows.length + histRows.length + skillRows.length,
     })
 
     return [
       ...memRows.map((r) => this.memoryToNode(r)),
       ...histRows.map((r) => this.historyToNode(r)),
+      ...skillRows.map((r) => this.skillToNode(r)),
     ]
   }
 
@@ -648,6 +782,33 @@ export class AFS {
         status: row.status ?? undefined,
         createdAt: row.createdAt.toISOString(),
         contentType: `afs/history-${row.bucket}`,
+        ...row.metadata,
+      },
+    }
+  }
+
+  private skillToNode(row: typeof afsSkill.$inferSelect): AfsNode {
+    const pathParts = ["Desktop"]
+    if (row.scope !== "Desktop") pathParts.push(row.scope)
+    pathParts.push("Skill", row.name)
+
+    return {
+      path: pathParts.join("/"),
+      name: row.name,
+      type: "file",
+      content: row.content,
+      metadata: {
+        scope: row.scope,
+        agentId: row.agentId,
+        description: row.description,
+        triggerWhen: row.triggerWhen,
+        tags: row.tags,
+        version: row.version,
+        isActive: row.isActive,
+        priority: row.priority,
+        contentType: "afs/skill",
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
         ...row.metadata,
       },
     }

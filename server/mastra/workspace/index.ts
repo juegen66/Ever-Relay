@@ -1,14 +1,15 @@
 import { Workspace } from "@mastra/core/workspace"
 import { E2BSandbox } from "@mastra/e2b"
 
+import { DbSkillSource } from "@/server/afs/skill-source"
 import { codingAppsService } from "@/server/modules/coding-apps/coding-apps.service"
 import { sandboxBindingsService } from "@/server/modules/sandbox/sandbox-bindings.service"
 
-const MESSAGE_HTML_BUILDER_SKILL_PATH =
-  "/Users/qiaodailong/.codex/skills/message-html-builder"
-
 const PREDICTION_REPORT_BUILDER_SKILL_PATH =
   "/Users/qiaodailong/.codex/skills/prediction-report-builder"
+
+// Virtual root path used by DbSkillSource for dynamic DB-backed skills
+const DB_SKILLS_ROOT = "/db-skills"
 
 export interface WorkspaceScope {
   userId: string
@@ -68,20 +69,39 @@ export async function createBuildWorkspace(scope: BuildWorkspaceScope) {
   })
 }
 
-export function createDesktopSkillWorkspace() {
-  return new Workspace({
-    id: "desktop-skill-workspace",
-    name: "Desktop Skill Workspace",
-    skills: [MESSAGE_HTML_BUILDER_SKILL_PATH],
-    bm25: true,
-  })
-}
-
 export function createPredictionSkillWorkspace() {
   return new Workspace({
     id: "prediction-skill-workspace",
     name: "Prediction Skill Workspace",
     skills: [PREDICTION_REPORT_BUILDER_SKILL_PATH],
+    bm25: true,
+  })
+}
+
+/**
+ * Create a workspace with dynamic skills loaded from the afs_skill table.
+ *
+ * Skills are resolved at runtime via DbSkillSource which implements Mastra's
+ * SkillSource interface. The Workspace SkillsProcessor handles the two-phase
+ * loading: metadata first (system message), full content on skill-activate.
+ *
+ * @param userId - Owner of the skills
+ * @param agentId - Optional agent ID to scope skills
+ * @param extraLocalSkills - Optional array of local filesystem skill paths to include alongside DB skills
+ */
+export function createDynamicSkillWorkspace(
+  userId: string,
+  agentId?: string,
+  extraLocalSkills?: string[]
+) {
+  const dbSource = new DbSkillSource({ userId, agentId })
+  const skillPaths = [DB_SKILLS_ROOT, ...(extraLocalSkills ?? [])]
+
+  return new Workspace({
+    id: `dynamic-skill-workspace-${userId}-${agentId ?? "global"}`,
+    name: `Dynamic Skill Workspace (${agentId ?? "global"})`,
+    skills: skillPaths,
+    skillSource: dbSource,
     bm25: true,
   })
 }

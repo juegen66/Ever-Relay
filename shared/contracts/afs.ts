@@ -10,6 +10,9 @@ import { apiSuccessSchema } from "./common"
 export const AFS_SCOPES = ["Desktop", "Canvas", "Logo", "VibeCoding"] as const
 export type AfsScope = (typeof AFS_SCOPES)[number]
 
+export const AFS_KINDS = ["Memory", "History", "Skill"] as const
+export type AfsKind = (typeof AFS_KINDS)[number]
+
 export const AFS_MEMORY_BUCKETS = ["user", "note"] as const
 export type AfsMemoryBucket = (typeof AFS_MEMORY_BUCKETS)[number]
 

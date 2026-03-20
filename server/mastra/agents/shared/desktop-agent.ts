@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent"
 
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
+import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   afsListTool,
@@ -12,7 +13,6 @@ import {
 } from "@/server/mastra/tools/afs"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
 import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
-import { createDesktopSkillWorkspace } from "@/server/mastra/workspace"
 import { DESKTOP_COPILOT_AGENT } from "@/shared/copilot/constants"
 
 export const desktopAgent = new Agent({
@@ -36,19 +36,22 @@ export const desktopAgent = new Agent({
     "For read-only questions, prefer list_desktop_items and list_canvas_projects.",
     "For desktop write operations, create can run directly via frontend tool, while rename/delete must use frontend human-in-the-loop tools and wait for approval.",
     "If a tool reports failure, explain clearly and ask user for next step.",
-    "When a request is better expressed as an embedded HTML artifact, first call skill-activate with name='message-html-builder' before composing the response.",
-    "Treat charts, comparisons, process visuals, data summaries, rich cards, compact dashboards, and explicit HTML/widget requests as message-html-builder cases.",
-    "After activating message-html-builder, follow its instructions and render the final result through render_artifact instead of pasting raw HTML into the chat.",
-    "",
-    "## render_artifact (HTML display, NOT image generation)",
-    "Use render_artifact to show web pages, charts, or interactive HTML in the chat. It is the rendering endpoint for message-html-builder style artifacts.",
-    "You must write the full HTML code yourself and pass it in the 'html' parameter. Do NOT pass prompt/size/n — those are for image APIs. Example: user asks for 'a simple webpage with a button' → you generate the HTML string (e.g. <!DOCTYPE html>...) and call render_artifact(html=thatString, title='My Page').",
   ].join("\n"),
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
-  inputProcessors: [requestOriginProcessor],
-  skillsFormat: "markdown",
-  workspace: createDesktopSkillWorkspace(),
+  inputProcessors: ({ requestContext }) => {
+    const rawUserId = requestContext.get("userId")
+    const userId = typeof rawUserId === "string" && rawUserId.length > 0
+      ? rawUserId
+      : ""
+
+    return [
+      requestOriginProcessor,
+      ...(userId
+        ? [new AfsSkillProcessor({ userId, agentId: DESKTOP_COPILOT_AGENT, scope: "Desktop" })]
+        : []),
+    ]
+  },
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,

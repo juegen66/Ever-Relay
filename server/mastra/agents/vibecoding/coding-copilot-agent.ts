@@ -9,6 +9,7 @@ import {
   afsSearchTool,
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
+import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
@@ -24,7 +25,19 @@ export const codingCopilotAgent = new Agent({
   name: "Coding Copilot Agent",
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
-  inputProcessors: [requestOriginProcessor],
+  inputProcessors: ({ requestContext }) => {
+    const rawUserId = requestContext.get("userId")
+    const userId = typeof rawUserId === "string" && rawUserId.length > 0
+      ? rawUserId
+      : ""
+
+    return [
+      requestOriginProcessor,
+      ...(userId
+        ? [new AfsSkillProcessor({ userId, agentId: CODING_COPILOT_AGENT, scope: "VibeCoding" })]
+        : []),
+    ]
+  },
   instructions: [
     "You are the CloudOS coding copilot.",
     "",

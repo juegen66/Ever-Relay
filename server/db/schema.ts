@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   customType,
   index,
   integer,
@@ -466,3 +467,45 @@ export const codingApps = pgTable(
     threadIdUniqueIdx: uniqueIndex("coding_apps_thread_id_unique_idx").on(table.threadId),
   })
 )
+
+// ---------------------------------------------------------------------------
+// AFS Skill — Dynamic skill storage for agents
+//
+// Each agent can have multiple skills. Skills are loaded in two phases:
+// 1. Metadata (description, triggerWhen, tags) — injected into system message
+// 2. Full content — loaded on demand when agent activates a skill
+// ---------------------------------------------------------------------------
+
+export const afsSkill = pgTable(
+  "afs_skill",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    agentId: text("agent_id"), // nullable = global skill available to all agents
+    scope: text("scope").$type<AfsScope>().notNull().default("Desktop"),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    triggerWhen: text("trigger_when"), // when should agent activate this skill
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    content: text("content").notNull(), // full skill instructions (markdown)
+    version: integer("version").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    priority: integer("priority").notNull().default(0),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userAgentNameIdx: uniqueIndex("afs_skill_user_agent_name_idx").on(
+      table.userId, table.agentId, table.name
+    ),
+    userScopeActiveIdx: index("afs_skill_user_scope_active_idx").on(
+      table.userId, table.scope, table.isActive
+    ),
+    agentActiveIdx: index("afs_skill_agent_active_idx").on(
+      table.agentId, table.isActive
+    ),
+  })
+)
+
+export type AfsSkillRow = typeof afsSkill.$inferSelect

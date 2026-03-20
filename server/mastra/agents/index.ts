@@ -18,6 +18,7 @@ import {
   MEMORY_CURATOR_AGENT_ID,
 } from "./shared/memory-curator-agent"
 import { predictionAgent, PREDICTION_AGENT_ID } from "./shared/prediction-agent"
+import { skillTestAgent, SKILL_TEST_AGENT_ID } from "./shared/skill-test-agent"
 import { builderAgent, BUILDER_AGENT_ID } from "./vibecoding/builder-agent"
 import { codingCopilotAgent } from "./vibecoding/coding-copilot-agent"
 import {
@@ -41,6 +42,7 @@ export const agents = {
   [PLANNER_AGENT_ID]: plannerAgent,
   [BUILDER_AGENT_ID]: builderAgent,
   [REVIEWER_AGENT_ID]: reviewerAgent,
+  [SKILL_TEST_AGENT_ID]: skillTestAgent,
   [CODING_WORKER_AGENT_ID]: codingWorkerAgent,
   [CODING_REVIEWER_AGENT_ID]: codingReviewerAgent,
   [BRAND_BRIEF_AGENT_ID]: brandBriefAgent,

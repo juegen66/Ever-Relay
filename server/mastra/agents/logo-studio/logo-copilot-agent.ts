@@ -9,6 +9,7 @@ import {
   afsSearchTool,
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
+import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
@@ -41,7 +42,19 @@ export const logoCopilotAgent = new Agent({
     "Do not trigger non-logo build workflows directly unless the user explicitly asks; use handoff when needed.",
   ].join("\n"),
   memory: createAgentMemory(),
-  inputProcessors: [requestOriginProcessor],
+  inputProcessors: ({ requestContext }) => {
+    const rawUserId = requestContext.get("userId")
+    const userId = typeof rawUserId === "string" && rawUserId.length > 0
+      ? rawUserId
+      : ""
+
+    return [
+      requestOriginProcessor,
+      ...(userId
+        ? [new AfsSkillProcessor({ userId, agentId: LOGO_COPILOT_AGENT, scope: "Logo" })]
+        : []),
+    ]
+  },
   tools: {
     listDesktopItems: listDesktopItemsTool,
     listCanvasProjects: listCanvasProjectsTool,

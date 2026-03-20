@@ -120,6 +120,22 @@ export class AfsService {
     })
   }
 
+  // ---- skill convenience methods ----
+
+  async listSkills(userId: string, scope?: AfsScope): Promise<AfsNode[]> {
+    const path = scope && scope !== "Desktop"
+      ? `Desktop/${scope}/Skill`
+      : "Desktop/Skill"
+    return this.list(userId, path)
+  }
+
+  async readSkill(userId: string, name: string, scope?: AfsScope): Promise<AfsNode | null> {
+    const path = scope && scope !== "Desktop"
+      ? `Desktop/${scope}/Skill/${name}`
+      : `Desktop/Skill/${name}`
+    return this.read(userId, path)
+  }
+
   // ---- lifecycle management ----
 
   async decayConfidence(daysInactive = 30, decayAmount = 10, minConfidence = 20) {

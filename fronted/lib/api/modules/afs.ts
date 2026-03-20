@@ -48,3 +48,13 @@ export async function logActionBatch(
 ) {
   await apiClient.post("/afs/actions/batch", { actions, sessionId })
 }
+
+export async function afsListSkills(scope?: string) {
+  const path = scope ? `Desktop/${scope}/Skill` : "Desktop/Skill"
+  return afsList(path)
+}
+
+export async function afsReadSkill(name: string, scope?: string) {
+  const path = scope ? `Desktop/${scope}/Skill/${name}` : `Desktop/Skill/${name}`
+  return afsRead(path)
+}
