@@ -3,7 +3,7 @@ __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 
-# Standalone local MCP demo (own pnpm + copied AFS; not part of main app)
+# Standalone local MCP demo (ignore its env only)
 test-mcp-afs/.env
 
 # Common ignores
