@@ -41,6 +41,7 @@
     "@mastra/inngest": "^1.1.1",
     "@mastra/loggers": "^1.0.2",
     "@mastra/memory": "^1.5.2",
+    "@mastra/observability": "1.2.0",
     "@mastra/pg": "^1.7.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

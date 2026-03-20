@@ -52,7 +52,6 @@ export const createAgentMemory = () =>
     storage: new PostgresStore({
       id: "mastra-memory-storage",
       pool,
-      disableInit: true,
     }),
     options: {
       workingMemory: {
