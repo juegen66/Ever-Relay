@@ -29,6 +29,7 @@ export const logoCopilotAgent = new Agent({
     "You have access to a unified file system. Your scope is Desktop/Logo/.",
     "Use afs_list('Desktop/Logo/Memory/user') for logo-specific user preferences.",
     "Use afs_write('Desktop/Logo/Memory/user/<slug>', content) to save logo-related preferences.",
+    "Use afs_search with mode=hybrid and a Memory pathPrefix when you need similar prior brand preferences or design observations; use exact for literal lookups.",
     "You can also read global memory at Desktop/Memory/ for cross-app context.",
     "",
     "Focus on logo design discovery plus brand-context and design-philosophy clarification only.",

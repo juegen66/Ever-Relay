@@ -17,6 +17,10 @@ export class AfsEmbeddingService {
     return serverConfig.afsEmbedding.enabled
   }
 
+  isSearchEnabled() {
+    return serverConfig.afsEmbedding.searchEnabled
+  }
+
   hashContent(content: string) {
     return createHash("sha256").update(content).digest("hex")
   }

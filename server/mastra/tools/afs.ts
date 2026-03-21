@@ -1,6 +1,7 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
 
+import { isAfsMemoryPathPrefix } from "@/shared/contracts/afs"
 import { afs } from "@/server/afs"
 import { requestContextSchema } from "./common"
 
@@ -85,22 +86,36 @@ export const afsWriteTool = createTool({
 export const afsSearchTool = createTool({
   id: "afs_search",
   description:
-    "Search across AFS in either exact or semantic mode.\n" +
-    "Use mode=exact for fast keyword search across all kinds including skills. Use mode=semantic only for Memory, and always constrain it with pathPrefix.\n" +
+    "Search across AFS in exact, semantic, or hybrid mode.\n" +
+    "Use mode=exact for fast literal keyword search across Memory, History, and Skill.\n" +
+    "Use mode=semantic only for Memory when you need conceptual similarity, and always constrain it with pathPrefix.\n" +
+    "Use mode=hybrid for memory recall tasks: it combines exact keyword matches with semantic memory retrieval, then appends semantic-only matches after exact hits.\n" +
+    "Semantic and hybrid modes require pathPrefix to point to a Memory subtree, e.g. Desktop/Canvas/Memory/note.\n" +
     "Use scope/pathPrefix to limit the search space: Desktop/Canvas/Memory/note searches only that subtree.",
   inputSchema: z.object({
     query: z.string().describe("Keyword to search for"),
-    mode: z.enum(["exact", "semantic"]).default("exact").describe("Search mode"),
+    mode: z.enum(["exact", "semantic", "hybrid"]).default("exact").describe("Search mode"),
     scope: z.string().optional().describe("Optional scope path, e.g. Desktop/Canvas"),
-    pathPrefix: z.string().optional().describe("Optional subtree path. Required for semantic mode, e.g. Desktop/Canvas/Memory/note"),
+    pathPrefix: z.string().optional().describe("Optional subtree path. Required for semantic and hybrid modes, e.g. Desktop/Canvas/Memory/note"),
     limit: z.number().int().min(1).max(100).optional().describe("Max results, default 20"),
   }).superRefine((value, ctx) => {
-    if (value.mode === "semantic" && !value.pathPrefix) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["pathPrefix"],
-        message: "pathPrefix is required when mode is semantic",
-      })
+    if (value.mode === "semantic" || value.mode === "hybrid") {
+      if (!value.pathPrefix) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pathPrefix"],
+          message: "pathPrefix is required when mode is semantic or hybrid",
+        })
+        return
+      }
+
+      if (!isAfsMemoryPathPrefix(value.pathPrefix)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pathPrefix"],
+          message: "pathPrefix must point to a Memory subtree when mode is semantic or hybrid",
+        })
+      }
     }
   }),
   requestContextSchema,

@@ -11,7 +11,7 @@
 import type { AfsScope, AfsMemoryBucket, AfsHistoryBucket } from "@/server/db/schema"
 
 export type AfsKind = "memory" | "history" | "skill"
-export type AfsSearchMode = "exact" | "semantic"
+export type AfsSearchMode = "exact" | "semantic" | "hybrid"
 
 export interface ParsedPath {
   scope: AfsScope

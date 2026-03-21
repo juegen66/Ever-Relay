@@ -18,11 +18,16 @@ export const serverConfig = {
       process.env.AFS_EMBEDDING_BASE_URL,
     model: process.env.AFS_EMBEDDING_MODEL,
     modelVersion: process.env.AFS_EMBEDDING_MODEL_VERSION,
+    vectorSearchEnabled:
+      process.env.AFS_VECTOR_SEARCH_ENABLED !== "false",
     dimensions: process.env.AFS_EMBEDDING_DIMENSIONS
       ? Number(process.env.AFS_EMBEDDING_DIMENSIONS)
       : undefined,
     get enabled() {
       return Boolean(this.apiKey && this.baseUrl && this.model && this.dimensions && this.dimensions > 0)
+    },
+    get searchEnabled() {
+      return Boolean(this.vectorSearchEnabled && this.enabled)
     },
   },
 

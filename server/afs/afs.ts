@@ -551,89 +551,17 @@ export class AFS {
       return this.searchSemantic(userId, query, options)
     }
 
+    if (mode === "hybrid") {
+      return this.searchHybrid(userId, query, options)
+    }
+
     return this.searchExact(userId, query, options)
   }
 
   private async searchExact(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
-    const limit = options?.limit ?? 20
-    const pattern = `%${query}%`
-    const normalizedPrefix = options?.pathPrefix ? this.normalizePathPrefix(options.pathPrefix) : undefined
+    const { memRows, histRows, skillRows, normalizedPrefix } = await this.searchExactRows(userId, query, options)
 
-    let scopeFilter: AfsScope | undefined
-    if (options?.scope) {
-      const scopeParsed = this.parsePath(options.scope)
-      if (scopeParsed.scope !== "Desktop") {
-        scopeFilter = scopeParsed.scope
-      }
-    }
-    const prefixScope = normalizedPrefix ? this.extractScopeFromPrefix(normalizedPrefix) : undefined
-    if (!scopeFilter && prefixScope && prefixScope !== "Desktop") {
-      scopeFilter = prefixScope
-    }
-
-    // Search memory
-    const memConditions = [
-      eq(afsMemory.userId, userId),
-      isNull(afsMemory.deletedAt),
-      ilike(afsMemory.content, pattern),
-    ]
-    if (scopeFilter) memConditions.push(eq(afsMemory.scope, scopeFilter))
-    if (normalizedPrefix) {
-      memConditions.push(this.pathPrefixCondition(this.memoryFullPathExpr(), normalizedPrefix))
-    }
-
-    const memRows = await db
-      .select()
-      .from(afsMemory)
-      .where(and(...memConditions))
-      .orderBy(desc(afsMemory.confidence), desc(afsMemory.updatedAt))
-      .limit(limit)
-
-    // Search history
-    const histConditions = [
-      eq(afsHistory.userId, userId),
-      ilike(afsHistory.content, pattern),
-    ]
-    if (scopeFilter) histConditions.push(eq(afsHistory.scope, scopeFilter))
-    if (normalizedPrefix) {
-      histConditions.push(this.pathPrefixCondition(this.historyFullPathExpr(), normalizedPrefix))
-    }
-
-    const histRows = await db
-      .select()
-      .from(afsHistory)
-      .where(and(...histConditions))
-      .orderBy(desc(afsHistory.createdAt))
-      .limit(limit)
-
-    // Search skills
-    const skillConditions = [
-      eq(afsSkill.userId, userId),
-      eq(afsSkill.isActive, true),
-      or(
-        ilike(afsSkill.name, pattern),
-        ilike(afsSkill.content, pattern),
-        ilike(afsSkill.description, pattern),
-      ),
-    ]
-    if (scopeFilter) skillConditions.push(eq(afsSkill.scope, scopeFilter))
-
-    const skillRows = await db
-      .select()
-      .from(afsSkill)
-      .where(and(...skillConditions))
-      .limit(limit)
-
-    // Bump access counts for memory results
-    if (memRows.length > 0) {
-      await db
-        .update(afsMemory)
-        .set({
-          accessCount: sql`${afsMemory.accessCount} + 1`,
-          lastAccessedAt: new Date(),
-        })
-        .where(inArray(afsMemory.id, memRows.map((r) => r.id)))
-    }
+    await this.bumpMemoryAccessCounts(memRows.map((row) => row.id))
 
     await this.recordTx(userId, "search", "/", {
       query,
@@ -650,6 +578,184 @@ export class AFS {
   }
 
   private async searchSemantic(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
+    if (!afsEmbeddingService.isSearchEnabled()) {
+      throw new Error("AFS: semantic search is not enabled")
+    }
+
+    const { rows, normalizedPrefix } = await this.searchSemanticRows(userId, query, options)
+
+    await this.bumpMemoryAccessCounts(rows.map((row) => row.memory.id))
+
+    await this.recordTx(userId, "search", "/", {
+      query,
+      mode: "semantic",
+      pathPrefix: normalizedPrefix,
+      resultCount: rows.length,
+    })
+
+    return rows.map((row) => this.memoryToNode(row.memory))
+  }
+
+  private async searchHybrid(userId: string, query: string, options?: AfsSearchOptions): Promise<AfsNode[]> {
+    const semanticPathPrefix = this.requireSemanticPathPrefix(options?.pathPrefix)
+    this.resolveSemanticScope(options?.scope, semanticPathPrefix)
+    const hybridOptions = {
+      ...options,
+      pathPrefix: semanticPathPrefix,
+    }
+    const { memRows, histRows, skillRows, normalizedPrefix } = await this.searchExactRows(userId, query, hybridOptions)
+
+    if (!afsEmbeddingService.isSearchEnabled()) {
+      await this.bumpMemoryAccessCounts(memRows.map((row) => row.id))
+
+      await this.recordTx(userId, "search", "/", {
+        query,
+        mode: "hybrid",
+        degraded: true,
+        degradeReason: "vector_search_disabled",
+        pathPrefix: normalizedPrefix,
+        exactResultCount: memRows.length + histRows.length + skillRows.length,
+        semanticResultCount: 0,
+        resultCount: memRows.length + histRows.length + skillRows.length,
+      })
+
+      return [
+        ...memRows.map((r) => this.memoryToNode(r)),
+        ...histRows.map((r) => this.historyToNode(r)),
+        ...skillRows.map((r) => this.skillToNode(r)),
+      ]
+    }
+
+    try {
+      const { rows: semanticRows } = await this.searchSemanticRows(userId, query, hybridOptions)
+      const exactResults = [
+        ...memRows.map((row) => this.memoryToNode(row)),
+        ...histRows.map((row) => this.historyToNode(row)),
+        ...skillRows.map((row) => this.skillToNode(row)),
+      ]
+      const semanticResults = semanticRows.map((row) => this.memoryToNode(row.memory))
+      const mergedResults = this.mergeHybridResults(exactResults, semanticResults)
+
+      await this.bumpMemoryAccessCounts(
+        mergedResults
+          .filter((node) => this.parsePath(node.path).kind === "memory")
+          .map((node) => this.findMemoryIdByPath(node.path, memRows, semanticRows))
+          .filter((id): id is string => Boolean(id))
+      )
+
+      await this.recordTx(userId, "search", "/", {
+        query,
+        mode: "hybrid",
+        degraded: false,
+        pathPrefix: normalizedPrefix,
+        exactResultCount: exactResults.length,
+        semanticResultCount: semanticResults.length,
+        resultCount: mergedResults.length,
+      })
+
+      return mergedResults
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "unknown_semantic_error"
+      console.warn("[AFS] hybrid search degraded to exact", {
+        userId,
+        query,
+        pathPrefix: normalizedPrefix,
+        reason,
+      })
+
+      await this.bumpMemoryAccessCounts(memRows.map((row) => row.id))
+
+      await this.recordTx(userId, "search", "/", {
+        query,
+        mode: "hybrid",
+        degraded: true,
+        degradeReason: reason,
+        pathPrefix: normalizedPrefix,
+        exactResultCount: memRows.length + histRows.length + skillRows.length,
+        semanticResultCount: 0,
+        resultCount: memRows.length + histRows.length + skillRows.length,
+      })
+
+      return [
+        ...memRows.map((r) => this.memoryToNode(r)),
+        ...histRows.map((r) => this.historyToNode(r)),
+        ...skillRows.map((r) => this.skillToNode(r)),
+      ]
+    }
+  }
+
+  private async searchExactRows(
+    userId: string,
+    query: string,
+    options?: AfsSearchOptions
+  ) {
+    const limit = options?.limit ?? 20
+    const pattern = `%${query}%`
+    const normalizedPrefix = options?.pathPrefix ? this.normalizePathPrefix(options.pathPrefix) : undefined
+    const scopeFilter = this.resolveExactScope(options?.scope, normalizedPrefix)
+
+    const memConditions = [
+      eq(afsMemory.userId, userId),
+      isNull(afsMemory.deletedAt),
+      ilike(afsMemory.content, pattern),
+    ]
+    if (scopeFilter) memConditions.push(eq(afsMemory.scope, scopeFilter))
+    if (normalizedPrefix) {
+      memConditions.push(this.pathPrefixCondition(this.memoryFullPathExpr(), normalizedPrefix))
+    }
+
+    const histConditions = [
+      eq(afsHistory.userId, userId),
+      ilike(afsHistory.content, pattern),
+    ]
+    if (scopeFilter) histConditions.push(eq(afsHistory.scope, scopeFilter))
+    if (normalizedPrefix) {
+      histConditions.push(this.pathPrefixCondition(this.historyFullPathExpr(), normalizedPrefix))
+    }
+
+    const skillConditions = [
+      eq(afsSkill.userId, userId),
+      eq(afsSkill.isActive, true),
+      or(
+        ilike(afsSkill.name, pattern),
+        ilike(afsSkill.content, pattern),
+        ilike(afsSkill.description, pattern),
+      ),
+    ]
+    if (scopeFilter) skillConditions.push(eq(afsSkill.scope, scopeFilter))
+    if (normalizedPrefix) {
+      skillConditions.push(this.pathPrefixCondition(this.skillFullPathExpr(), normalizedPrefix))
+    }
+
+    const [memRows, histRows, skillRows] = await Promise.all([
+      db
+        .select()
+        .from(afsMemory)
+        .where(and(...memConditions))
+        .orderBy(desc(afsMemory.confidence), desc(afsMemory.updatedAt))
+        .limit(limit),
+      db
+        .select()
+        .from(afsHistory)
+        .where(and(...histConditions))
+        .orderBy(desc(afsHistory.createdAt))
+        .limit(limit),
+      db
+        .select()
+        .from(afsSkill)
+        .where(and(...skillConditions))
+        .limit(limit),
+    ])
+
+    return {
+      memRows,
+      histRows,
+      skillRows,
+      normalizedPrefix,
+    }
+  }
+
+  private async searchSemanticRows(userId: string, query: string, options?: AfsSearchOptions) {
     const limit = options?.limit ?? 20
     const normalizedPrefix = this.requireSemanticPathPrefix(options?.pathPrefix)
     const scopeFilter = this.resolveSemanticScope(options?.scope, normalizedPrefix)
@@ -674,24 +780,56 @@ export class AFS {
       .orderBy(distanceExpr, desc(afsMemory.confidence), desc(afsMemory.updatedAt))
       .limit(limit)
 
-    if (rows.length > 0) {
-      await db
-        .update(afsMemory)
-        .set({
-          accessCount: sql`${afsMemory.accessCount} + 1`,
-          lastAccessedAt: new Date(),
-        })
-        .where(inArray(afsMemory.id, rows.map((row) => row.memory.id)))
+    return { rows, normalizedPrefix }
+  }
+
+  private async bumpMemoryAccessCounts(memoryIds: string[]) {
+    const uniqueMemoryIds = Array.from(new Set(memoryIds))
+
+    if (uniqueMemoryIds.length === 0) {
+      return
     }
 
-    await this.recordTx(userId, "search", "/", {
-      query,
-      mode: "semantic",
-      pathPrefix: normalizedPrefix,
-      resultCount: rows.length,
-    })
+    await db
+      .update(afsMemory)
+      .set({
+        accessCount: sql`${afsMemory.accessCount} + 1`,
+        lastAccessedAt: new Date(),
+      })
+      .where(inArray(afsMemory.id, uniqueMemoryIds))
+  }
 
-    return rows.map((row) => this.memoryToNode(row.memory))
+  private mergeHybridResults(exactResults: AfsNode[], semanticResults: AfsNode[]) {
+    const seenPaths = new Set<string>()
+    const merged: AfsNode[] = []
+
+    for (const node of exactResults) {
+      if (seenPaths.has(node.path)) continue
+      seenPaths.add(node.path)
+      merged.push(node)
+    }
+
+    for (const node of semanticResults) {
+      if (seenPaths.has(node.path)) continue
+      seenPaths.add(node.path)
+      merged.push(node)
+    }
+
+    return merged
+  }
+
+  private findMemoryIdByPath(
+    path: string,
+    exactMemoryRows: Array<typeof afsMemory.$inferSelect>,
+    semanticRows: Array<{ memory: typeof afsMemory.$inferSelect; distance: number }>
+  ) {
+    const exactMatch = exactMemoryRows.find((row) => this.memoryToNode(row).path === path)
+    if (exactMatch) {
+      return exactMatch.id
+    }
+
+    const semanticMatch = semanticRows.find((row) => this.memoryToNode(row.memory).path === path)
+    return semanticMatch?.memory.id
   }
 
   // -----------------------------------------------------------------------
@@ -840,6 +978,24 @@ export class AFS {
     return this.parsePath(pathPrefix).scope
   }
 
+  private resolveExactScope(scope: string | undefined, normalizedPrefix: string | undefined): AfsScope | undefined {
+    let scopeFilter: AfsScope | undefined
+
+    if (scope) {
+      const scopeParsed = this.parsePath(scope)
+      if (scopeParsed.scope !== "Desktop") {
+        scopeFilter = scopeParsed.scope
+      }
+    }
+
+    const prefixScope = normalizedPrefix ? this.extractScopeFromPrefix(normalizedPrefix) : undefined
+    if (!scopeFilter && prefixScope && prefixScope !== "Desktop") {
+      scopeFilter = prefixScope
+    }
+
+    return scopeFilter
+  }
+
   private resolveSemanticScope(scope: string | undefined, pathPrefix: string): AfsScope | undefined {
     const prefixScope = this.extractScopeFromPrefix(pathPrefix)
     if (!scope) {
@@ -875,6 +1031,15 @@ export class AFS {
       case when ${afsHistory.path} <> '/' then ${afsHistory.path} else '' end,
       '/',
       ${afsHistory.name}
+    )`
+  }
+
+  private skillFullPathExpr() {
+    return sql<string>`concat(
+      'Desktop',
+      case when ${afsSkill.scope} <> 'Desktop' then '/' || ${afsSkill.scope} else '' end,
+      '/Skill/',
+      ${afsSkill.name}
     )`
   }
 

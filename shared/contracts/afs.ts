@@ -45,6 +45,20 @@ export const afsNodeSchema = z.object({
 
 export type AfsNode = z.infer<typeof afsNodeSchema>
 
+export function isAfsMemoryPathPrefix(path: string) {
+  const segments = path.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean)
+
+  if (segments[0] === "Desktop") {
+    segments.shift()
+  }
+
+  if (segments[0] && AFS_SCOPES.includes(segments[0] as AfsScope) && segments[0] !== "Desktop") {
+    segments.shift()
+  }
+
+  return segments[0] === "Memory"
+}
+
 // ---------------------------------------------------------------------------
 // API: list
 // ---------------------------------------------------------------------------
@@ -97,17 +111,28 @@ export const afsWriteResponseSchema = apiSuccessSchema(afsNodeSchema)
 
 export const afsSearchQuerySchema = z.object({
   query: z.string().min(1),
-  mode: z.enum(["exact", "semantic"]).default("exact"),
+  mode: z.enum(["exact", "semantic", "hybrid"]).default("exact"),
   scope: z.string().optional(),
   pathPrefix: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 }).superRefine((value, ctx) => {
-  if (value.mode === "semantic" && !value.pathPrefix) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "pathPrefix is required when mode is semantic",
-      path: ["pathPrefix"],
-    })
+  if (value.mode === "semantic" || value.mode === "hybrid") {
+    if (!value.pathPrefix) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pathPrefix is required when mode is semantic or hybrid",
+        path: ["pathPrefix"],
+      })
+      return
+    }
+
+    if (!isAfsMemoryPathPrefix(value.pathPrefix)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pathPrefix must point to a Memory subtree when mode is semantic or hybrid",
+        path: ["pathPrefix"],
+      })
+    }
   }
 })
 

@@ -29,6 +29,7 @@ export const thirdPartyCopilotAgent = new Agent({
     "",
     "## AFS (Agentic File System)",
     "Your primary AFS scope is Desktop/ThirdParty/ — use it for structured notes about this integration.",
+    "Use afs_search with mode=hybrid and a Memory pathPrefix when you need related prior notes or preferences, and use exact for literal terms.",
     "You may read broader Desktop/ paths when the user asks for cross-app context.",
     "Memory paths are writable. History paths are read-only.",
     "",

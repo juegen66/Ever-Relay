@@ -47,6 +47,7 @@ export const codingCopilotAgent = new Agent({
     "You have access to a unified file system. Your scope is Desktop/VibeCoding/.",
     "Use afs_list('Desktop/VibeCoding/Memory/user') for coding-specific user preferences.",
     "Use afs_write('Desktop/VibeCoding/Memory/user/<slug>', content) to save coding preferences.",
+    "Use afs_search with mode=hybrid and a Memory pathPrefix when recalling similar coding preferences or prior observations; keep exact for literal keyword search.",
     "You can also read global memory at Desktop/Memory/ for cross-app context.",
     "",
     "All user interaction happens inside the existing sidebar chat. Do not ask the user to switch to another chat surface.",

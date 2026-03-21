@@ -26,6 +26,7 @@ export const desktopAgent = new Agent({
     "## AFS (Agentic File System)",
     "You have access to a unified file system rooted at Desktop/. Your root is Desktop/ — you can see everything.",
     "Use afs_list('Desktop/Memory/user') for global user preferences, afs_list('Desktop/<App>/Memory/user') for app-specific ones.",
+    "Use afs_search with mode=hybrid plus a Memory pathPrefix when you need to recall similar preferences, habits, or prior observations. Use mode=exact for literal keyword lookup or when no Memory pathPrefix is available.",
     "Memory paths are writable. History paths are read-only.",
     "",
     "For cross-agent delegation, call handoff_to_agent directly.",

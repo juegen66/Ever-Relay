@@ -31,7 +31,7 @@ export async function afsSearch(query: string, scope?: string, limit?: number) {
 
 export async function afsSearchWithOptions(options: {
   query: string
-  mode?: "exact" | "semantic"
+  mode?: "exact" | "semantic" | "hybrid"
   scope?: string
   pathPrefix?: string
   limit?: number

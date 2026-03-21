@@ -27,7 +27,7 @@ export class AfsService {
   search(
     userId: string,
     query: string,
-    options?: { mode?: "exact" | "semantic"; scope?: string; pathPrefix?: string; limit?: number }
+    options?: { mode?: "exact" | "semantic" | "hybrid"; scope?: string; pathPrefix?: string; limit?: number }
   ) {
     return afs.search(userId, query, options)
   }
