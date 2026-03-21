@@ -9,6 +9,7 @@ import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import {
   DESKTOP_PREDICTION_CHAT_ID,
+  DESKTOP_PREDICTION_ENABLED,
   DESKTOP_PREDICTION_ENDPOINT,
   DESKTOP_COPILOT_SILENT_CHAT_ID,
   DESKTOP_COPILOT_SILENT_EVENT,
@@ -205,6 +206,10 @@ export function SilentCopilotRuntime() {
       }, 0)
     }
   }, [])
+
+  if (!DESKTOP_PREDICTION_ENABLED) {
+    return <SilentMessageRuntime />
+  }
 
   return (
     <>

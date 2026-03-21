@@ -1,13 +1,17 @@
-import { eq, and } from "drizzle-orm"
+import { eq, and, isNull } from "drizzle-orm"
 
+import { db } from "@/server/core/database"
+import { desktopItems } from "@/server/db/schema"
 import type {
   CreateFileParams,
   FileItemType,
   UpdateFileContentBody,
   UpdateFileParams,
 } from "@/shared/contracts/files"
-import { db } from "@/server/core/database"
-import { desktopItems } from "@/server/db/schema"
+import {
+  normalizeDesktopItemName,
+  normalizeDesktopItemParentId,
+} from "@/shared/copilot/desktop-item-identity"
 
 export type DesktopItemType = FileItemType
 export type CreateItemInput = CreateFileParams & { userId: string }
@@ -37,6 +41,34 @@ export class FilesService {
     return db.query.desktopItems.findFirst({
       where: and(eq(desktopItems.id, id), eq(desktopItems.userId, userId)),
     })
+  }
+
+  /**
+   * Find an existing item by logical identity (name + type + parent)
+   */
+  async findItemByIdentity(input: {
+    userId: string
+    name: string
+    itemType: DesktopItemType
+    parentId?: string | null
+  }) {
+    const normalizedName = normalizeDesktopItemName(input.name)
+    const normalizedParentId = normalizeDesktopItemParentId(input.parentId)
+
+    const [item] = await db.query.desktopItems.findMany({
+      where: and(
+        eq(desktopItems.userId, input.userId),
+        eq(desktopItems.name, normalizedName),
+        eq(desktopItems.itemType, input.itemType),
+        normalizedParentId === null
+          ? isNull(desktopItems.parentId)
+          : eq(desktopItems.parentId, normalizedParentId)
+      ),
+      orderBy: (items, { asc }) => [asc(items.createdAt)],
+      limit: 1,
+    })
+
+    return item ?? null
   }
 
   /**

@@ -8,10 +8,12 @@ import { toDesktopFolder } from "@/lib/desktop-items"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopItemsQuery } from "@/lib/query/files"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopNotificationStore } from "@/lib/stores/desktop-notification-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
 import { AboutMac } from "./about-mac"
 import { AppWindow } from "./app-window"
@@ -51,6 +53,7 @@ export function Desktop() {
   const updateWindowPosition = useDesktopWindowStore((state) => state.updateWindowPosition)
   const updateWindowSize = useDesktopWindowStore((state) => state.updateWindowSize)
   const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
+  const focusThirdPartyCopilot = useDesktopAgentStore((state) => state.focusThirdPartyCopilot)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   const desktopItemsQuery = useDesktopItemsQuery()
@@ -308,7 +311,14 @@ export function Desktop() {
           <AppWindow
             windowState={win}
             isActive={win.id === activeWindowId}
-            onFocus={() => focusWindow(win.id)}
+            onFocus={() => {
+              focusWindow(win.id)
+              if (isThirdPartyAppId(win.appId)) {
+                if (useDesktopAgentStore.getState().copilotAgentMode === "third_party") {
+                  focusThirdPartyCopilot(win.id)
+                }
+              }
+            }}
             onClose={() => closeWindow(win.id)}
             onMinimize={() => minimizeWindow(win.id)}
             onMaximize={() => maximizeWindow(win.id)}

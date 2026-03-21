@@ -10,6 +10,7 @@ import {
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
+import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
@@ -33,6 +34,7 @@ export const codingCopilotAgent = new Agent({
 
     return [
       requestOriginProcessor,
+      createHandoffContextProcessor(CODING_COPILOT_AGENT),
       ...(userId
         ? [new AfsSkillProcessor({ userId, agentId: CODING_COPILOT_AGENT, scope: "VibeCoding" })]
         : []),

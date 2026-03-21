@@ -1,13 +1,16 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
-import { filesService } from "@/server/modules/files/files.service"
+
 import { assertOperationApproved } from "@/server/mastra/tools/safety/approvals"
+import { filesService } from "@/server/modules/files/files.service"
 import { fileItemTypeSchema } from "@/shared/contracts/files"
+
 import { requestContextSchema } from "./common"
 
 export const createDesktopItemTool = createTool({
   id: "create_desktop_item_backend",
-  description: "Create a desktop item for the authenticated user.",
+  description:
+    "Create a desktop item for the authenticated user. If the same name, itemType, and parentId already exist, return the existing item instead of creating a duplicate.",
   requestContextSchema,
   inputSchema: z.object({
     name: z.string().trim().min(1),
@@ -24,6 +27,27 @@ export const createDesktopItemTool = createTool({
       return { ok: false, error: "Missing authenticated user context" }
     }
 
+    const existingItem = await filesService.findItemByIdentity({
+      userId,
+      name: input.name,
+      itemType: input.itemType,
+      parentId: input.parentId ?? null,
+    })
+
+    if (existingItem) {
+      return {
+        ok: true,
+        created: false,
+        alreadyExists: true,
+        item: {
+          id: existingItem.id,
+          name: existingItem.name,
+          itemType: existingItem.itemType,
+          parentId: existingItem.parentId,
+        },
+      }
+    }
+
     const item = await filesService.createItem({
       userId,
       name: input.name,
@@ -38,6 +62,8 @@ export const createDesktopItemTool = createTool({
 
     return {
       ok: true,
+      created: true,
+      alreadyExists: false,
       item: {
         id: item.id,
         name: item.name,
@@ -126,4 +152,3 @@ export const deleteDesktopItemTool = createTool({
     return { ok: true, deleted: true as const }
   },
 })
-

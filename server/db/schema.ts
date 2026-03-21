@@ -439,6 +439,46 @@ export const handoffRecords = pgTable(
   })
 )
 
+export const HANDOFF_CONTEXT_STATUSES = ["pending", "consumed"] as const
+export type HandoffContextStatus = (typeof HANDOFF_CONTEXT_STATUSES)[number]
+
+export type HandoffContextMetadata = {
+  handoffId: string
+  reason?: string | null
+  task?: string
+  done?: string[]
+  nextSteps?: string[]
+  constraints?: string[]
+  artifacts?: string[]
+  openQuestions?: string[]
+  riskNotes?: string[]
+}
+
+/** Pending handoff document for Mastra input processor (per thread + target agent). */
+export const handoffContext = pgTable(
+  "handoff_context",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    sourceAgentId: text("source_agent_id").notNull(),
+    targetAgentId: text("target_agent_id").notNull(),
+    content: text("content").notNull(),
+    status: text("status").$type<HandoffContextStatus>().notNull().default("pending"),
+    metadata: jsonb("metadata").$type<HandoffContextMetadata>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  },
+  (table) => ({
+    threadTargetStatusIdx: index("handoff_context_thread_target_status_idx").on(
+      table.threadId,
+      table.targetAgentId,
+      table.status
+    ),
+    userThreadIdx: index("handoff_context_user_thread_idx").on(table.userId, table.threadId),
+  })
+)
+
 // ---------------------------------------------------------------------------
 // Coding apps
 // ---------------------------------------------------------------------------

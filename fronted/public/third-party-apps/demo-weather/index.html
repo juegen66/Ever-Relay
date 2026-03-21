@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo Weather — CloudOS Third-Party</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: linear-gradient(160deg, #0ea5e9 0%, #6366f1 55%, #7c3aed 100%);
+        color: #0f172a;
+        min-height: 100vh;
+        padding: 16px;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 16px;
+        padding: 20px;
+        max-width: 360px;
+        margin: 0 auto;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+      }
+      h1 { font-size: 1.1rem; margin: 0 0 12px; color: #1e293b; }
+      .temp { font-size: 2.5rem; font-weight: 700; color: #0f172a; }
+      .meta { font-size: 0.85rem; color: #64748b; margin-top: 8px; }
+      .log {
+        margin-top: 16px;
+        font-size: 11px;
+        color: #475569;
+        max-height: 120px;
+        overflow: auto;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Demo Weather</h1>
+      <div class="temp" id="temp">--°</div>
+      <div class="meta" id="location">Location: (not set)</div>
+      <div class="meta" id="forecast">Forecast: —</div>
+      <div class="log" id="log"></div>
+    </div>
+    <script src="../sdk/cloudos-host-bridge.js"></script>
+    <script>
+      (function () {
+        var logEl = document.getElementById("log")
+        function log(line) {
+          var t = new Date().toLocaleTimeString()
+          logEl.textContent = "[" + t + "] " + line + "\n" + logEl.textContent
+        }
+
+        var instanceId = CloudOSHostBridge.resolveAppInstanceId()
+        if (!instanceId) {
+          log("Missing cloudosWindowId — open this app from CloudOS desktop.")
+          return
+        }
+
+        var state = { city: "San Francisco", tempC: 18, condition: "Partly cloudy" }
+
+        var bridge = new CloudOSHostBridge({ appInstanceId: instanceId })
+
+        function render() {
+          document.getElementById("temp").textContent = Math.round(state.tempC) + "°C"
+          document.getElementById("location").textContent = "Location: " + state.city
+          document.getElementById("forecast").textContent = "Forecast: " + state.condition
+        }
+        render()
+
+        bridge.onTool("get_weather", function () {
+          log("tool get_weather")
+          return {
+            city: state.city,
+            tempC: state.tempC,
+            condition: state.condition,
+          }
+        })
+
+        bridge.onTool("set_location", function (args) {
+          var city = typeof args.city === "string" ? args.city.trim() : ""
+          if (!city) throw new Error("city is required")
+          state.city = city
+          render()
+          log("tool set_location → " + city)
+          return { ok: true, city: state.city }
+        })
+
+        bridge.onTool("show_forecast", function (args) {
+          var days = typeof args.days === "number" ? Math.min(7, Math.max(1, Math.floor(args.days))) : 3
+          log("tool show_forecast days=" + days)
+          var rows = []
+          for (var i = 0; i < days; i++) {
+            rows.push({
+              day: "D+" + (i + 1),
+              highC: state.tempC + i,
+              lowC: state.tempC - 2,
+            })
+          }
+          state.condition = "Multi-day outlook updated"
+          render()
+          return { days: days, outlook: rows }
+        })
+
+        bridge.registerTools([
+          {
+            id: "get_weather",
+            name: "get_weather",
+            description: "Return the current demo city, temperature in Celsius, and short condition string.",
+            parameters: { type: "object", properties: {} },
+          },
+          {
+            id: "set_location",
+            name: "set_location",
+            description: "Set the active city name shown in the iframe UI.",
+            parameters: {
+              type: "object",
+              properties: {
+                city: { type: "string", description: "City name" },
+              },
+              required: ["city"],
+            },
+          },
+          {
+            id: "show_forecast",
+            name: "show_forecast",
+            description: "Generate a short multi-day outlook and refresh the widget summary.",
+            parameters: {
+              type: "object",
+              properties: {
+                days: { type: "number", description: "Number of days 1-7" },
+              },
+            },
+          },
+        ])
+
+        bridge.signalReady()
+        log("Ready — tools registered for instance " + instanceId.slice(0, 8) + "…")
+      })()
+    </script>
+  </body>
+</html>

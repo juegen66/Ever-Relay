@@ -103,6 +103,35 @@ function mergeReport(
   }
 }
 
+/**
+ * Markdown document stored in `handoff_context` and injected via HandoffContextProcessor.
+ */
+export function formatHandoffDocument(report: HandoffReport): string {
+  const lines: string[] = [
+    `# Agent handoff`,
+    ``,
+    `## Task`,
+    report.task,
+    ``,
+    `## Prior context (compressed)`,
+    report.contextDigest,
+  ]
+
+  const appendList = (title: string, items: string[]) => {
+    if (items.length === 0) return
+    lines.push(``, `## ${title}`, ...items.map((item) => `- ${item}`))
+  }
+
+  appendList("Done", report.done)
+  appendList("Next steps", report.nextSteps)
+  appendList("Constraints", report.constraints)
+  appendList("Artifacts", report.artifacts)
+  appendList("Open questions", report.openQuestions)
+  appendList("Risk notes", report.riskNotes)
+
+  return lines.join("\n")
+}
+
 export async function buildHandoffMetadata(
   body: PrepareHandoffBody
 ): Promise<HandoffMetadata | null> {

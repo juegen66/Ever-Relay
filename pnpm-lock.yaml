@@ -23,8 +23,8 @@ importers:
         specifier: 0.0.44
         version: 0.0.44
       '@ag-ui/mastra':
-        specifier: ^1.0.0
-        version: 1.0.0(e3e752700862a7f362314a2cd5a850a4)
+        specifier: ^1.0.1
+        version: 1.0.1(e3e752700862a7f362314a2cd5a850a4)
       '@ai-sdk/anthropic':
         specifier: ^3.0.50
         version: 3.0.50(zod@3.25.76)
@@ -362,12 +362,12 @@ packages:
       '@ag-ui/client': '>=0.0.42'
       '@ag-ui/core': '>=0.0.42'
 
-  '@ag-ui/mastra@1.0.0':
-    resolution: {integrity: sha512-X7s/qVUTZHdsuO1qrOLVUEIAhTs2ZFXwfoq871KJgrn5lWzXdSz4Bxr/Jmq/JlwGoTq+rHjVj3pFjFqHDeNr1Q==}
+  '@ag-ui/mastra@1.0.1':
+    resolution: {integrity: sha512-8XcsAdZVweiQU7HeZW4sD9x4oXOk3VJ7piK3eihwIzVkEvd8YtfiPgwNlOzNxT6my8IHaHIuKtAlxLS/wo3TKQ==}
     peerDependencies:
       '@ag-ui/client': '>=0.0.44'
       '@ag-ui/core': '>=0.0.44'
-      '@copilotkit/runtime': ^1.51.2
+      '@copilotkit/runtime': 0.0.0-mme-ag-ui-0-0-46-20260227141603
       '@mastra/client-js': '>=1.0.0-0 <2.0.0-0'
       '@mastra/core': 1.14.0
 
@@ -9938,7 +9938,7 @@ snapshots:
       - react
       - react-dom
 
-  '@ag-ui/mastra@1.0.0(e3e752700862a7f362314a2cd5a850a4)':
+  '@ag-ui/mastra@1.0.1(e3e752700862a7f362314a2cd5a850a4)':
     dependencies:
       '@ag-ui/client': 0.0.44
       '@ag-ui/core': 0.0.44

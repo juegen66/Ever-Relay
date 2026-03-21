@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 
 import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
-import { MessageSquare, Sparkles, X } from "lucide-react"
+import { X } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import {
@@ -98,26 +98,6 @@ function DesktopCopilotHeader() {
   )
 }
 
-function SidebarOpenStateSync() {
-  const { open, setOpen } = useChatContext()
-  const desiredOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
-  const lastSyncedRef = useRef<boolean | null>(null)
-
-  useEffect(() => {
-    if (open === desiredOpen) {
-      lastSyncedRef.current = null
-      return
-    }
-    // Avoid loop: if we just synced to desiredOpen but open hasn't updated yet, skip
-    if (lastSyncedRef.current === desiredOpen) return
-
-    lastSyncedRef.current = desiredOpen
-    setOpen(desiredOpen)
-  }, [desiredOpen, open, setOpen])
-
-  return null
-}
-
 function DesktopCopilotOpenButton() {
   const { open } = useChatContext()
   const pathname = usePathname()
@@ -163,18 +143,6 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   useEffect(() => {
-    if (useDesktopAgentStore.getState().copilotSidebarOpen) {
-      setCopilotSidebarOpen(false)
-    }
-
-    return () => {
-      if (useDesktopAgentStore.getState().copilotSidebarOpen) {
-        setCopilotSidebarOpen(false)
-      }
-    }
-  }, [setCopilotSidebarOpen])
-
-  useEffect(() => {
     if (!isDesktopRootRoute) {
       if (useDesktopAgentStore.getState().copilotSidebarOpen) {
         setCopilotSidebarOpen(false)
@@ -197,6 +165,8 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   return (
     <>
       <CopilotSidebar
+        key={copilotSidebarOpen ? "sidebar-open" : "sidebar-closed"}
+        defaultOpen={copilotSidebarOpen}
         labels={DESKTOP_COPILOT_LABELS}
         className="text-sm"
         shortcut={isDesktopRootRoute ? "k" : undefined}
@@ -209,7 +179,6 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
       >
         <CopilotToolsRegistry agentId={activeAgent} />
         <DesktopAgentContextProvider />
-        <SidebarOpenStateSync />
         {desktop}
       </CopilotSidebar>
       <BuildProgressPanel />
@@ -221,12 +190,21 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProviderProps) {
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
+  const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
   const activeAgent =
     copilotAgentMode === "logo"
       ? LOGO_COPILOT_AGENT
       : copilotAgentMode === "coding"
         ? CODING_COPILOT_AGENT
         : DESKTOP_COPILOT_AGENT
+
+  useEffect(() => {
+    return () => {
+      if (useDesktopAgentStore.getState().copilotSidebarOpen) {
+        setCopilotSidebarOpen(false)
+      }
+    }
+  }, [setCopilotSidebarOpen])
 
   return (
     <>

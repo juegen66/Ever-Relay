@@ -1,4 +1,16 @@
-export type AppId = "finder" | "canvas" | "logo" | "vibecoding" | "textedit" | "report"
+/** Built-in CloudOS apps */
+export type BuiltinAppId =
+  | "finder"
+  | "canvas"
+  | "logo"
+  | "vibecoding"
+  | "textedit"
+  | "report"
+
+/** Third-party iframe apps use ids `tp_<slug>`, e.g. tp_demo_weather */
+export type ThirdPartyAppId = `tp_${string}`
+
+export type AppId = BuiltinAppId | ThirdPartyAppId
 
 export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
 

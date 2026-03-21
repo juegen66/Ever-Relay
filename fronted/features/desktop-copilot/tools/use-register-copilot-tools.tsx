@@ -7,6 +7,7 @@ import {
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
   PREDICTION_AGENT_ID,
+  THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
 import { useAgentHandoffTools } from "./use-agent-handoff-tools"
@@ -20,6 +21,7 @@ import { useDesktopHitlTools } from "./use-desktop-hitl-tools"
 import { useLogoTools } from "./use-logo-tools"
 import { usePredictionReportTools } from "./use-prediction-report-tools"
 import { usePredictionTools } from "./use-prediction-tools"
+import { ThirdPartyToolsMount } from "./use-third-party-tools"
 import { useTextEditTools } from "./use-textedit-tools"
 
 /** Mounts tools for main_agent (desktop mode). */
@@ -62,10 +64,21 @@ function PredictionAgentToolsMount() {
   return null
 }
 
+function ThirdPartyAgentToolsMount() {
+  useDesktopCoreTools()
+  useAgentHandoffTools()
+  return (
+    <>
+      <ThirdPartyToolsMount />
+    </>
+  )
+}
+
 const AGENT_MOUNTS: Record<string, ComponentType> = {
   [DESKTOP_COPILOT_AGENT]: DesktopAgentToolsMount,
   [LOGO_COPILOT_AGENT]: LogoAgentToolsMount,
   [CODING_COPILOT_AGENT]: CodingAgentToolsMount,
+  [THIRD_PARTY_COPILOT_AGENT]: ThirdPartyAgentToolsMount,
   [PREDICTION_AGENT_ID]: PredictionAgentToolsMount,
 }
 

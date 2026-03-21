@@ -3,6 +3,7 @@
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import {
+  DESKTOP_PREDICTION_ENABLED,
   DESKTOP_PREDICTION_ENDPOINT,
   PREDICTION_AGENT_ID,
 } from "@/shared/copilot/constants"
@@ -59,6 +60,10 @@ function shouldSkipPredictionRun(force: boolean) {
 }
 
 async function stopDesktopPredictionRun(threadId: string) {
+  if (!DESKTOP_PREDICTION_ENABLED) {
+    return false
+  }
+
   const url = `${DESKTOP_PREDICTION_ENDPOINT}/agent/${PREDICTION_AGENT_ID}/stop/${encodeURIComponent(threadId)}`
 
   try {
@@ -112,6 +117,10 @@ async function runPredictionTransition(
 export function queueDesktopPredictionRun(
   options?: QueueDesktopPredictionRunOptions
 ): Promise<QueueDesktopPredictionRunResult> {
+  if (!DESKTOP_PREDICTION_ENABLED) {
+    return Promise.resolve("skipped")
+  }
+
   const force = options?.force ?? false
   const result = predictionTransition
     .catch(() => undefined)

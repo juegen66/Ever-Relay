@@ -1,11 +1,14 @@
 "use client"
 
+import { useMemo } from "react"
+
 import type { AppId } from "@/lib/desktop/types"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { getThirdPartyAppIdForSlug, useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 
-const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
+const BASE_LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
   { id: "finder", name: "Finder", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)", letter: "F" },
   { id: "canvas", name: "Canvas", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)", letter: "C" },
   { id: "logo", name: "Logo Studio", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", letter: "LG" },
@@ -17,6 +20,26 @@ export function Launchpad() {
   const track = useTrackAction()
   const onOpenApp = useDesktopWindowStore((state) => state.openApp)
   const onClose = useDesktopUIStore((state) => state.closeLaunchpad)
+  const thirdPartyManifestsRecord = useThirdPartyAppRegistry((s) => s.manifests)
+  const thirdPartyManifests = useMemo(
+    () => Object.values(thirdPartyManifestsRecord),
+    [thirdPartyManifestsRecord],
+  )
+
+  const launchpadApps = useMemo(() => {
+    const extra = thirdPartyManifests.map((m) => ({
+      id: getThirdPartyAppIdForSlug(m.slug) as AppId,
+      name: m.displayName,
+      color: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+      letter: m.displayName
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 3)
+        .toUpperCase(),
+    }))
+    return [...BASE_LAUNCHPAD_APPS, ...extra]
+  }, [thirdPartyManifests])
 
   return (
     <div
@@ -50,7 +73,7 @@ export function Launchpad() {
         className="grid grid-cols-5 gap-x-12 gap-y-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {LAUNCHPAD_APPS.map((app) => (
+        {launchpadApps.map((app) => (
           <button
             key={app.id}
             className="flex flex-col items-center gap-2 group"

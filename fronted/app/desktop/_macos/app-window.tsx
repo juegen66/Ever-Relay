@@ -2,7 +2,9 @@
 
 import { useRef, useCallback, useEffect, useState } from "react"
 
+import { resolveAppDisplayName } from "@/lib/desktop/resolve-app-display-name"
 import type { DesktopFolder, DesktopItemType, WindowState } from "@/lib/desktop/types"
+import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
@@ -10,6 +12,7 @@ import { LogoStudioApp } from "./apps/logo-studio-app"
 import { ReportApp } from "./apps/report-app"
 import { TextEditApp } from "./apps/textedit-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
+import { ThirdPartyApp } from "./apps/third-party-app"
 
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",
@@ -165,7 +168,9 @@ export function AppWindow({
 
   const isFinderView = appId === "finder" && folderViewerProps
   const isFileViewer = appId === "textedit" && windowState.fileId
-  const AppContent = (isFinderView || isFileViewer) ? null : APP_COMPONENTS[appId]
+  const isThirdParty = isThirdPartyAppId(appId)
+  const AppContent =
+    isFinderView || isFileViewer || isThirdParty ? null : APP_COMPONENTS[appId]
   const shouldAnimateWindowBounds = maximized || isTogglingMaximize
 
   const windowStyle = maximized
@@ -287,7 +292,9 @@ export function AppWindow({
             ? windowState.folderName || "Desktop"
             : isFileViewer
               ? windowState.fileName || "Untitled"
-              : APP_TITLES[appId]}
+              : isThirdParty
+                ? resolveAppDisplayName(windowState.appId)
+                : APP_TITLES[appId] ?? appId}
         </div>
         <div className="w-[62px]" />
       </div>
@@ -312,6 +319,8 @@ export function AppWindow({
             fileId={windowState.fileId!}
             fileName={windowState.fileName || "Untitled"}
           />
+        ) : isThirdParty ? (
+          <ThirdPartyApp windowState={windowState} />
         ) : AppContent ? (
           <AppContent />
         ) : null}

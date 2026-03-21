@@ -10,6 +10,26 @@ import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { toAppId } from "../types"
 import { MOVE_DESKTOP_ITEM_PARAMS, OPEN_APP_PARAMS, toErrorMessage } from "./types"
 
+type ToolSuccess<T extends Record<string, unknown> = Record<string, never>> = {
+  status: "success"
+  ok: true
+  summary: string
+} & T
+
+type ToolFailure = {
+  status: "failed"
+  ok: false
+  error: string
+}
+
+function toolSuccess<T extends Record<string, unknown>>(summary: string, data: T): ToolSuccess<T> {
+  return { status: "success", ok: true, summary, ...data }
+}
+
+function toolFailure(error: string): ToolFailure {
+  return { status: "failed", ok: false, error }
+}
+
 export function useDesktopCoreTools() {
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const windows = useDesktopWindowStore((state) => state.windows)
@@ -45,11 +65,11 @@ export function useDesktopCoreTools() {
         const desktopY = hasY ? args.y : undefined
 
         if (!itemId) {
-          return { ok: false, error: "itemId is required" }
+          return toolFailure("itemId is required")
         }
 
         if (hasX !== hasY) {
-          return { ok: false, error: "x and y must be provided together" }
+          return toolFailure("x and y must be provided together")
         }
 
         const readItems = readDesktopFoldersFromCache
@@ -61,19 +81,19 @@ export function useDesktopCoreTools() {
 
         const item = items.find((entry) => entry.id === itemId)
         if (!item) {
-          return { ok: false, error: `Item not found: ${itemId}` }
+          return toolFailure(`Item not found: ${itemId}`)
         }
 
         if (targetFolderId) {
           const target = items.find((entry) => entry.id === targetFolderId)
           if (!target) {
-            return { ok: false, error: `Target folder not found: ${targetFolderId}` }
+            return toolFailure(`Target folder not found: ${targetFolderId}`)
           }
           if (target.itemType !== "folder") {
-            return { ok: false, error: `Target item is not a folder: ${targetFolderId}` }
+            return toolFailure(`Target item is not a folder: ${targetFolderId}`)
           }
           if (itemId === targetFolderId) {
-            return { ok: false, error: "Cannot move item into itself" }
+            return toolFailure("Cannot move item into itself")
           }
 
           if (item.itemType === "folder") {
@@ -82,10 +102,7 @@ export function useDesktopCoreTools() {
 
             while (currentParentId) {
               if (currentParentId === itemId) {
-                return {
-                  ok: false,
-                  error: "Cannot move a folder into its descendant",
-                }
+                return toolFailure("Cannot move a folder into its descendant")
               }
               currentParentId = itemById.get(currentParentId)?.parentId ?? null
             }
@@ -96,20 +113,22 @@ export function useDesktopCoreTools() {
 
           const movedItem = readDesktopFoldersFromCache().find((entry) => entry.id === itemId)
           if (!movedItem || movedItem.parentId !== targetFolderId) {
-            return { ok: false, error: "Move failed: item did not reach target folder" }
+            return toolFailure("Move failed: item did not reach target folder")
           }
 
-          return {
-            ok: true,
-            destination: { type: "folder", targetFolderId },
-            item: {
-              id: movedItem.id,
-              name: movedItem.name,
-              parentId: movedItem.parentId ?? null,
-              x: movedItem.x,
-              y: movedItem.y,
-            },
-          }
+          return toolSuccess(
+            `Success: moved "${movedItem.name}" into folder id ${targetFolderId}.`,
+            {
+              destination: { type: "folder" as const, targetFolderId },
+              item: {
+                id: movedItem.id,
+                name: movedItem.name,
+                parentId: movedItem.parentId ?? null,
+                x: movedItem.x,
+                y: movedItem.y,
+              },
+            }
+          )
         }
 
         if (desktopX !== undefined && desktopY !== undefined) {
@@ -121,12 +140,16 @@ export function useDesktopCoreTools() {
 
         const movedItem = readDesktopFoldersFromCache().find((entry) => entry.id === itemId)
         if (!movedItem || movedItem.parentId) {
-          return { ok: false, error: "Move failed: item did not move to desktop" }
+          return toolFailure("Move failed: item did not move to desktop")
         }
 
-        return {
-          ok: true,
-          destination: { type: "desktop", x: movedItem.x, y: movedItem.y },
+        const placed =
+          desktopX !== undefined && desktopY !== undefined
+            ? `at desktop position (${desktopX}, ${desktopY})`
+            : "to the desktop (root level)"
+
+        return toolSuccess(`Success: moved "${movedItem.name}" ${placed}.`, {
+          destination: { type: "desktop" as const, x: movedItem.x, y: movedItem.y },
           item: {
             id: movedItem.id,
             name: movedItem.name,
@@ -134,12 +157,9 @@ export function useDesktopCoreTools() {
             x: movedItem.x,
             y: movedItem.y,
           },
-        }
+        })
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolFailure(toErrorMessage(error))
       }
     },
     [
@@ -159,17 +179,13 @@ export function useDesktopCoreTools() {
       handler: async (args) => {
         const appId = toAppId(String(args.appId ?? ""))
         if (!appId) {
-          return {
-            ok: false,
-            error: `Unsupported appId: ${args.appId}`,
-          }
+          return toolFailure(`Unsupported appId: ${args.appId}`)
         }
 
         openApp(appId)
-        return {
-          ok: true,
+        return toolSuccess(`Success: opened app "${appId}" (window should appear on the desktop).`, {
           openedApp: appId,
-        }
+        })
       },
     },
     [openApp]
@@ -180,17 +196,17 @@ export function useDesktopCoreTools() {
       name: "list_open_windows",
       description: "List current desktop windows and their app ids.",
       handler: async () => {
-        return {
-          ok: true,
-          count: windows.length,
-          windows: windows.map((windowState) => ({
-            id: windowState.id,
-            appId: windowState.appId,
-            minimized: windowState.minimized,
-            maximized: windowState.maximized,
-            title: windowState.folderName ?? windowState.fileName ?? null,
-          })),
-        }
+        const list = windows.map((windowState) => ({
+          id: windowState.id,
+          appId: windowState.appId,
+          minimized: windowState.minimized,
+          maximized: windowState.maximized,
+          title: windowState.folderName ?? windowState.fileName ?? null,
+        }))
+        return toolSuccess(
+          `Success: listed ${windows.length} open window(s); see windows for app ids and titles.`,
+          { count: windows.length, windows: list }
+        )
       },
     },
     [windows]
@@ -201,16 +217,16 @@ export function useDesktopCoreTools() {
       name: "list_desktop_items",
       description: "List desktop items currently visible to the user.",
       handler: async () => {
-        return {
-          ok: true,
-          count: desktopFolders.length,
-          items: desktopFolders.map((item) => ({
-            id: item.id,
-            name: item.name,
-            itemType: item.itemType,
-            parentId: item.parentId,
-          })),
-        }
+        const items = desktopFolders.map((item) => ({
+          id: item.id,
+          name: item.name,
+          itemType: item.itemType,
+          parentId: item.parentId,
+        }))
+        return toolSuccess(
+          `Success: listed ${desktopFolders.length} desktop item(s); see items for ids, names, and types.`,
+          { count: desktopFolders.length, items }
+        )
       },
     },
     [desktopFolders]
@@ -222,10 +238,11 @@ export function useDesktopCoreTools() {
       description: "Reload desktop items from backend.",
       handler: async () => {
         await refreshDesktopItems()
-        return {
-          ok: true,
-          count: readDesktopFoldersFromCache().length,
-        }
+        const count = readDesktopFoldersFromCache().length
+        return toolSuccess(
+          `Success: reloaded desktop items from the server; ${count} item(s) now in cache.`,
+          { count }
+        )
       },
     },
     [readDesktopFoldersFromCache, refreshDesktopItems]

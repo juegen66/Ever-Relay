@@ -4,7 +4,6 @@ import { create } from "zustand"
 
 import type { CodingApp } from "@/shared/contracts/coding-apps"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
-import type { HandoffMetadata } from "@/shared/copilot/handoff"
 
 export type CopilotAgentMode = "main" | "logo" | "coding"
 export type SilentPredictionStatus = "idle" | "running" | "stopping"
@@ -16,8 +15,18 @@ export type ActiveCodingApp = Pick<
 export interface PendingHandoff {
   id: string
   threadId: string
+  sourceAgentId: string
+  targetAgentId: string
   targetMode: CopilotAgentMode
-  metadata: HandoffMetadata
+  status: "queued" | "switching"
+}
+
+export interface PendingCopilotDispatch {
+  id: string
+  threadId: string
+  targetMode: CopilotAgentMode
+  role: "user" | "developer"
+  content: string
   status: "queued" | "sending"
 }
 
@@ -48,6 +57,7 @@ interface DesktopAgentStore {
   silentLastStartedAt: number | null
   silentRunRequestId: number
   pendingHandoff: PendingHandoff | null
+  pendingCopilotDispatch: PendingCopilotDispatch | null
   setCopilotSidebarOpen: (open: boolean) => void
   setCopilotAgentMode: (mode: CopilotAgentMode) => void
   startNewCopilotThread: () => void
@@ -59,9 +69,12 @@ interface DesktopAgentStore {
   finishSilentPredictionRun: (requestId?: number) => boolean
   resetSilentPredictionSession: (requestId?: number) => void
   queuePendingHandoff: (handoff: Omit<PendingHandoff, "status">) => void
-  markPendingHandoffSending: (id: string) => boolean
+  markPendingHandoffSwitching: (id: string) => boolean
   clearPendingHandoff: (id: string) => void
-  resetPendingHandoff: (id: string) => void
+  queuePendingCopilotDispatch: (dispatch: Omit<PendingCopilotDispatch, "status">) => void
+  markPendingCopilotDispatchSending: (id: string) => boolean
+  clearPendingCopilotDispatch: (id: string) => void
+  resetPendingCopilotDispatch: (id: string) => void
 }
 
 export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
@@ -77,6 +90,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
   silentLastStartedAt: null,
   silentRunRequestId: 0,
   pendingHandoff: null,
+  pendingCopilotDispatch: null,
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
   setCopilotAgentMode: (mode) => set({ copilotAgentMode: mode }),
   startNewCopilotThread: () =>
@@ -201,7 +215,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
         status: "queued",
       },
     }),
-  markPendingHandoffSending: (id) => {
+  markPendingHandoffSwitching: (id) => {
     let marked = false
     set((state) => {
       if (!state.pendingHandoff || state.pendingHandoff.id !== id || state.pendingHandoff.status !== "queued") {
@@ -212,7 +226,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
       return {
         pendingHandoff: {
           ...state.pendingHandoff,
-          status: "sending",
+          status: "switching",
         },
       }
     })
@@ -226,12 +240,48 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
           }
         : {}
     ),
-  resetPendingHandoff: (id) =>
+  queuePendingCopilotDispatch: (dispatch) =>
+    set({
+      pendingCopilotDispatch: {
+        ...dispatch,
+        status: "queued",
+      },
+    }),
+  markPendingCopilotDispatchSending: (id) => {
+    let marked = false
+    set((state) => {
+      if (
+        !state.pendingCopilotDispatch ||
+        state.pendingCopilotDispatch.id !== id ||
+        state.pendingCopilotDispatch.status !== "queued"
+      ) {
+        return {}
+      }
+
+      marked = true
+      return {
+        pendingCopilotDispatch: {
+          ...state.pendingCopilotDispatch,
+          status: "sending",
+        },
+      }
+    })
+    return marked
+  },
+  clearPendingCopilotDispatch: (id) =>
     set((state) =>
-      state.pendingHandoff?.id === id
+      state.pendingCopilotDispatch?.id === id
         ? {
-            pendingHandoff: {
-              ...state.pendingHandoff,
+            pendingCopilotDispatch: null,
+          }
+        : {}
+    ),
+  resetPendingCopilotDispatch: (id) =>
+    set((state) =>
+      state.pendingCopilotDispatch?.id === id
+        ? {
+            pendingCopilotDispatch: {
+              ...state.pendingCopilotDispatch,
               status: "queued",
             },
           }

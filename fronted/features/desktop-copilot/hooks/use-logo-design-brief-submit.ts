@@ -2,6 +2,8 @@
 
 import { useCallback } from "react"
 
+import { useCopilotChat } from "@copilotkit/react-core"
+
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { dispatchBrandBriefToCopilot } from "@/shared/copilot/brand-brief"
 
@@ -65,12 +67,15 @@ function formatBrandBriefForCopilot(data: BrandBriefFormData): string {
  * for clarification (open_logo_sidebar) or trigger confirm_logo_brief directly.
  */
 export function useLogoDesignBriefSubmit() {
+  const { isLoading, stopGeneration } = useCopilotChat()
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
-  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   const submitBrief = useCallback(
     (formData: BrandBriefFormData) => {
-      setCopilotAgentMode("logo")
+      if (isLoading) {
+        stopGeneration()
+      }
+
       // Start in silent mode: only open sidebar when logo agent explicitly asks for clarification.
       setCopilotSidebarOpen(false)
       const message = formatBrandBriefForCopilot(formData)
@@ -78,7 +83,7 @@ export function useLogoDesignBriefSubmit() {
         dispatchBrandBriefToCopilot({ message })
       })
     },
-    [setCopilotAgentMode, setCopilotSidebarOpen]
+    [isLoading, setCopilotSidebarOpen, stopGeneration]
   )
 
   return { submitBrief }

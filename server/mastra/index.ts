@@ -12,6 +12,7 @@ export const mastra = new Mastra({
   storage: new PostgresStore({
     id: "mastra-storage",
     pool,
+    disableInit: true,
   }),
   observability: mastraObservability,
   logger: consoleProcessor,

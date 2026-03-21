@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@/shared/copilot/constants", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/shared/copilot/constants")>()
+  return { ...mod, DESKTOP_PREDICTION_ENABLED: true }
+})
+
 import {
   createCopilotThreadId,
   useDesktopAgentStore,

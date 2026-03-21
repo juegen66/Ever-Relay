@@ -7,6 +7,7 @@ import { useFrontendTool, useHumanInTheLoop } from "@copilotkit/react-core"
 
 import { toDesktopItemType } from "@/lib/desktop-items"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { findMatchingDesktopItem } from "@/shared/copilot/desktop-item-identity"
 
 import {
   CREATE_ITEM_PARAMS,
@@ -36,11 +37,36 @@ export function useDesktopHitlTools() {
     async (args: { name: string; itemType?: string; parentId?: string }) => {
       const normalizedType = toDesktopItemType(args.itemType)
       const name = args.name.trim()
+      const targetIdentity = {
+        name,
+        itemType: normalizedType,
+        parentId: args.parentId ?? null,
+      }
 
       if (!name) {
         return {
           ok: false,
           error: "Item name cannot be empty",
+        }
+      }
+
+      let existingItem = findMatchingDesktopItem(readDesktopFoldersFromCache(), targetIdentity)
+
+      if (!existingItem) {
+        await refreshDesktopItems()
+        existingItem = findMatchingDesktopItem(readDesktopFoldersFromCache(), targetIdentity)
+      }
+
+      if (existingItem) {
+        return {
+          ok: true,
+          created: false,
+          alreadyExists: true,
+          item: {
+            id: existingItem.id,
+            name: existingItem.name,
+            itemType: existingItem.itemType ?? normalizedType,
+          },
         }
       }
 
@@ -60,6 +86,8 @@ export function useDesktopHitlTools() {
 
       return {
         ok: true,
+        created: true,
+        alreadyExists: false,
         item: {
           id: item.id,
           name: item.name,
@@ -67,13 +95,14 @@ export function useDesktopHitlTools() {
         },
       }
     },
-    [createItem, refreshDesktopItems]
+    [createItem, readDesktopFoldersFromCache, refreshDesktopItems]
   )
 
   useFrontendTool(
     {
       name: "create_desktop_item",
-      description: "Create a desktop item (file/folder) directly without approval.",
+      description:
+        "Create a desktop item (file/folder) directly without approval. If the same name, itemType, and parentId already exist, return the existing item instead of creating a duplicate.",
       parameters: CREATE_ITEM_PARAMS,
       handler: async (args) => {
         try {

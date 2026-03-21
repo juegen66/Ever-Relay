@@ -2,6 +2,7 @@ import {
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
+  THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
 import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./logo-studio/brand-brief-agent"
@@ -18,6 +19,7 @@ import {
   MEMORY_CURATOR_AGENT_ID,
 } from "./shared/memory-curator-agent"
 import { predictionAgent, PREDICTION_AGENT_ID } from "./shared/prediction-agent"
+import { thirdPartyCopilotAgent } from "./third-party/third-party-copilot-agent"
 import { skillTestAgent, SKILL_TEST_AGENT_ID } from "./shared/skill-test-agent"
 import { builderAgent, BUILDER_AGENT_ID } from "./vibecoding/builder-agent"
 import { codingCopilotAgent } from "./vibecoding/coding-copilot-agent"
@@ -36,6 +38,7 @@ export const agents = {
   [DESKTOP_COPILOT_AGENT]: desktopAgent,
   [LOGO_COPILOT_AGENT]: logoCopilotAgent,
   [CODING_COPILOT_AGENT]: codingCopilotAgent,
+  [THIRD_PARTY_COPILOT_AGENT]: thirdPartyCopilotAgent,
   [PREDICTION_AGENT_ID]: predictionAgent,
   [CONTEXT_COMPRESSION_AGENT_ID]: contextCompressionAgent,
   [MEMORY_CURATOR_AGENT_ID]: memoryCuratorAgent,

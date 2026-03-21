@@ -2,6 +2,8 @@
 
 import { useCallback } from "react"
 
+import { useCopilotChat } from "@copilotkit/react-core"
+
 import { useCodingAppsStore } from "@/lib/stores/coding-apps-store"
 import { useCodingWorkspaceStore } from "@/lib/stores/coding-workspace-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
@@ -52,10 +54,10 @@ function toDescription(prompt: string) {
 }
 
 export function useCodingProjectSubmit() {
+  const { isLoading, stopGeneration } = useCopilotChat()
   const createApp = useCodingAppsStore((state) => state.createApp)
   const bootstrapProject = useCodingWorkspaceStore((state) => state.bootstrapProject)
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
-  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
 
   const submitProject = useCallback(
     async (rawPrompt: string): Promise<CodingApp> => {
@@ -64,13 +66,16 @@ export function useCodingProjectSubmit() {
         throw new Error("Prompt is required")
       }
 
+      if (isLoading) {
+        stopGeneration()
+      }
+
       const appName = deriveProjectName(prompt)
       const app = await createApp({
         name: appName,
         description: toDescription(prompt),
       })
 
-      setCopilotAgentMode("coding")
       setCopilotSidebarOpen(false)
       bootstrapProject({
         appId: app.id,
@@ -93,8 +98,9 @@ export function useCodingProjectSubmit() {
     [
       bootstrapProject,
       createApp,
-      setCopilotAgentMode,
+      isLoading,
       setCopilotSidebarOpen,
+      stopGeneration,
     ]
   )
 

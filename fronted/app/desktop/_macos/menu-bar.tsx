@@ -20,19 +20,11 @@ import { useRouter } from "next/navigation"
 
 
 import { authClient } from "@/lib/auth/auth-client"
-import type { AppId } from "@/lib/desktop/types"
+import { resolveAppDisplayName } from "@/lib/desktop/resolve-app-display-name"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useUserStore } from "@/lib/stores/user-store"
-
-const APP_NAMES: Record<AppId, string> = {
-  finder: "Finder",
-  canvas: "Canvas",
-  logo: "Logo Studio",
-  vibecoding: "Coding Apps",
-  textedit: "TextEdit",
-}
 
 type MenuActionItem = {
   type?: never
@@ -137,7 +129,7 @@ export function MenuBar() {
   }, [])
 
   const activeApp = windows.find((w) => w.id === activeWindowId)?.appId || null
-  const appName = activeApp ? APP_NAMES[activeApp] : "Finder"
+  const appName = activeApp ? resolveAppDisplayName(activeApp) : "Finder"
 
   const handleMenuAction = useCallback(
     async (menu: string, action?: string, label?: string) => {

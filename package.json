@@ -25,7 +25,7 @@
     "@ag-ui/client": "0.0.44",
     "@ag-ui/core": "0.0.44",
     "@ag-ui/encoder": "0.0.44",
-    "@ag-ui/mastra": "^1.0.0",
+    "@ag-ui/mastra": "^1.0.1",
     "@ai-sdk/anthropic": "^3.0.50",
     "@ai-sdk/openai": "^3.0.34",
     "@aws-sdk/client-s3": "^3.993.0",
