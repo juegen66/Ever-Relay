@@ -1,4 +1,5 @@
 export const DESKTOP_COPILOT_AGENT = "main_agent"
+export const CANVAS_COPILOT_AGENT = "canvas_agent"
 export const LOGO_COPILOT_AGENT = "logo_agent"
 export const CODING_COPILOT_AGENT = "coding_agent"
 export const THIRD_PARTY_COPILOT_AGENT = "third_party_agent"

@@ -19,6 +19,7 @@ import {
   WRITE_TEXT_FILE_CONTENT_PARAMS,
   toolErr,
   toolOk,
+  toolRetryLater,
 } from "./types"
 
 export function useTextEditTools() {
@@ -152,7 +153,15 @@ export function useTextEditTools() {
       openFileWindow(fileId, resolved.item.name)
       const isReady = await waitForTextEditorReady(fileId, 5000)
       if (!isReady) {
-        return toolErr(`Text editor is not ready for file: ${fileId}`)
+        return toolRetryLater(
+          `Text editor is not ready for file: ${fileId}`,
+          {
+            fileId,
+          },
+          {
+            nextAction: "wait_for_text_editor_ready",
+          }
+        )
       }
 
       writeTextEditorContent(fileId, args.content)

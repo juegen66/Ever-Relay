@@ -87,4 +87,22 @@ describe("desktop-agent-store handoff state machine", () => {
     expect(useDesktopAgentStore.getState().markPendingHandoffSwitching("wrong-id")).toBe(false)
     expect(useDesktopAgentStore.getState().pendingHandoff?.status).toBe("queued")
   })
+
+  it("stores canvas as a valid handoff target mode", () => {
+    useDesktopAgentStore.getState().queuePendingHandoff({
+      id: "pending-canvas",
+      threadId,
+      sourceAgentId: "main_agent",
+      targetAgentId: "canvas_agent",
+      targetMode: "canvas",
+      handoffDocument: "# Agent handoff",
+    })
+
+    expect(useDesktopAgentStore.getState().pendingHandoff).toMatchObject({
+      id: "pending-canvas",
+      targetAgentId: "canvas_agent",
+      targetMode: "canvas",
+      status: "queued",
+    })
+  })
 })

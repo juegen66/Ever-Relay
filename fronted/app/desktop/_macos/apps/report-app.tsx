@@ -1,28 +1,9 @@
 "use client"
 
-import { useState } from "react"
-
 import { FileBarChart } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { usePredictionReportStore } from "@/lib/stores/prediction-report-store"
-
-function stripScripts(html: string): string {
-  if (typeof document === "undefined") return html
-  try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, "text/html")
-    const scripts = doc.querySelectorAll("script")
-    scripts.forEach((el) => el.remove())
-    return doc.documentElement.outerHTML
-  } catch {
-    return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-  }
-}
-
-function hasScripts(html: string): boolean {
-  return /<script\b/i.test(html)
-}
 
 function ensureHtmlDocument(html: string): string {
   const trimmed = html.trim()
@@ -33,7 +14,6 @@ function ensureHtmlDocument(html: string): string {
 export function ReportApp() {
   const html = usePredictionReportStore((s) => s.html)
   const title = usePredictionReportStore((s) => s.title)
-  const [trustScripts, setTrustScripts] = useState(false)
 
   if (!html) {
     return (
@@ -47,12 +27,10 @@ export function ReportApp() {
     )
   }
 
-  const htmlToInject = trustScripts ? html : stripScripts(html)
-  const scriptsStripped = hasScripts(html) && !trustScripts
-  const sandbox = trustScripts ? "allow-scripts allow-forms allow-modals allow-popups" : ""
+  const sandbox = "allow-scripts allow-forms allow-modals allow-popups"
 
   const openInNewWindow = () => {
-    const content = ensureHtmlDocument(trustScripts ? html : htmlToInject)
+    const content = ensureHtmlDocument(html)
     if (!content) return
 
     const artifactUrl = URL.createObjectURL(
@@ -76,16 +54,6 @@ export function ReportApp() {
       <div className="flex items-center justify-between border-b border-black/5 px-3 py-1.5">
         <span className="text-xs font-medium text-neutral-500">{title}</span>
         <div className="flex items-center gap-1">
-          {scriptsStripped && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => setTrustScripts(true)}
-            >
-              Trust & run scripts
-            </Button>
-          )}
           <Button
             size="sm"
             variant="ghost"
@@ -100,9 +68,9 @@ export function ReportApp() {
       {/* Report iframe */}
       <div className="flex-1 overflow-hidden">
         <iframe
-          key={trustScripts ? "trusted-report" : "safe-report"}
+          key="report"
           title={title}
-          srcDoc={htmlToInject}
+          srcDoc={html}
           sandbox={sandbox}
           className="block h-full w-full border-0 bg-white"
         />

@@ -2,13 +2,6 @@ import { Agent } from "@mastra/core/agent"
 
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
-import {
-  afsListTool,
-  afsReadTool,
-  afsWriteTool,
-  afsSearchTool,
-  afsDeleteTool,
-} from "@/server/mastra/tools/afs"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
 // import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
@@ -19,6 +12,13 @@ import {
   readProjectFileTool,
   searchProjectCodeTool,
 } from "@/server/mastra/tools"
+import {
+  afsListTool,
+  afsReadTool,
+  afsWriteTool,
+  afsSearchTool,
+  afsDeleteTool,
+} from "@/server/mastra/tools/afs"
 import { CODING_COPILOT_AGENT } from "@/shared/copilot/constants"
 
 export const codingCopilotAgent = new Agent({
@@ -50,6 +50,10 @@ export const codingCopilotAgent = new Agent({
     "Use afs_search with mode=hybrid and a Memory pathPrefix when recalling similar coding preferences or prior observations; keep exact for literal keyword search.",
     "You can also read global memory at Desktop/Memory/ for cross-app context.",
     "",
+    "Tool results include structured fields: status, shouldStop, retryable, and nextAction.",
+    "If a tool returns status='retry_later', stop calling tools in this turn and tell the user to wait.",
+    "If shouldStop is true, stop the current tool loop and respond to the user instead of immediately calling more tools.",
+    "If nextAction is present and shouldStop is false, continue only with that next action or a direct user-facing follow-up.",
     "All user interaction happens inside the existing sidebar chat. Do not ask the user to switch to another chat surface.",
     "This agent only works inside an active coding app thread. First check the active coding app context.",
     "If no coding app is active, first tell the user to create or activate one in the vibecoding app. If they explicitly ask you to do it directly, you may use create_coding_app or activate_coding_app.",

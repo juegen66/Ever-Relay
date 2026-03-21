@@ -4,14 +4,23 @@ import { useEffect, useRef } from "react"
 
 import { useCopilotChatInternal } from "@copilotkit/react-core"
 
-import { useDesktopAgentStore, type PendingHandoff } from "@/lib/stores/desktop-agent-store"
 import {
+  useDesktopAgentStore,
+  type CopilotAgentMode,
+  type PendingHandoff,
+} from "@/lib/stores/desktop-agent-store"
+import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
-function resolveAgentIdForMode(mode: "main" | "logo" | "coding") {
+function resolveAgentIdForMode(mode: CopilotAgentMode) {
+  if (mode === "canvas") {
+    return CANVAS_COPILOT_AGENT
+  }
+
   if (mode === "logo") {
     return LOGO_COPILOT_AGENT
   }

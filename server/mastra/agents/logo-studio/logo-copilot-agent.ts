@@ -2,13 +2,6 @@ import { Agent } from "@mastra/core/agent"
 
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
-import {
-  afsListTool,
-  afsReadTool,
-  afsWriteTool,
-  afsSearchTool,
-  afsDeleteTool,
-} from "@/server/mastra/tools/afs"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
 // import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
@@ -16,6 +9,13 @@ import {
   listCanvasProjectsTool,
   listDesktopItemsTool,
 } from "@/server/mastra/tools"
+import {
+  afsListTool,
+  afsReadTool,
+  afsWriteTool,
+  afsSearchTool,
+  afsDeleteTool,
+} from "@/server/mastra/tools/afs"
 import { LOGO_COPILOT_AGENT } from "@/shared/copilot/constants"
 
 export const logoCopilotAgent = new Agent({
@@ -32,6 +32,10 @@ export const logoCopilotAgent = new Agent({
     "Use afs_search with mode=hybrid and a Memory pathPrefix when you need similar prior brand preferences or design observations; use exact for literal lookups.",
     "You can also read global memory at Desktop/Memory/ for cross-app context.",
     "",
+    "Tool results include structured fields: status, shouldStop, retryable, and nextAction.",
+    "If a tool returns status='retry_later', stop calling tools in this turn and tell the user to wait.",
+    "If shouldStop is true, stop the current tool loop and respond to the user instead of immediately calling more tools.",
+    "If nextAction is present and shouldStop is false, continue only with that next action or a direct user-facing follow-up.",
     "Focus on logo design discovery plus brand-context and design-philosophy clarification only.",
     "By default, keep sidebar closed and process the submitted brief silently.",
     "MANDATORY: Whenever you have doubts or need more information (e.g. user input is unclear, ambiguous, or incomplete), you MUST call open_logo_sidebar FIRST — no exceptions. Only after open_logo_sidebar has been called may you ask clarifying questions.",

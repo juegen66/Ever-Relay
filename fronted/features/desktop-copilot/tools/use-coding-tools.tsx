@@ -42,6 +42,9 @@ export function useCodingTools() {
         {
           opened: true,
           reason: reason || null,
+        },
+        {
+          nextAction: "ask_user_follow_up",
         }
       )
     },
@@ -94,8 +97,11 @@ export function useCodingTools() {
         `Succeeded: updated coding workspace status to "${status}" for app ${appId}.`,
         {
           appId,
-          status,
+          projectStatus: status,
           summary: summary ?? null,
+        },
+        {
+          nextAction: "continue_reasoning",
         }
       )
     },
@@ -138,7 +144,11 @@ export function useCodingTools() {
           {
             runId: response.runId,
             stage: response.stage,
-            status: response.status,
+            workflowStatus: response.status,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
           }
         )
       } catch (error) {

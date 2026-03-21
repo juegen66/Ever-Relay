@@ -4,23 +4,6 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 
-function stripScripts(html: string): string {
-  if (typeof document === "undefined") return html
-  try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, "text/html")
-    const scripts = doc.querySelectorAll("script")
-    scripts.forEach((el) => el.remove())
-    return doc.documentElement.outerHTML
-  } catch {
-    return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-  }
-}
-
-function hasScripts(html: string): boolean {
-  return /<script\b/i.test(html)
-}
-
 function ensureHtmlDocument(html: string): string {
   const trimmed = html.trim()
   if (!trimmed) return trimmed
@@ -35,12 +18,9 @@ interface ShadowArtifactProps {
 
 export function ShadowArtifact({ html, title = "Artifact", status }: ShadowArtifactProps) {
   const [expanded, setExpanded] = useState(true)
-  const [trustScripts, setTrustScripts] = useState(false)
-  const htmlToInject = trustScripts ? html : stripScripts(html)
-  const scriptsStripped = hasScripts(html) && !trustScripts
 
   const openInNewWindow = () => {
-    const content = ensureHtmlDocument(trustScripts ? html : htmlToInject)
+    const content = ensureHtmlDocument(html)
     if (!content) return
 
     const artifactUrl = URL.createObjectURL(
@@ -60,7 +40,7 @@ export function ShadowArtifact({ html, title = "Artifact", status }: ShadowArtif
 
   const isEmpty = !html?.trim()
   const isInProgress = status === "inProgress"
-  const sandbox = trustScripts ? "allow-scripts allow-forms allow-modals allow-popups" : ""
+  const sandbox = "allow-scripts allow-forms allow-modals allow-popups"
 
   return (
     <div className="shadow-artifact-card my-2 overflow-hidden rounded-lg border border-black/10 bg-white/85 text-xs text-neutral-700 shadow-sm">
@@ -86,22 +66,6 @@ export function ShadowArtifact({ html, title = "Artifact", status }: ShadowArtif
         </div>
       </div>
 
-      {scriptsStripped && (
-        <div className="flex items-center justify-between gap-2 border-b border-amber-200/60 bg-amber-50/80 px-3 py-2">
-          <span className="text-[11px] text-amber-800">
-            Scripts were removed for security. Click to trust and run scripts.
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => setTrustScripts(true)}
-          >
-            Trust and run
-          </Button>
-        </div>
-      )}
-
       {isInProgress && (
         <div className="px-3 py-4 text-[11px] text-neutral-500">Loading artifact...</div>
       )}
@@ -116,9 +80,9 @@ export function ShadowArtifact({ html, title = "Artifact", status }: ShadowArtif
           style={{ maxHeight: expanded ? "480px" : "0" }}
         >
           <iframe
-            key={trustScripts ? "trusted-artifact" : "safe-artifact"}
+            key="artifact"
             title={title}
-            srcDoc={htmlToInject}
+            srcDoc={html}
             sandbox={sandbox}
             className="block min-h-[80px] w-full border-0 bg-white"
             style={{ height: "480px" }}

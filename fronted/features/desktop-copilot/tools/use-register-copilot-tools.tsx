@@ -3,6 +3,7 @@
 import type { ComponentType } from "react"
 
 import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
@@ -13,6 +14,7 @@ import {
 import { useAgentHandoffTools } from "./use-agent-handoff-tools"
 import { useArtifactTools } from "./use-artifact-tools"
 import { useBuildTools } from "./use-build-tools"
+import { useCanvasAgentTools } from "./use-canvas-agent-tools"
 import { useCanvasTools } from "./use-canvas-tools"
 import { useCodingAppTools } from "./use-coding-app-tools"
 import { useCodingTools } from "./use-coding-tools"
@@ -21,18 +23,26 @@ import { useDesktopHitlTools } from "./use-desktop-hitl-tools"
 import { useLogoTools } from "./use-logo-tools"
 import { usePredictionReportTools } from "./use-prediction-report-tools"
 import { usePredictionTools } from "./use-prediction-tools"
-import { ThirdPartyToolsMount } from "./use-third-party-tools"
 import { useTextEditTools } from "./use-textedit-tools"
+import { ThirdPartyToolsMount } from "./use-third-party-tools"
 
 /** Mounts tools for main_agent (desktop mode). */
 function DesktopAgentToolsMount() {
   useDesktopCoreTools()
   useArtifactTools()
-  useCanvasTools()
   useTextEditTools()
   useBuildTools()
   useCodingAppTools()
   useDesktopHitlTools()
+  useAgentHandoffTools()
+  return null
+}
+
+/** Mounts tools for canvas_agent (canvas mode). */
+function CanvasAgentToolsMount() {
+  useDesktopCoreTools()
+  useCanvasTools()
+  useCanvasAgentTools()
   useAgentHandoffTools()
   return null
 }
@@ -67,15 +77,12 @@ function PredictionAgentToolsMount() {
 function ThirdPartyAgentToolsMount() {
   useDesktopCoreTools()
   useAgentHandoffTools()
-  return (
-    <>
-      <ThirdPartyToolsMount />
-    </>
-  )
+  return <ThirdPartyToolsMount />
 }
 
 const AGENT_MOUNTS: Record<string, ComponentType> = {
   [DESKTOP_COPILOT_AGENT]: DesktopAgentToolsMount,
+  [CANVAS_COPILOT_AGENT]: CanvasAgentToolsMount,
   [LOGO_COPILOT_AGENT]: LogoAgentToolsMount,
   [CODING_COPILOT_AGENT]: CodingAgentToolsMount,
   [THIRD_PARTY_COPILOT_AGENT]: ThirdPartyAgentToolsMount,

@@ -5,6 +5,15 @@ export type ToolParameter = {
   required?: boolean
 }
 
+export type ToolLifecycleStatus = "completed" | "blocked" | "retry_later"
+
+export type ToolOutcomeMeta = {
+  status?: ToolLifecycleStatus
+  shouldStop?: boolean
+  retryable?: boolean
+  nextAction?: string | null
+}
+
 export function toErrorMessage(error: unknown) {
   if (error instanceof Error && error.message.trim()) {
     return error.message
@@ -15,16 +24,52 @@ export function toErrorMessage(error: unknown) {
 /** Natural-language outcome for the model; keep `ok` for structured checks. */
 export function toolOk<T extends Record<string, unknown> = Record<string, never>>(
   message: string,
-  data: T = {} as T
+  data: T = {} as T,
+  meta: ToolOutcomeMeta = {}
 ) {
-  return { ok: true as const, message, ...data }
+  return {
+    ok: true as const,
+    message,
+    ...data,
+    status: meta.status ?? "completed",
+    shouldStop: meta.shouldStop ?? false,
+    retryable: meta.retryable ?? false,
+    nextAction: meta.nextAction ?? null,
+  }
 }
 
 export function toolErr<T extends Record<string, unknown> = Record<string, never>>(
   error: string,
-  data: T = {} as T
+  data: T = {} as T,
+  meta: ToolOutcomeMeta = {}
 ) {
-  return { ok: false as const, message: `Failed: ${error}`, error, ...data }
+  return {
+    ok: false as const,
+    message: `Failed: ${error}`,
+    error,
+    ...data,
+    status: meta.status ?? "blocked",
+    shouldStop: meta.shouldStop ?? true,
+    retryable: meta.retryable ?? false,
+    nextAction: meta.nextAction ?? "reply_to_user",
+  }
+}
+
+export function toolRetryLater<T extends Record<string, unknown> = Record<string, never>>(
+  message: string,
+  data: T = {} as T,
+  meta: Omit<ToolOutcomeMeta, "status" | "retryable"> = {}
+) {
+  return {
+    ok: false as const,
+    message: `Retry later: ${message}`,
+    error: message,
+    ...data,
+    status: "retry_later" as const,
+    shouldStop: meta.shouldStop ?? true,
+    retryable: true as const,
+    nextAction: meta.nextAction ?? "wait_and_retry",
+  }
 }
 
 export const OPEN_APP_PARAMS: ToolParameter[] = [
@@ -227,12 +272,21 @@ export const OPEN_LOGO_SIDEBAR_PARAMS: ToolParameter[] = [
   },
 ]
 
+export const OPEN_CANVAS_SIDEBAR_PARAMS: ToolParameter[] = [
+  {
+    name: "reason",
+    type: "string",
+    description: "Optional reason shown in tool result for why the Canvas copilot was opened.",
+    required: false,
+  },
+]
+
 export const HANDOFF_TO_AGENT_PARAMS: ToolParameter[] = [
   {
     name: "targetAgentId",
     type: "string",
     description:
-      "Agent id to switch to: main_agent, logo_agent, coding_agent, or third_party_agent (embedded iframe apps).",
+      "Agent id to switch to: main_agent, canvas_agent, logo_agent, coding_agent, or third_party_agent (embedded iframe apps).",
     required: true,
   },
   {

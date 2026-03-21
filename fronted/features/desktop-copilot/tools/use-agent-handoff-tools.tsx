@@ -19,6 +19,7 @@ import {
 } from "@/lib/stores/desktop-agent-store"
 import type { PrepareHandoffBody } from "@/shared/contracts/copilot-handoff"
 import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
@@ -33,6 +34,7 @@ import {
 
 const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
   [DESKTOP_COPILOT_AGENT]: "main",
+  [CANVAS_COPILOT_AGENT]: "canvas",
   [CODING_COPILOT_AGENT]: "coding",
   [LOGO_COPILOT_AGENT]: "logo",
 }
@@ -71,7 +73,9 @@ export function useAgentHandoffTools() {
 
   const sourceAgentId = useMemo(
     () =>
-      copilotAgentMode === "logo"
+      copilotAgentMode === "canvas"
+        ? CANVAS_COPILOT_AGENT
+        : copilotAgentMode === "logo"
         ? LOGO_COPILOT_AGENT
         : copilotAgentMode === "coding"
           ? CODING_COPILOT_AGENT
@@ -84,7 +88,13 @@ export function useAgentHandoffTools() {
       const targetAgentId = toSafeText(args.targetAgentId)
       const targetMode = AGENT_ID_TO_MODE[targetAgentId]
       if (!targetMode) {
-        return toolErr(`Unsupported targetAgentId: ${args.targetAgentId ?? "unknown"}`)
+        return toolErr(
+          `Unsupported targetAgentId: ${args.targetAgentId ?? "unknown"}`,
+          {},
+          {
+            nextAction: "reply_to_user",
+          }
+        )
       }
 
       if (targetAgentId === sourceAgentId) {
@@ -96,12 +106,24 @@ export function useAgentHandoffTools() {
             sourceAgentId,
             targetAgentId,
             threadId: copilotThreadId,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
           }
         )
       }
 
       if (pendingHandoff?.threadId === copilotThreadId) {
-        return toolErr("Another agent handoff is already in progress for this thread")
+        return toolErr(
+          "Another agent handoff is already in progress for this thread",
+          {},
+          {
+            status: "retry_later",
+            retryable: true,
+            nextAction: "wait_for_handoff",
+          }
+        )
       }
 
       try {
@@ -152,6 +174,10 @@ export function useAgentHandoffTools() {
           sourceAgentId,
           targetAgentId,
           threadId: copilotThreadId,
+        },
+        {
+          shouldStop: true,
+          nextAction: "wait_for_handoff",
         }
       )
     },

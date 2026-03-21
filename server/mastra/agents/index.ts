@@ -1,10 +1,12 @@
 import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
   THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
+import { canvasCopilotAgent } from "./canvas/canvas-copilot-agent"
 import { brandBriefAgent, BRAND_BRIEF_AGENT_ID } from "./logo-studio/brand-brief-agent"
 import { brandDesignerAgent, BRAND_DESIGNER_AGENT_ID } from "./logo-studio/brand-designer-agent"
 import { logoCopilotAgent } from "./logo-studio/logo-copilot-agent"
@@ -36,6 +38,7 @@ import { reviewerAgent, REVIEWER_AGENT_ID } from "./vibecoding/reviewer-agent"
 
 export const agents = {
   [DESKTOP_COPILOT_AGENT]: desktopAgent,
+  [CANVAS_COPILOT_AGENT]: canvasCopilotAgent,
   [LOGO_COPILOT_AGENT]: logoCopilotAgent,
   [CODING_COPILOT_AGENT]: codingCopilotAgent,
   [THIRD_PARTY_COPILOT_AGENT]: thirdPartyCopilotAgent,

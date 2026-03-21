@@ -19,6 +19,7 @@ import {
   toErrorMessage,
   toolErr,
   toolOk,
+  toolRetryLater,
 } from "./types"
 
 export function useCanvasTools() {
@@ -47,10 +48,14 @@ export function useCanvasTools() {
 
       const ready = await waitForCanvasSessionReady(hasVisibleCanvasWindow ? 1200 : 3500)
       if (!ready) {
-        return toolErr(
+        return toolRetryLater(
           hasVisibleCanvasWindow
-            ? "Canvas app is not ready yet. Please retry shortly."
-            : "Canvas app opened. Please wait for it to load, then retry open_canvas_project."
+            ? "Canvas app is not ready yet."
+            : "Canvas app was opened and is still loading before open_canvas_project can run.",
+          {},
+          {
+            nextAction: "wait_for_canvas_ready",
+          }
         )
       }
 
@@ -101,16 +106,26 @@ export function useCanvasTools() {
 
       const ready = await waitForCanvasSessionReady(hasVisibleCanvasWindow ? 1200 : 3500)
       if (!ready) {
-        return toolErr(
+        return toolRetryLater(
           hasVisibleCanvasWindow
-            ? "Canvas app is not ready yet. Please retry shortly."
-            : "Canvas app opened. Please wait for it to load, then call open_canvas_project before add_svg_to_canvas."
+            ? "Canvas app is not ready yet."
+            : "Canvas app was opened and is still loading before add_svg_to_canvas can run.",
+          {},
+          {
+            nextAction: "wait_for_canvas_ready",
+          }
         )
       }
 
       const activeProjectId = getActiveCanvasProjectId()
       if (!activeProjectId) {
-        return toolErr("No active canvas project. Call open_canvas_project first.")
+        return toolErr(
+          "No active canvas project. Call open_canvas_project first.",
+          {},
+          {
+            nextAction: "open_canvas_project",
+          }
+        )
       }
 
       if (width !== undefined && (width < 120 || width > 2400)) {

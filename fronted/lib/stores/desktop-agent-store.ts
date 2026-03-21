@@ -5,7 +5,7 @@ import { create } from "zustand"
 import type { CodingApp } from "@/shared/contracts/coding-apps"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
 
-export type CopilotAgentMode = "main" | "logo" | "coding"
+export type CopilotAgentMode = "main" | "canvas" | "logo" | "coding"
 export type SilentPredictionStatus = "idle" | "running" | "stopping"
 export type ActiveCodingApp = Pick<
   CodingApp,

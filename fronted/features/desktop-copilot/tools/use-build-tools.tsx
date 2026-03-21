@@ -44,7 +44,11 @@ export function useBuildTools() {
           {
             runId: response.runId,
             stage: response.stage,
-            status: response.status,
+            workflowStatus: response.status,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
           }
         )
       } catch (error) {

@@ -42,7 +42,11 @@ export function useLogoTools() {
           {
             runId: response.runId,
             stage: response.stage,
-            status: response.status,
+            workflowStatus: response.status,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
           }
         )
       } catch (error) {
@@ -57,10 +61,16 @@ export function useLogoTools() {
     setCopilotSidebarOpen(true)
 
     const reason = typeof args.reason === "string" ? args.reason.trim() : ""
-    return toolOk("Succeeded: logo sidebar is open; agent mode is set to logo.", {
-      opened: true,
-      reason: reason || null,
-    })
+    return toolOk(
+      "Succeeded: logo sidebar is open; agent mode is set to logo.",
+      {
+        opened: true,
+        reason: reason || null,
+      },
+      {
+        nextAction: "ask_user_follow_up",
+      }
+    )
   }, [setCopilotAgentMode, setCopilotSidebarOpen])
 
   useFrontendTool(

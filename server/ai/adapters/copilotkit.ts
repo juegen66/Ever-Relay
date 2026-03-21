@@ -5,6 +5,7 @@ import { RequestContext, MASTRA_RESOURCE_ID_KEY } from "@mastra/core/request-con
 import { mastra } from "@/server/mastra"
 import { PREDICTION_AGENT_ID } from "@/server/mastra/agents/shared/prediction-agent"
 import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
@@ -13,6 +14,7 @@ import {
 
 const SHARED_COPILOT_AGENT_IDS = [
   DESKTOP_COPILOT_AGENT,
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
   THIRD_PARTY_COPILOT_AGENT,

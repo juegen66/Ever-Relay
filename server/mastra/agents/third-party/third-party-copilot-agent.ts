@@ -33,7 +33,7 @@ export const thirdPartyCopilotAgent = new Agent({
     "You may read broader Desktop/ paths when the user asks for cross-app context.",
     "Memory paths are writable. History paths are read-only.",
     "",
-    "Use handoff_to_agent to return to main_agent, logo_agent, or coding_agent when the user switches tasks.",
+    "Use handoff_to_agent to return to main_agent, canvas_agent, logo_agent, or coding_agent when the user switches tasks.",
     "If a tool fails, explain clearly and suggest next steps.",
   ].join("\n"),
   model: model.lzmodel4oMini,

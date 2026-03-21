@@ -8,29 +8,57 @@ import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 
 import { toAppId } from "../types"
-import { MOVE_DESKTOP_ITEM_PARAMS, OPEN_APP_PARAMS, toErrorMessage } from "./types"
+import {
+  MOVE_DESKTOP_ITEM_PARAMS,
+  OPEN_APP_PARAMS,
+  toErrorMessage,
+  type ToolLifecycleStatus,
+} from "./types"
 
 type ToolSuccess<T extends Record<string, unknown> = Record<string, never>> = {
-  status: "success"
+  status: ToolLifecycleStatus
   ok: true
   summary: string
   message: string
+  shouldStop: false
+  retryable: false
+  nextAction: null
 } & T
 
 type ToolFailure = {
-  status: "failed"
+  status: ToolLifecycleStatus
   ok: false
   error: string
   message: string
+  shouldStop: true
+  retryable: false
+  nextAction: "reply_to_user"
 }
 
 function toolSuccess<T extends Record<string, unknown>>(summary: string, data: T): ToolSuccess<T> {
-  return { status: "success", ok: true, summary, message: summary, ...data }
+  return {
+    ok: true,
+    summary,
+    message: summary,
+    ...data,
+    status: "completed",
+    shouldStop: false,
+    retryable: false,
+    nextAction: null,
+  }
 }
 
 function toolFailure(error: string): ToolFailure {
   const message = `Failed: ${error}`
-  return { status: "failed", ok: false, error, message }
+  return {
+    ok: false,
+    error,
+    message,
+    status: "blocked",
+    shouldStop: true,
+    retryable: false,
+    nextAction: "reply_to_user",
+  }
 }
 
 export function useDesktopCoreTools() {

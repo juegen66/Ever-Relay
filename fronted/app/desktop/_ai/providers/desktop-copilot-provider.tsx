@@ -31,6 +31,7 @@ import {
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
+  CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
@@ -43,6 +44,22 @@ import { useStartNewCopilotChat } from "../hooks/use-start-new-copilot-chat"
 import { BuildProgressPanel } from "../ui/build-progress-panel"
 
 import type { Message } from "@copilotkit/shared"
+
+function resolveActiveAgent(mode: ReturnType<typeof useDesktopAgentStore.getState>["copilotAgentMode"]) {
+  if (mode === "canvas") {
+    return CANVAS_COPILOT_AGENT
+  }
+
+  if (mode === "logo") {
+    return LOGO_COPILOT_AGENT
+  }
+
+  if (mode === "coding") {
+    return CODING_COPILOT_AGENT
+  }
+
+  return DESKTOP_COPILOT_AGENT
+}
 
 function DesktopCopilotHeader() {
   const { labels } = useChatContext()
@@ -253,12 +270,7 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
-  const activeAgent =
-    copilotAgentMode === "logo"
-      ? LOGO_COPILOT_AGENT
-      : copilotAgentMode === "coding"
-        ? CODING_COPILOT_AGENT
-        : DESKTOP_COPILOT_AGENT
+  const activeAgent = resolveActiveAgent(copilotAgentMode)
   const copilotSidebarOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
@@ -313,12 +325,7 @@ export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProv
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
-  const activeAgent =
-    copilotAgentMode === "logo"
-      ? LOGO_COPILOT_AGENT
-      : copilotAgentMode === "coding"
-        ? CODING_COPILOT_AGENT
-        : DESKTOP_COPILOT_AGENT
+  const activeAgent = resolveActiveAgent(copilotAgentMode)
 
   useEffect(() => {
     return () => {
