@@ -3,7 +3,7 @@ import { Agent } from "@mastra/core/agent"
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
-import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
+// import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   afsListTool,
@@ -43,7 +43,7 @@ export const thirdPartyCopilotAgent = new Agent({
 
     return [
       requestOriginProcessor,
-      createHandoffContextProcessor(THIRD_PARTY_COPILOT_AGENT),
+      // createHandoffContextProcessor(THIRD_PARTY_COPILOT_AGENT),
       ...(userId
         ? [
             new AfsSkillProcessor({

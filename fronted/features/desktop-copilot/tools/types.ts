@@ -12,6 +12,21 @@ export function toErrorMessage(error: unknown) {
   return "Unknown error"
 }
 
+/** Natural-language outcome for the model; keep `ok` for structured checks. */
+export function toolOk<T extends Record<string, unknown> = Record<string, never>>(
+  message: string,
+  data: T = {} as T
+) {
+  return { ok: true as const, message, ...data }
+}
+
+export function toolErr<T extends Record<string, unknown> = Record<string, never>>(
+  error: string,
+  data: T = {} as T
+) {
+  return { ok: false as const, message: `Failed: ${error}`, error, ...data }
+}
+
 export const OPEN_APP_PARAMS: ToolParameter[] = [
   {
     name: "appId",

@@ -7,6 +7,7 @@ import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { PredictionCard, SuggestionCard } from "@/lib/stores/prediction-store"
 
 import { selectProactiveReminder } from "./select-proactive-reminder"
+import { toolOk } from "./types"
 
 export function usePredictionTools() {
   const setPredictionSnapshot = usePredictionStore((state) => state.setPredictionSnapshot)
@@ -60,17 +61,19 @@ export function usePredictionTools() {
           })
         }
 
-        return {
-          ok: true,
-          predictionsCount: predictions.length,
-          suggestionsCount: suggestions.length,
-          proactiveReminder: proactiveReminder
-            ? {
-                predictionId: proactiveReminder.predictionId,
-                confidence: proactiveReminder.confidence,
-              }
-            : null,
-        }
+        return toolOk(
+          `Succeeded: dashboard updated with ${predictions.length} prediction(s) and ${suggestions.length} suggestion(s).`,
+          {
+            predictionsCount: predictions.length,
+            suggestionsCount: suggestions.length,
+            proactiveReminder: proactiveReminder
+              ? {
+                  predictionId: proactiveReminder.predictionId,
+                  confidence: proactiveReminder.confidence,
+                }
+              : null,
+          }
+        )
       },
     },
     [setLoading, setPredictionSnapshot]

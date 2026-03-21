@@ -5,6 +5,8 @@ import { useFrontendTool } from "@copilotkit/react-core"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { usePredictionReportStore } from "@/lib/stores/prediction-report-store"
 
+import { toolErr, toolOk } from "./types"
+
 export function usePredictionReportTools() {
   const setReport = usePredictionReportStore((s) => s.setReport)
 
@@ -34,7 +36,7 @@ export function usePredictionReportTools() {
         const title = String(args.title ?? "Predict Report")
 
         if (!html.trim()) {
-          return { ok: false, error: "Empty HTML" }
+          return toolErr("Empty HTML")
         }
 
         setReport(html, title)
@@ -48,7 +50,10 @@ export function usePredictionReportTools() {
           useDesktopWindowStore.getState().openApp("report")
         })
 
-        return { ok: true, title }
+        return toolOk(
+          `Succeeded: prediction report "${title}" was saved and the Predict Report app will open.`,
+          { title }
+        )
       },
     },
     [setReport]

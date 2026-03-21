@@ -10,7 +10,7 @@ import {
   afsDeleteTool,
 } from "@/server/mastra/tools/afs"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
-import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
+// import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   listCanvasProjectsTool,
@@ -39,7 +39,7 @@ export const logoCopilotAgent = new Agent({
     "After user confirmation, call confirm_logo_brief with: fullPrompt (required) and brandBrief (structured object).",
     "If information is already sufficient, call confirm_logo_brief directly without opening sidebar.",
     "If the task should continue in another specialist agent, call handoff_to_agent directly.",
-    "Cross-agent handoff must keep the same thread id. Compressed handoff context is stored server-side and injected via an input processor before the target agent runs.",
+    "Cross-agent handoff must keep the same thread id. Compressed handoff context is prepared server-side, returned to the frontend, then replayed back to the target agent after mode switch.",
     "Do not trigger non-logo build workflows directly unless the user explicitly asks; use handoff when needed.",
   ].join("\n"),
   memory: createAgentMemory(),
@@ -51,7 +51,7 @@ export const logoCopilotAgent = new Agent({
 
     return [
       requestOriginProcessor,
-      createHandoffContextProcessor(LOGO_COPILOT_AGENT),
+      // createHandoffContextProcessor(LOGO_COPILOT_AGENT),
       ...(userId
         ? [new AfsSkillProcessor({ userId, agentId: LOGO_COPILOT_AGENT, scope: "Logo" })]
         : []),

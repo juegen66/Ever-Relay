@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import { useCopilotChatInternal } from "@copilotkit/react-core"
 
-import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
+import { useDesktopAgentStore, type PendingHandoff } from "@/lib/stores/desktop-agent-store"
 import {
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
@@ -23,13 +23,39 @@ function resolveAgentIdForMode(mode: "main" | "logo" | "coding") {
   return DESKTOP_COPILOT_AGENT
 }
 
+/** Phase 2: sent via PendingCopilotDispatch with followUp: true after handoff context is replayed. */
+const HANDOFF_GREETING_FOLLOWUP_INSTRUCTION =
+  "You have just been activated via agent handoff. " +
+  "Greet the user briefly, summarize what you know from the handoff context, " +
+  "and explain what you can help with. Always produce a visible text reply."
+
+/** Phase 1: replay handoff context only (followUp: false) — avoids parallel runAgent during mode switch. */
+function buildHandoffGreeting(handoff: PendingHandoff): string {
+  const parts: string[] = [
+    "[HANDOFF_CONTEXT_VIA_FRONTEND]",
+    "The following handoff document was prepared server-side and replayed through the frontend because the backend handoff processor is currently disabled.",
+    "Treat it as authoritative context for this turn and continue from it.",
+    "",
+  ]
+
+  if (handoff.reason) {
+    parts.push(`Handoff reason: ${handoff.reason}`)
+    parts.push("")
+  }
+
+  parts.push(handoff.handoffDocument)
+  parts.push("")
+  parts.push("You have been activated via agent handoff. Await further instructions.")
+
+  return parts.join("\n")
+}
+
 /**
  * Handles two concerns:
- * 1. Pending handoff — switches agent mode; CopilotKit replays the user
- *    message automatically when the `agent` prop changes, so we do NOT
- *    send an extra trigger message (that would cause a duplicate run).
- *    The HandoffContextProcessor on the backend injects the compressed
- *    handoff context as a system message before the model sees it.
+ * 1. Pending handoff — switches agent mode, replays handoff context as a
+ *    developer message (followUp: false),
+ *    then queues PendingCopilotDispatch with a greeting instruction (followUp: true)
+ *    so the new agent replies without racing parallel requests during the switch.
  * 2. Pending copilot dispatch — sends a queued message after mode switch.
  */
 export function HandoffMetadataInjector() {
@@ -41,13 +67,16 @@ export function HandoffMetadataInjector() {
   const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
   const markPendingHandoffSwitching = useDesktopAgentStore((state) => state.markPendingHandoffSwitching)
   const clearPendingHandoff = useDesktopAgentStore((state) => state.clearPendingHandoff)
+  const queuePendingCopilotDispatch = useDesktopAgentStore((state) => state.queuePendingCopilotDispatch)
   const markPendingCopilotDispatchSending = useDesktopAgentStore(
     (state) => state.markPendingCopilotDispatchSending
   )
   const clearPendingCopilotDispatch = useDesktopAgentStore((state) => state.clearPendingCopilotDispatch)
   const resetPendingCopilotDispatch = useDesktopAgentStore((state) => state.resetPendingCopilotDispatch)
 
-  // ---- Handoff: switch mode only, no extra message ----
+  const handoffGreetingSentRef = useRef<string | null>(null)
+
+  // ---- Handoff: switch mode, then trigger greeting ----
   useEffect(() => {
     if (!pendingHandoff || pendingHandoff.threadId !== copilotThreadId) {
       return
@@ -62,17 +91,52 @@ export function HandoffMetadataInjector() {
         return
       }
 
+      handoffGreetingSentRef.current = null
       setCopilotAgentMode(pendingHandoff.targetMode)
       return
     }
 
-    // Once mode has switched and CopilotKit has mounted the target agent,
-    // the handoff is complete. CopilotKit will replay the user's original
-    // message; the HandoffContextProcessor injects the DB context.
     if (pendingHandoff.status === "switching") {
-      if (agent?.agentId === pendingHandoff.targetAgentId) {
-        clearPendingHandoff(pendingHandoff.id)
+      if (agent?.agentId !== pendingHandoff.targetAgentId) {
+        return
       }
+
+      if (isLoading) {
+        return
+      }
+
+      if (handoffGreetingSentRef.current === pendingHandoff.id) {
+        return
+      }
+
+      handoffGreetingSentRef.current = pendingHandoff.id
+      const greeting = buildHandoffGreeting(pendingHandoff)
+      const handoffId = pendingHandoff.id
+      const dispatchTargetMode = pendingHandoff.targetMode
+      const dispatchThreadId = copilotThreadId
+
+      void sendMessage(
+        {
+          id: crypto.randomUUID(),
+          role: "developer",
+          content: greeting,
+        },
+        { followUp: false }
+      )
+        .then(() => {
+          clearPendingHandoff(handoffId)
+          queuePendingCopilotDispatch({
+            id: crypto.randomUUID(),
+            threadId: dispatchThreadId,
+            targetMode: dispatchTargetMode,
+            role: "developer",
+            content: HANDOFF_GREETING_FOLLOWUP_INSTRUCTION,
+          })
+        })
+        .catch((error) => {
+          console.error("[handoff-metadata-injector] Failed to send handoff greeting", error)
+          clearPendingHandoff(handoffId)
+        })
     }
   }, [
     agent?.agentId,
@@ -81,6 +145,8 @@ export function HandoffMetadataInjector() {
     isLoading,
     markPendingHandoffSwitching,
     pendingHandoff,
+    queuePendingCopilotDispatch,
+    sendMessage,
     setCopilotAgentMode,
   ])
 

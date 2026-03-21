@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
-import { CopilotKit } from "@copilotkit/react-core"
+import { CopilotKit, useCopilotChatInternal } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
 import { X } from "lucide-react"
 import { usePathname } from "next/navigation"
@@ -24,6 +24,10 @@ import { CodingPromptInjector } from "@/features/desktop-copilot/components/codi
 import { HandoffMetadataInjector } from "@/features/desktop-copilot/components/handoff-metadata-injector"
 import { PredictionActionInjector } from "@/features/desktop-copilot/components/prediction-action-injector"
 import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-register-copilot-tools"
+import {
+  shouldCarryOverAgentMessages,
+  toStructuredCloneableMessages,
+} from "@/lib/copilot/agent-message-carryover"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import {
@@ -37,6 +41,8 @@ import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "../copilot
 import { DesktopAgentContextProvider } from "./desktop-agent-context-provider"
 import { useStartNewCopilotChat } from "../hooks/use-start-new-copilot-chat"
 import { BuildProgressPanel } from "../ui/build-progress-panel"
+
+import type { Message } from "@copilotkit/shared"
 
 function DesktopCopilotHeader() {
   const { labels } = useChatContext()
@@ -128,6 +134,121 @@ interface DesktopCopilotProviderProps {
   children: ReactNode
 }
 
+/**
+ * Keeps the CopilotSidebar's internal open state in sync with our zustand
+ * store. Must be rendered inside <CopilotSidebar> so it has access to the
+ * ChatContext.  This replaces the old `key={copilotSidebarOpen ? … : …}`
+ * approach which caused a full remount — destroying in-flight streaming
+ * messages whenever the sidebar toggled (especially during agent handoffs).
+ */
+function SidebarOpenSync() {
+  const { open, setOpen } = useChatContext()
+  const copilotSidebarOpen = useDesktopAgentStore((state) => state.copilotSidebarOpen)
+
+  useEffect(() => {
+    if (copilotSidebarOpen !== open) {
+      setOpen(copilotSidebarOpen)
+    }
+  }, [copilotSidebarOpen, open, setOpen])
+
+  return null
+}
+
+function AgentMessageCarryoverSync() {
+  const { agent, setMessages, threadId } = useCopilotChatInternal({})
+  const pendingHandoff = useDesktopAgentStore((state) => state.pendingHandoff)
+  const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
+  const snapshotRef = useRef<{
+    agentId: string | null
+    threadId: string | null
+    messages: Message[]
+  }>({
+    agentId: null,
+    threadId: null,
+    messages: [],
+  })
+
+  useEffect(() => {
+    const previousSnapshot = snapshotRef.current
+    const rawMessages = agent?.messages ?? []
+    const nextSnapshot = {
+      agentId: agent?.agentId ?? null,
+      threadId: threadId ?? null,
+      messages: toStructuredCloneableMessages(rawMessages),
+    }
+
+    const isHandoffInProgress =
+      pendingHandoff?.status === "switching" &&
+      pendingHandoff.threadId === copilotThreadId
+
+    if (shouldCarryOverAgentMessages(previousSnapshot, nextSnapshot, { isHandoffInProgress })) {
+      setMessages(previousSnapshot.messages)
+      snapshotRef.current = {
+        ...nextSnapshot,
+        messages: previousSnapshot.messages,
+      }
+      return
+    }
+
+    snapshotRef.current = nextSnapshot
+  }, [agent?.agentId, agent?.messages, copilotThreadId, pendingHandoff, setMessages, threadId])
+
+  return null
+}
+
+/**
+ * Blocks user input in the CopilotSidebar while an agent handoff or copilot
+ * dispatch is in progress.  Without this guard there is a race window where
+ * the user can submit a message before React re-renders with the updated
+ * `agent.isRunning` flag, causing two concurrent `runAgent` calls whose
+ * streamed responses get interleaved and produce JSON-parse errors.
+ *
+ * The guard injects a global `<style>` that disables pointer-events and
+ * keyboard input on the sidebar's textarea / send-button for the duration
+ * of the transition.
+ */
+function HandoffTransitionGuard() {
+  const pendingHandoff = useDesktopAgentStore((state) => state.pendingHandoff)
+  const pendingCopilotDispatch = useDesktopAgentStore((state) => state.pendingCopilotDispatch)
+  const isTransitioning = !!pendingHandoff || !!pendingCopilotDispatch
+
+  useEffect(() => {
+    if (!isTransitioning) return
+
+    const sidebar = document.querySelector<HTMLElement>("[data-copilot-sidebar]")
+    if (!sidebar) return
+
+    const textarea = sidebar.querySelector<HTMLTextAreaElement>("textarea")
+    const sendButtons = sidebar.querySelectorAll<HTMLButtonElement>(
+      "[data-layout] button"
+    )
+
+    if (textarea) {
+      textarea.dataset.prevDisabled = String(textarea.disabled)
+      textarea.disabled = true
+    }
+
+    sendButtons.forEach((btn) => {
+      btn.dataset.prevDisabled = String(btn.disabled)
+      btn.disabled = true
+    })
+
+    return () => {
+      if (textarea) {
+        textarea.disabled = textarea.dataset.prevDisabled === "true"
+        delete textarea.dataset.prevDisabled
+      }
+
+      sendButtons.forEach((btn) => {
+        btn.disabled = btn.dataset.prevDisabled === "true"
+        delete btn.dataset.prevDisabled
+      })
+    }
+  }, [isTransitioning])
+
+  return null
+}
+
 function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps) {
   const pathname = usePathname()
   const isDesktopRootRoute = pathname === "/desktop"
@@ -165,7 +286,6 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
   return (
     <>
       <CopilotSidebar
-        key={copilotSidebarOpen ? "sidebar-open" : "sidebar-closed"}
         defaultOpen={copilotSidebarOpen}
         labels={DESKTOP_COPILOT_LABELS}
         className="text-sm"
@@ -177,6 +297,8 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
         Header={DesktopCopilotHeader}
         instructions={DESKTOP_COPILOT_INSTRUCTIONS}
       >
+        <SidebarOpenSync />
+        <HandoffTransitionGuard />
         <CopilotToolsRegistry agentId={activeAgent} />
         <DesktopAgentContextProvider />
         {desktop}
@@ -219,6 +341,7 @@ export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProv
       >
         <BrandBriefInjector />
         <CodingPromptInjector />
+        <AgentMessageCarryoverSync />
         <HandoffMetadataInjector />
         <PredictionActionInjector />
         <DesktopCopilotBridge desktop={desktop}>{children}</DesktopCopilotBridge>

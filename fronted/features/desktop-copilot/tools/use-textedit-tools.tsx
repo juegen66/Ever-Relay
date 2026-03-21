@@ -17,6 +17,8 @@ import {
   OPEN_TEXT_FILE_PARAMS,
   READ_TEXT_FILE_CONTENT_PARAMS,
   WRITE_TEXT_FILE_CONTENT_PARAMS,
+  toolErr,
+  toolOk,
 } from "./types"
 
 export function useTextEditTools() {
@@ -45,23 +47,16 @@ export function useTextEditTools() {
       }
 
       if (!target) {
-        return {
-          ok: false as const,
-          error: `File not found by id: ${fileId}`,
-        }
+        return toolErr(`File not found by id: ${fileId}`)
       }
 
       if (target.itemType !== "text") {
-        return {
-          ok: false as const,
-          error: `Item is not a text file: ${fileId}`,
-        }
+        return toolErr(`Item is not a text file: ${fileId}`)
       }
 
-      return {
-        ok: true as const,
+      return toolOk(`Resolved text file "${target.name}" (${target.id}).`, {
         item: target as DesktopFolder,
-      }
+      })
     },
     [readDesktopFoldersFromCache, refreshDesktopItems]
   )
@@ -72,10 +67,7 @@ export function useTextEditTools() {
       const rawName = typeof args.name === "string" ? args.name.trim() : ""
 
       if (!rawId && !rawName) {
-        return {
-          ok: false,
-          error: "id or name is required",
-        }
+        return toolErr("id or name is required")
       }
 
       const findTarget = () => {
@@ -100,20 +92,18 @@ export function useTextEditTools() {
       }
 
       if (!target) {
-        return {
-          ok: false,
-          error: rawId ? `Text file not found by id: ${rawId}` : `Text file not found by name: ${rawName}`,
-        }
+        return toolErr(
+          rawId ? `Text file not found by id: ${rawId}` : `Text file not found by name: ${rawName}`
+        )
       }
 
       openFileWindow(target.id, target.name)
-      return {
-        ok: true,
+      return toolOk(`Succeeded: opened text file "${target.name}" in the editor.`, {
         openedFile: {
           id: target.id,
           name: target.name,
         },
-      }
+      })
     },
     [openFileWindow, readDesktopFoldersFromCache, refreshDesktopItems]
   )
@@ -122,10 +112,7 @@ export function useTextEditTools() {
     async (args: { fileId?: string }) => {
       const fileId = typeof args.fileId === "string" ? args.fileId.trim() : ""
       if (!fileId) {
-        return {
-          ok: false,
-          error: "fileId is required",
-        }
+        return toolErr("fileId is required")
       }
 
       const resolved = await resolveTextFileById(fileId)
@@ -134,12 +121,14 @@ export function useTextEditTools() {
       }
 
       const content = await readTextEditorContent(fileId)
-      return {
-        ok: true,
-        fileId,
-        content,
-        length: content.length,
-      }
+      return toolOk(
+        `Succeeded: read ${content.length} character(s) from the text file (fileId ${fileId}).`,
+        {
+          fileId,
+          content,
+          length: content.length,
+        }
+      )
     },
     [resolveTextFileById]
   )
@@ -148,17 +137,11 @@ export function useTextEditTools() {
     async (args: { fileId?: string; content?: string }) => {
       const fileId = typeof args.fileId === "string" ? args.fileId.trim() : ""
       if (!fileId) {
-        return {
-          ok: false,
-          error: "fileId is required",
-        }
+        return toolErr("fileId is required")
       }
 
       if (typeof args.content !== "string") {
-        return {
-          ok: false,
-          error: "content is required",
-        }
+        return toolErr("content is required")
       }
 
       const resolved = await resolveTextFileById(fileId)
@@ -169,18 +152,17 @@ export function useTextEditTools() {
       openFileWindow(fileId, resolved.item.name)
       const isReady = await waitForTextEditorReady(fileId, 5000)
       if (!isReady) {
-        return {
-          ok: false,
-          error: `Text editor is not ready for file: ${fileId}`,
-        }
+        return toolErr(`Text editor is not ready for file: ${fileId}`)
       }
 
       writeTextEditorContent(fileId, args.content)
-      return {
-        ok: true,
-        fileId,
-        writtenLength: args.content.length,
-      }
+      return toolOk(
+        `Succeeded: wrote ${args.content.length} character(s) into the text editor for fileId ${fileId} (auto-save will persist).`,
+        {
+          fileId,
+          writtenLength: args.content.length,
+        }
+      )
     },
     [openFileWindow, resolveTextFileById]
   )

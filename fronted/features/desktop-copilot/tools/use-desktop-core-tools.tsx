@@ -14,20 +14,23 @@ type ToolSuccess<T extends Record<string, unknown> = Record<string, never>> = {
   status: "success"
   ok: true
   summary: string
+  message: string
 } & T
 
 type ToolFailure = {
   status: "failed"
   ok: false
   error: string
+  message: string
 }
 
 function toolSuccess<T extends Record<string, unknown>>(summary: string, data: T): ToolSuccess<T> {
-  return { status: "success", ok: true, summary, ...data }
+  return { status: "success", ok: true, summary, message: summary, ...data }
 }
 
 function toolFailure(error: string): ToolFailure {
-  return { status: "failed", ok: false, error }
+  const message = `Failed: ${error}`
+  return { status: "failed", ok: false, error, message }
 }
 
 export function useDesktopCoreTools() {

@@ -24,6 +24,9 @@ export async function prepareHandoff(
     )
   }
 
+  const handoffDocument = formatHandoffDocument(metadata.report)
+  const consumedAt = new Date()
+
   try {
     await db.insert(handoffRecords).values({
       userId,
@@ -40,8 +43,9 @@ export async function prepareHandoff(
       threadId: metadata.threadId,
       sourceAgentId: metadata.sourceAgentId,
       targetAgentId: metadata.targetAgentId,
-      content: formatHandoffDocument(metadata.report),
-      status: "pending",
+      content: handoffDocument,
+      status: "consumed",
+      consumedAt,
       metadata: {
         handoffId: metadata.handoffId,
         reason: metadata.reason,
@@ -63,6 +67,7 @@ export async function prepareHandoff(
 
   return ok(context, {
     metadata,
+    handoffDocument,
     droppedMessageCount: body.messages.length,
     truncateBeforeMessageId,
   })

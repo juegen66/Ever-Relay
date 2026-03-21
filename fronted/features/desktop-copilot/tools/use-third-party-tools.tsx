@@ -9,7 +9,7 @@ import { useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 import type { ThirdPartyToolDefinition } from "@/lib/third-party-app/types"
 import { namespacedThirdPartyToolName } from "@/lib/third-party-app/types"
 
-import { toErrorMessage } from "./types"
+import { toErrorMessage, toolErr, toolOk } from "./types"
 
 function jsonSchemaPropsToParameters(schema: unknown): ToolParameter[] {
   if (!schema || typeof schema !== "object") {
@@ -99,17 +99,22 @@ function ThirdPartyDynamicTool(props: {
       handler: async (args) => {
         const bridge = useThirdPartyAppRegistry.getState().getBridgeForWindow(windowId)
         if (!bridge) {
-          return { ok: false, error: "Third-party app is not connected (open and focus the app window)." }
+          return toolErr(
+            "Third-party app is not connected (open and focus the app window)."
+          )
         }
         try {
           const payload = buildArgsFromHandlerInput(definition, args as Record<string, unknown>)
           const result = await bridge.invoke(definition.name, payload)
           if (!result.ok) {
-            return { ok: false, error: result.error }
+            return toolErr(result.error ?? "Third-party tool returned an error")
           }
-          return { ok: true, result: result.result }
+          return toolOk(
+            `Succeeded: third-party tool "${definition.name}" ran in the embedded app; see result for payload.`,
+            { result: result.result }
+          )
         } catch (e) {
-          return { ok: false, error: toErrorMessage(e) }
+          return toolErr(toErrorMessage(e))
         }
       },
     },

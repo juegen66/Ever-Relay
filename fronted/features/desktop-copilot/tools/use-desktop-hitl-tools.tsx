@@ -14,6 +14,8 @@ import {
   DELETE_ITEM_PARAMS,
   RENAME_ITEM_PARAMS,
   toErrorMessage,
+  toolErr,
+  toolOk,
 } from "./types"
 import { ApprovalCard } from "../components/approval-card"
 
@@ -44,10 +46,7 @@ export function useDesktopHitlTools() {
       }
 
       if (!name) {
-        return {
-          ok: false,
-          error: "Item name cannot be empty",
-        }
+        return toolErr("Item name cannot be empty")
       }
 
       let existingItem = findMatchingDesktopItem(readDesktopFoldersFromCache(), targetIdentity)
@@ -58,16 +57,18 @@ export function useDesktopHitlTools() {
       }
 
       if (existingItem) {
-        return {
-          ok: true,
-          created: false,
-          alreadyExists: true,
-          item: {
-            id: existingItem.id,
-            name: existingItem.name,
-            itemType: existingItem.itemType ?? normalizedType,
-          },
-        }
+        return toolOk(
+          `Succeeded: desktop item already existed — reusing "${existingItem.name}" (${existingItem.id}).`,
+          {
+            created: false,
+            alreadyExists: true,
+            item: {
+              id: existingItem.id,
+              name: existingItem.name,
+              itemType: existingItem.itemType ?? normalizedType,
+            },
+          }
+        )
       }
 
       const item = await createItem({
@@ -76,16 +77,12 @@ export function useDesktopHitlTools() {
         parentId: args.parentId || undefined,
       })
       if (!item) {
-        return {
-          ok: false,
-          error: "Failed to create item",
-        }
+        return toolErr("Failed to create item")
       }
 
       await refreshDesktopItems()
 
-      return {
-        ok: true,
+      return toolOk(`Succeeded: created desktop item "${item.name}" (${item.id}).`, {
         created: true,
         alreadyExists: false,
         item: {
@@ -93,7 +90,7 @@ export function useDesktopHitlTools() {
           name: item.name,
           itemType: item.itemType,
         },
-      }
+      })
     },
     [createItem, readDesktopFoldersFromCache, refreshDesktopItems]
   )
@@ -112,10 +109,7 @@ export function useDesktopHitlTools() {
             parentId: typeof args.parentId === "string" ? args.parentId : undefined,
           })
         } catch (error) {
-          return {
-            ok: false,
-            error: toErrorMessage(error),
-          }
+          return toolErr(toErrorMessage(error))
         }
       },
     },
@@ -140,7 +134,11 @@ export function useDesktopHitlTools() {
               const id = String(args.id ?? "")
               const name = String(args.name ?? "").trim()
               if (!id || !name) {
-                respond({ approved: false, ok: false, error: "id and name are required" })
+                respond(
+                  toolErr("id and name are required", {
+                    approved: false,
+                  })
+                )
                 return
               }
 
@@ -148,22 +146,37 @@ export function useDesktopHitlTools() {
               await refreshDesktopItems()
               const renamed = readDesktopFoldersFromCache().find((item) => item.id === id)
               if (!renamed || renamed.name !== name) {
-                respond({ approved: false, ok: false, error: "Failed to rename item" })
+                respond(
+                  toolErr("Failed to rename item", {
+                    approved: false,
+                  })
+                )
                 return
               }
 
-              respond({ approved: true, ok: true, id: renamed.id, name: renamed.name })
+              respond(
+                toolOk(`Succeeded: renamed item to "${renamed.name}".`, {
+                  approved: true,
+                  id: renamed.id,
+                  name: renamed.name,
+                })
+              )
             } catch (error) {
-              respond({
-                approved: false,
-                ok: false,
-                error: toErrorMessage(error),
-              })
+              respond(
+                toolErr(toErrorMessage(error), {
+                  approved: false,
+                })
+              )
             }
           }}
           onReject={() => {
             if (status !== "executing" || !respond) return
-            respond({ approved: false, cancelled: true })
+            respond({
+              approved: false,
+              cancelled: true,
+              ok: false,
+              message: "Failed: user rejected the rename request",
+            })
           }}
         />
       ),
@@ -188,7 +201,7 @@ export function useDesktopHitlTools() {
             try {
               const id = String(args.id ?? "")
               if (!id) {
-                respond({ approved: false, ok: false, error: "id is required" })
+                respond(toolErr("id is required", { approved: false }))
                 return
               }
 
@@ -196,21 +209,31 @@ export function useDesktopHitlTools() {
               await refreshDesktopItems()
               const deleted = !readDesktopFoldersFromCache().some((item) => item.id === id)
               if (!deleted) {
-                respond({ approved: false, ok: false, error: "Failed to delete item" })
+                respond(toolErr("Failed to delete item", { approved: false }))
                 return
               }
-              respond({ approved: true, ok: true, id })
+              respond(
+                toolOk(`Succeeded: deleted desktop item ${id}.`, {
+                  approved: true,
+                  id,
+                })
+              )
             } catch (error) {
-              respond({
-                approved: false,
-                ok: false,
-                error: toErrorMessage(error),
-              })
+              respond(
+                toolErr(toErrorMessage(error), {
+                  approved: false,
+                })
+              )
             }
           }}
           onReject={() => {
             if (status !== "executing" || !respond) return
-            respond({ approved: false, cancelled: true })
+            respond({
+              approved: false,
+              cancelled: true,
+              ok: false,
+              message: "Cancelled: user declined the delete request",
+            })
           }}
         />
       ),

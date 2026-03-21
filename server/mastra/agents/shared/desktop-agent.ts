@@ -3,7 +3,7 @@ import { Agent } from "@mastra/core/agent"
 import { createAgentMemory } from "@/server/mastra/memory"
 import model from "@/server/mastra/model"
 import { AfsSkillProcessor } from "@/server/mastra/processors/afs-skill-processor"
-import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
+// import { createHandoffContextProcessor } from "@/server/mastra/processors/handoff-context-processor"
 import { requestOriginProcessor } from "@/server/mastra/processors/request-origin-processor"
 import {
   afsListTool,
@@ -29,7 +29,7 @@ export const desktopAgent = new Agent({
     "Memory paths are writable. History paths are read-only.",
     "",
     "For cross-agent delegation, call handoff_to_agent directly.",
-    "Cross-agent handoff must keep the same thread id. Compressed handoff context is stored server-side and injected via an input processor before the target agent runs.",
+    "Cross-agent handoff must keep the same thread id. Compressed handoff context is prepared server-side, returned to the frontend, then replayed back to the target agent after mode switch.",
     "For codebase implementation, coding workflow, or repo-inspection tasks, first check the active coding app context.",
     "If there is no active coding app, first guide the user to the vibecoding app so they can create or activate one there. If the user explicitly asks you to do it directly, you may use create_coding_app or activate_coding_app.",
     "Only once a coding app is active should you hand off to coding_agent, because coding work must stay inside that app's thread and sandbox.",
@@ -51,7 +51,7 @@ export const desktopAgent = new Agent({
 
     return [
       requestOriginProcessor,
-      createHandoffContextProcessor(DESKTOP_COPILOT_AGENT),
+      // createHandoffContextProcessor(DESKTOP_COPILOT_AGENT),
       ...(userId
         ? [new AfsSkillProcessor({ userId, agentId: DESKTOP_COPILOT_AGENT, scope: "Desktop" })]
         : []),

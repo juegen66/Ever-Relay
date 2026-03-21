@@ -27,6 +27,8 @@ import {
 import {
   HANDOFF_TO_AGENT_PARAMS,
   toErrorMessage,
+  toolErr,
+  toolOk,
 } from "./types"
 
 const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
@@ -82,28 +84,24 @@ export function useAgentHandoffTools() {
       const targetAgentId = toSafeText(args.targetAgentId)
       const targetMode = AGENT_ID_TO_MODE[targetAgentId]
       if (!targetMode) {
-        return {
-          ok: false,
-          error: `Unsupported targetAgentId: ${args.targetAgentId ?? "unknown"}`,
-        }
+        return toolErr(`Unsupported targetAgentId: ${args.targetAgentId ?? "unknown"}`)
       }
 
       if (targetAgentId === sourceAgentId) {
-        return {
-          ok: true,
-          skipped: true,
-          reason: "Already using target agent",
-          sourceAgentId,
-          targetAgentId,
-          threadId: copilotThreadId,
-        }
+        return toolOk(
+          "Succeeded: no handoff needed — already on the target agent.",
+          {
+            skipped: true,
+            reason: "Already using target agent",
+            sourceAgentId,
+            targetAgentId,
+            threadId: copilotThreadId,
+          }
+        )
       }
 
       if (pendingHandoff?.threadId === copilotThreadId) {
-        return {
-          ok: false,
-          error: "Another agent handoff is already in progress for this thread",
-        }
+        return toolErr("Another agent handoff is already in progress for this thread")
       }
 
       try {
@@ -132,7 +130,7 @@ export function useAgentHandoffTools() {
           messages: toApiMessages(snapshotMessages),
         }
 
-        await copilotApi.prepareHandoff(body)
+        const handoffData = await copilotApi.prepareHandoff(body)
 
         queuePendingHandoff({
           id: crypto.randomUUID(),
@@ -140,20 +138,22 @@ export function useAgentHandoffTools() {
           sourceAgentId,
           targetAgentId,
           targetMode,
+          handoffDocument: handoffData.handoffDocument,
+          reason: toSafeText(args.reason) || undefined,
+          task: toSafeText(args.task) || undefined,
         })
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
 
-      return {
-        ok: true,
-        sourceAgentId,
-        targetAgentId,
-        threadId: copilotThreadId,
-      }
+      return toolOk(
+        `Succeeded: handoff prepared server-side and returned to the frontend; the UI will switch to ${targetAgentId} on the same thread (${copilotThreadId}).`,
+        {
+          sourceAgentId,
+          targetAgentId,
+          threadId: copilotThreadId,
+        }
+      )
     },
     [
       copilotThreadId,
@@ -168,7 +168,7 @@ export function useAgentHandoffTools() {
     {
       name: "handoff_to_agent",
       description:
-        "Switch to another agent without changing thread id. Compressed handoff context is stored server-side and injected before the next model call.",
+        "Switch to another agent without changing thread id. Compressed handoff context is prepared server-side, returned to the frontend, then replayed back to the target agent after mode switch.",
       followUp: false,
       parameters: HANDOFF_TO_AGENT_PARAMS,
       handler: async (args) => {

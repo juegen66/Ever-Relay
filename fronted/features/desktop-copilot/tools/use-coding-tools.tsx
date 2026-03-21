@@ -18,6 +18,8 @@ import {
   SET_CODING_PROJECT_STATUS_PARAMS,
   TRIGGER_CODING_WORKFLOW_PARAMS,
   toErrorMessage,
+  toolErr,
+  toolOk,
 } from "./types"
 
 export function useCodingTools() {
@@ -35,11 +37,13 @@ export function useCodingTools() {
 
       const reason = typeof args.reason === "string" ? args.reason.trim() : ""
 
-      return {
-        ok: true,
-        opened: true,
-        reason: reason || null,
-      }
+      return toolOk(
+        "Succeeded: coding sidebar is open and agent mode is set to coding.",
+        {
+          opened: true,
+          reason: reason || null,
+        }
+      )
     },
     [setCopilotAgentMode, setCopilotSidebarOpen]
   )
@@ -55,10 +59,7 @@ export function useCodingTools() {
           ? args.appId.trim()
           : activeCodingApp?.id
       if (!appId) {
-        return {
-          ok: false,
-          error: "No active coding app. Create or activate a coding app first.",
-        }
+        return toolErr("No active coding app. Create or activate a coding app first.")
       }
 
       const status =
@@ -70,11 +71,9 @@ export function useCodingTools() {
       ]
 
       if (!allowedStatuses.includes(status as CodingWorkspacePhase)) {
-        return {
-          ok: false,
-          error:
-            "status must be one of: reviewing_request, needs_clarification, ready_for_confirmation",
-        }
+        return toolErr(
+          "status must be one of: reviewing_request, needs_clarification, ready_for_confirmation"
+        )
       }
 
       const summary =
@@ -91,12 +90,14 @@ export function useCodingTools() {
         summary,
       })
 
-      return {
-        ok: true,
-        appId,
-        status,
-        summary: summary ?? null,
-      }
+      return toolOk(
+        `Succeeded: updated coding workspace status to "${status}" for app ${appId}.`,
+        {
+          appId,
+          status,
+          summary: summary ?? null,
+        }
+      )
     },
     [activeCodingApp?.id, setProjectPhase]
   )
@@ -113,17 +114,11 @@ export function useCodingTools() {
           : activeCodingApp?.id
 
       if (!report) {
-        return {
-          ok: false,
-          error: "report is required",
-        }
+        return toolErr("report is required")
       }
 
       if (!appId) {
-        return {
-          ok: false,
-          error: "No active coding app. Create or activate a coding app first.",
-        }
+        return toolErr("No active coding app. Create or activate a coding app first.")
       }
 
       try {
@@ -138,17 +133,16 @@ export function useCodingTools() {
         })
         openWorkflowProgress(response.runId, "coding")
 
-        return {
-          ok: true,
-          runId: response.runId,
-          stage: response.stage,
-          status: response.status,
-        }
+        return toolOk(
+          `Succeeded: coding workflow started (runId ${response.runId}, stage ${String(response.stage)}, status ${String(response.status)}). Progress panel should open.`,
+          {
+            runId: response.runId,
+            stage: response.stage,
+            status: response.status,
+          }
+        )
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     [activeCodingApp?.id, markWorkflowRunning, openWorkflowProgress]

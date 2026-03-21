@@ -104,7 +104,8 @@ function mergeReport(
 }
 
 /**
- * Markdown document stored in `handoff_context` and injected via HandoffContextProcessor.
+ * Markdown document stored for audit/history and replayed by the frontend
+ * back into the target agent after mode switch.
  */
 export function formatHandoffDocument(report: HandoffReport): string {
   const lines: string[] = [

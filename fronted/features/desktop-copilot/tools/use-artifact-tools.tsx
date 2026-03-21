@@ -2,7 +2,7 @@
 
 import { useFrontendTool } from "@copilotkit/react-core"
 
-import { RENDER_ARTIFACT_PARAMS } from "./types"
+import { RENDER_ARTIFACT_PARAMS, toolOk } from "./types"
 import { ShadowArtifact } from "../components/shadow-artifact"
 
 export function useArtifactTools() {
@@ -12,7 +12,10 @@ export function useArtifactTools() {
       description:
         "Display a message HTML artifact inline in the chat. This is the rendering endpoint for message-html-builder style outputs, not image generation. You must write the full HTML code yourself and pass it in the 'html' parameter. Parameters: html (required, the complete HTML string), title (optional). Do NOT use prompt, size, or n — those are for image APIs.",
       parameters: RENDER_ARTIFACT_PARAMS,
-      handler: async () => ({ ok: true }),
+      handler: async () =>
+        toolOk(
+          "Succeeded: HTML artifact is rendering inline in the chat (see the artifact card)."
+        ),
       render: ({ status, args }) => (
         <ShadowArtifact
           html={String(args?.html ?? "")}

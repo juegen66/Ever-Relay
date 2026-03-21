@@ -8,7 +8,13 @@ import { buildsApi } from "@/lib/api/modules/builds"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useWorkflowProgressStore } from "@/lib/stores/workflow-progress-store"
 
-import { START_NEW_CHAT_THREAD_PARAMS, TRIGGER_BUILD_PARAMS, toErrorMessage } from "./types"
+import {
+  START_NEW_CHAT_THREAD_PARAMS,
+  TRIGGER_BUILD_PARAMS,
+  toErrorMessage,
+  toolErr,
+  toolOk,
+} from "./types"
 
 export function useBuildTools() {
   const { reset, stopGeneration, isLoading } = useCopilotChat()
@@ -23,10 +29,7 @@ export function useBuildTools() {
       const projectId = typeof args.projectId === "string" ? args.projectId.trim() : ""
 
       if (!prompt) {
-        return {
-          ok: false,
-          error: "prompt is required",
-        }
+        return toolErr("prompt is required")
       }
 
       try {
@@ -36,17 +39,16 @@ export function useBuildTools() {
         })
 
         openWorkflowProgress(response.runId, "build")
-        return {
-          ok: true,
-          runId: response.runId,
-          stage: response.stage,
-          status: response.status,
-        }
+        return toolOk(
+          `Succeeded: build workflow started (runId ${response.runId}, stage ${String(response.stage)}, status ${String(response.status)}). The progress panel should open.`,
+          {
+            runId: response.runId,
+            stage: response.stage,
+            status: response.status,
+          }
+        )
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     [openWorkflowProgress]
@@ -68,12 +70,14 @@ export function useBuildTools() {
         const { copilotThreadId: newThreadId } = useDesktopAgentStore.getState()
         const reason = typeof args.reason === "string" ? args.reason.trim() : ""
 
-        return {
-          ok: true,
-          newThreadId,
-          previousAgentMode,
-          reason: reason || null,
-        }
+        return toolOk(
+          `Succeeded: started a fresh chat thread (newThreadId ${newThreadId}). Previous agent mode was ${String(previousAgentMode)}.`,
+          {
+            newThreadId,
+            previousAgentMode,
+            reason: reason || null,
+          }
+        )
       }
 
       startNewCopilotThread()
@@ -81,12 +85,14 @@ export function useBuildTools() {
       const { copilotThreadId: newThreadId } = useDesktopAgentStore.getState()
       const reason = typeof args.reason === "string" ? args.reason.trim() : ""
 
-      return {
-        ok: true,
-        newThreadId,
-        previousAgentMode,
-        reason: reason || null,
-      }
+      return toolOk(
+        `Succeeded: started a fresh chat thread (newThreadId ${newThreadId}).`,
+        {
+          newThreadId,
+          previousAgentMode,
+          reason: reason || null,
+        }
+      )
     },
     [
       activeCodingApp,

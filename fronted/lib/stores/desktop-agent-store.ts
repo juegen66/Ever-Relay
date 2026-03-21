@@ -18,6 +18,9 @@ export interface PendingHandoff {
   sourceAgentId: string
   targetAgentId: string
   targetMode: CopilotAgentMode
+  handoffDocument: string
+  reason?: string
+  task?: string
   status: "queued" | "switching"
 }
 

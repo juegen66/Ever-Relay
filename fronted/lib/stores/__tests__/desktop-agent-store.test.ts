@@ -30,6 +30,7 @@ describe("desktop-agent-store handoff state machine", () => {
       sourceAgentId: "logo_agent",
       targetAgentId: "main_agent",
       targetMode: "main",
+      handoffDocument: "# Agent handoff",
     })
 
     expect(useDesktopAgentStore.getState().pendingHandoff).toMatchObject({
@@ -38,6 +39,7 @@ describe("desktop-agent-store handoff state machine", () => {
       sourceAgentId: "logo_agent",
       targetAgentId: "main_agent",
       targetMode: "main",
+      handoffDocument: "# Agent handoff",
       status: "queued",
     })
   })
@@ -49,6 +51,7 @@ describe("desktop-agent-store handoff state machine", () => {
       sourceAgentId: "logo_agent",
       targetAgentId: "main_agent",
       targetMode: "main",
+      handoffDocument: "# Agent handoff",
     })
 
     expect(useDesktopAgentStore.getState().markPendingHandoffSwitching("pending-1")).toBe(true)
@@ -62,6 +65,7 @@ describe("desktop-agent-store handoff state machine", () => {
       sourceAgentId: "logo_agent",
       targetAgentId: "main_agent",
       targetMode: "main",
+      handoffDocument: "# Agent handoff",
     })
 
     useDesktopAgentStore.getState().markPendingHandoffSwitching("pending-1")
@@ -77,6 +81,7 @@ describe("desktop-agent-store handoff state machine", () => {
       sourceAgentId: "logo_agent",
       targetAgentId: "main_agent",
       targetMode: "main",
+      handoffDocument: "# Agent handoff",
     })
 
     expect(useDesktopAgentStore.getState().markPendingHandoffSwitching("wrong-id")).toBe(false)
