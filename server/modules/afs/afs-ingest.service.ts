@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { afs } from "@/server/afs"
@@ -52,18 +52,17 @@ interface IngestMemorySpec {
 interface IngestBatchResult {
   historyCount: number
   memoriesWritten: number
-  embeddingsUpdated: number
   noteMemories: number
   userMemories: number
+  changedMemoryIds: string[]
   lastHistoryId: string
   lastHistoryCreatedAt: string
 }
 
-export interface AfsMemoryIngestResult {
+export interface AfsMemoryHistoryToMemoryResult {
   userId: string
   historyCount: number
   memoriesWritten: number
-  embeddingsUpdated: number
   noteMemories: number
   userMemories: number
   batchesProcessed: number
@@ -72,6 +71,11 @@ export interface AfsMemoryIngestResult {
     lastHistoryId: string | null
     lastHistoryCreatedAt: string | null
   }
+  changedMemoryIds: string[]
+}
+
+export interface AfsMemoryIngestResult extends Omit<AfsMemoryHistoryToMemoryResult, "changedMemoryIds"> {
+  embeddingsUpdated: number
 }
 
 function slugify(text: string) {
@@ -157,6 +161,11 @@ export class AfsIngestService {
   }
 
   async ingestUserHistory(userId: string): Promise<AfsMemoryIngestResult> {
+    const historyToMemoryResult = await this.ingestHistoryToMemory(userId)
+    return this.embedChangedMemories(historyToMemoryResult)
+  }
+
+  async ingestHistoryToMemory(userId: string): Promise<AfsMemoryHistoryToMemoryResult> {
     let checkpoint = await this.getCheckpoint(userId)
     await this.upsertCheckpoint(userId, {
       status: "running",
@@ -169,11 +178,11 @@ export class AfsIngestService {
 
     let historyCount = 0
     let memoriesWritten = 0
-    let embeddingsUpdated = 0
     let noteMemories = 0
     let userMemories = 0
     let batchesProcessed = 0
     let hasMore = false
+    const changedMemoryIds = new Set<string>()
 
     try {
       for (let batchIndex = 0; batchIndex < MAX_BATCHES_PER_RUN; batchIndex++) {
@@ -188,10 +197,12 @@ export class AfsIngestService {
 
         historyCount += batchResult.historyCount
         memoriesWritten += batchResult.memoriesWritten
-        embeddingsUpdated += batchResult.embeddingsUpdated
         noteMemories += batchResult.noteMemories
         userMemories += batchResult.userMemories
         batchesProcessed++
+        for (const memoryId of batchResult.changedMemoryIds) {
+          changedMemoryIds.add(memoryId)
+        }
 
         checkpoint = await this.upsertCheckpoint(userId, {
           status: "running",
@@ -203,6 +214,7 @@ export class AfsIngestService {
           metadata: {
             lastBatchHistoryCount: batchResult.historyCount,
             lastBatchAt: new Date().toISOString(),
+            changedMemoryCount: changedMemoryIds.size,
           },
         })
 
@@ -213,17 +225,18 @@ export class AfsIngestService {
       }
 
       checkpoint = await this.upsertCheckpoint(userId, {
-        status: "completed",
+        status: "running",
         error: null,
         lastRunAt: new Date(),
         metadata: {
+          phase: "history_to_memory_completed",
           batchesProcessed,
           historyCount,
           memoriesWritten,
-          embeddingsUpdated,
           noteMemories,
           userMemories,
           hasMore,
+          changedMemoryCount: changedMemoryIds.size,
         },
       })
 
@@ -231,7 +244,6 @@ export class AfsIngestService {
         userId,
         historyCount,
         memoriesWritten,
-        embeddingsUpdated,
         noteMemories,
         userMemories,
         batchesProcessed,
@@ -240,6 +252,7 @@ export class AfsIngestService {
           lastHistoryId: checkpoint?.lastHistoryId ?? null,
           lastHistoryCreatedAt: checkpoint?.lastHistoryCreatedAt?.toISOString() ?? null,
         },
+        changedMemoryIds: Array.from(changedMemoryIds),
       }
     } catch (error) {
       const message = error instanceof Error && error.message.trim()
@@ -251,13 +264,99 @@ export class AfsIngestService {
         error: message,
         lastRunAt: new Date(),
         metadata: {
+          phase: "history_to_memory_failed",
           batchesProcessed,
           historyCount,
           memoriesWritten,
-          embeddingsUpdated,
+          noteMemories,
+          userMemories,
+          hasMore,
+          changedMemoryCount: changedMemoryIds.size,
           failedAt: new Date().toISOString(),
         },
       })
+      throw error
+    }
+  }
+
+  async embedChangedMemories(
+    input: AfsMemoryHistoryToMemoryResult
+  ): Promise<AfsMemoryIngestResult> {
+    const changedMemoryIds = Array.from(new Set(input.changedMemoryIds))
+    const embeddingsEnabled = afsEmbeddingService.isEnabled()
+
+    try {
+      let embeddingsUpdated = 0
+
+      if (embeddingsEnabled && changedMemoryIds.length > 0) {
+        const rows = await this.getMemoryRowsByIds(input.userId, changedMemoryIds)
+        const rowsById = new Map(rows.map((row) => [row.id, row] as const))
+        const missingIds = changedMemoryIds.filter((memoryId) => !rowsById.has(memoryId))
+
+        if (missingIds.length > 0) {
+          throw new Error(`AFS ingest embedding stage could not load memories: ${missingIds.join(", ")}`)
+        }
+
+        for (const memoryId of changedMemoryIds) {
+          const row = rowsById.get(memoryId)!
+          const updated = await afsEmbeddingService.upsertMemoryEmbedding(row)
+          if (updated) {
+            embeddingsUpdated++
+          }
+        }
+      }
+
+      await this.upsertCheckpoint(input.userId, {
+        status: "completed",
+        error: null,
+        lastRunAt: new Date(),
+        metadata: {
+          phase: "embedding_completed",
+          historyCount: input.historyCount,
+          memoriesWritten: input.memoriesWritten,
+          embeddingsUpdated,
+          noteMemories: input.noteMemories,
+          userMemories: input.userMemories,
+          batchesProcessed: input.batchesProcessed,
+          hasMore: input.hasMore,
+          changedMemoryCount: changedMemoryIds.length,
+          embeddingProviderEnabled: embeddingsEnabled,
+        },
+      })
+
+      return {
+        userId: input.userId,
+        historyCount: input.historyCount,
+        memoriesWritten: input.memoriesWritten,
+        embeddingsUpdated,
+        noteMemories: input.noteMemories,
+        userMemories: input.userMemories,
+        batchesProcessed: input.batchesProcessed,
+        hasMore: input.hasMore,
+        checkpoint: input.checkpoint,
+      }
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : "AFS memory embedding failed"
+
+      await this.upsertCheckpoint(input.userId, {
+        status: "failed",
+        error: message,
+        lastRunAt: new Date(),
+        metadata: {
+          phase: "embedding_failed",
+          historyCount: input.historyCount,
+          memoriesWritten: input.memoriesWritten,
+          noteMemories: input.noteMemories,
+          userMemories: input.userMemories,
+          batchesProcessed: input.batchesProcessed,
+          hasMore: input.hasMore,
+          changedMemoryCount: changedMemoryIds.length,
+          failedAt: new Date().toISOString(),
+        },
+      })
+
       throw error
     }
   }
@@ -272,24 +371,14 @@ export class AfsIngestService {
     }
 
     const dedupedSpecs = this.dedupeSpecs(specs)
-    const persistedRows: AfsMemoryRow[] = []
+    const changedMemoryIds: string[] = []
     let memoriesWritten = 0
 
     for (const spec of dedupedSpecs) {
       const persisted = await this.persistMemorySpec(userId, spec)
-      persistedRows.push(persisted.row)
       if (persisted.changed) {
         memoriesWritten++
-      }
-    }
-
-    let embeddingsUpdated = 0
-    if (afsEmbeddingService.isEnabled()) {
-      for (const row of persistedRows) {
-        const updated = await afsEmbeddingService.upsertMemoryEmbedding(row)
-        if (updated) {
-          embeddingsUpdated++
-        }
+        changedMemoryIds.push(persisted.row.id)
       }
     }
 
@@ -298,9 +387,9 @@ export class AfsIngestService {
     return {
       historyCount: rows.length,
       memoriesWritten,
-      embeddingsUpdated,
       noteMemories: dedupedSpecs.filter((spec) => spec.bucket === "note").length,
       userMemories: dedupedSpecs.filter((spec) => spec.bucket === "user").length,
+      changedMemoryIds,
       lastHistoryId: lastHistory.id,
       lastHistoryCreatedAt: lastHistory.createdAt.toISOString(),
     }
@@ -568,6 +657,21 @@ export class AfsIngestService {
         isNull(afsMemory.deletedAt)
       ),
     })
+  }
+
+  private async getMemoryRowsByIds(userId: string, memoryIds: string[]) {
+    if (memoryIds.length === 0) {
+      return []
+    }
+
+    return db
+      .select()
+      .from(afsMemory)
+      .where(and(
+        eq(afsMemory.userId, userId),
+        inArray(afsMemory.id, memoryIds),
+        isNull(afsMemory.deletedAt)
+      ))
   }
 
   private async getCheckpoint(userId: string) {

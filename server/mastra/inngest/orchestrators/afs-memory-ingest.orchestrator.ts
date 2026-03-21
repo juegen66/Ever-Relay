@@ -1,7 +1,8 @@
 import { init } from "@mastra/inngest"
 
 import { inngest } from "@/server/mastra/inngest/client"
-import { processAfsMemoryIngestStep } from "@/server/mastra/inngest/functions/memory/process-ingest.function"
+import { historyToMemoryStep } from "@/server/mastra/inngest/functions/memory/history-to-memory.function"
+import { memoryToEmbeddingStep } from "@/server/mastra/inngest/functions/memory/memory-to-embedding.function"
 import {
   afsMemoryIngestWorkflowInputSchema,
   afsMemoryIngestWorkflowOutputSchema,
@@ -13,7 +14,7 @@ export const AFS_MEMORY_INGEST_WORKFLOW_ID = "afs-memory-ingest"
 
 export const afsMemoryIngestWorkflow = createWorkflow({
   id: AFS_MEMORY_INGEST_WORKFLOW_ID,
-  description: "Daily AFS ingest: summarize new history into memory and sync embeddings",
+  description: "Daily AFS ingest: history to memory, then memory to embeddings",
   inputSchema: afsMemoryIngestWorkflowInputSchema,
   outputSchema: afsMemoryIngestWorkflowOutputSchema,
   concurrency: {
@@ -21,5 +22,6 @@ export const afsMemoryIngestWorkflow = createWorkflow({
     key: "event.data.userId",
   },
 })
-  .then(processAfsMemoryIngestStep)
+  .then(historyToMemoryStep)
+  .then(memoryToEmbeddingStep)
   .commit()
