@@ -12,7 +12,10 @@
  */
 
 import { afsSkillService } from "@/server/afs/skill"
-import { SKILL_TEST_AGENT_ID, SKILL_TEST_DEFAULT_USER_ID } from "@/server/mastra/agents/shared/skill-test-agent"
+import {
+  SKILL_TEST_AGENT_ID,
+  SKILL_TEST_DEFAULT_USER_ID,
+} from "@/server/mastra/agents/shared/parallel-agent.constants"
 
 const USER_ID = SKILL_TEST_DEFAULT_USER_ID
 
@@ -82,6 +85,28 @@ async function main() {
     metadata: { source: "seed-script" },
   })
   console.log("  ✓ list-available-skills (Desktop)")
+
+  await afsSkillService.upsertSkill(USER_ID, {
+    agentId: SKILL_TEST_AGENT_ID,
+    scope: "Desktop",
+    name: "parallel-diagnostic-routing",
+    description: "Route multi-step skill diagnostics through the parallel workflow",
+    triggerWhen: "当用户要求跨 scope 验证、复杂排查、生成诊断报告时",
+    tags: ["parallel-workflow", "diagnostic", "routing"],
+    content: `# Parallel Diagnostic Routing
+
+当用户请求涉及多个 skill、多个 scope、激活验证链路、或要求总结诊断报告时：
+
+## 操作步骤
+1. 不要直接一次性手写完整答案
+2. 调用 \`run_parallel_workflow\`，把用户原始请求作为 request 传入
+3. workflow 返回 synthesis 后，用精简方式回复该 synthesis
+4. 如果 workflow 判断任务不够复杂，则回退为普通直接回答
+`,
+    priority: 9,
+    metadata: { source: "seed-script", purpose: "parallel-workflow-routing" },
+  })
+  console.log("  ✓ parallel-diagnostic-routing (Desktop)")
 
   // -------------------------------------------------------------------------
   // Agent Canvas 模拟 skills (scope: Canvas)
@@ -219,7 +244,7 @@ async function main() {
   console.log("  ✓ logo-export-assets (Logo)")
 
   console.log("\nDone. Seeded skills for:")
-  console.log("  - Desktop: verify-skill-loading, echo-test, list-available-skills")
+  console.log("  - Desktop: verify-skill-loading, echo-test, list-available-skills, parallel-diagnostic-routing")
   console.log("  - Canvas (Agent Canvas): canvas-create-project, canvas-add-nodes, canvas-organize-layout")
   console.log("  - Logo (Logo Agent): logo-draft-brand-brief, logo-refine-philosophy, logo-export-assets")
   console.log("\nRun skill test agent and ask: '列出可用的 skills' or '验证 skill 加载'")

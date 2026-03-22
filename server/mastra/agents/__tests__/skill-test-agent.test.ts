@@ -27,4 +27,8 @@ describe("skill test agent registration", () => {
     expect(skillTestAgent.id).toBe(SKILL_TEST_AGENT_ID)
     expect(skillTestAgent.name).toBe("Skill Test Agent")
   })
+
+  it("keeps the skill test agent registered after parallel workflow integration", () => {
+    expect(agents[SKILL_TEST_AGENT_ID]).toBeDefined()
+  })
 })
