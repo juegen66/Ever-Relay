@@ -6,6 +6,20 @@ import { afs } from "@/server/afs"
 import { requestContextSchema } from "./common"
 
 const NAMESPACE_TREE = afs.getNamespaceTree()
+const afsWriteMetadataSchema = z.object({
+  description: z.string().min(1).max(1024).optional().describe(
+    "Required for Skill writes. Used as the skill summary shown in the available-skills list."
+  ),
+  triggerWhen: z.string().min(1).max(1024).optional().describe(
+    "Optional trigger guidance for Skill writes."
+  ),
+  priority: z.number().int().min(0).max(100).optional().describe(
+    "Optional Skill priority. Higher numbers sort first."
+  ),
+  agentId: z.string().nullable().optional().describe(
+    "Optional agent-specific override for Skill writes. Leave null for global skills."
+  ),
+}).passthrough()
 
 export const afsListTool = createTool({
   id: "afs_list",
@@ -57,16 +71,19 @@ export const afsWriteTool = createTool({
     "Path: Desktop/<scope>/Memory/<bucket>/<name> or Desktop/<scope>/Skill/<name>\n" +
     "Buckets: user (preferences, facts), note (observations, episodic summaries)\n" +
     "Existing entries at the same path are merged (deduplication).\n" +
-    "Skill write takes description via metadata: pass metadata.description.\n" +
+    "Skill write takes summary fields via metadata: pass metadata.description and optionally metadata.triggerWhen, metadata.priority, metadata.agentId.\n" +
     "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference, Desktop/Canvas/Skill/poster-layout",
   inputSchema: z.object({
     path: z.string().describe("Target path, e.g. Desktop/Memory/user/prefers-morning-design"),
     content: z.string().describe("Memory content text"),
     tags: z.array(z.string()).optional().describe("Optional tags for retrieval"),
     confidence: z.number().int().min(0).max(100).optional().describe("Confidence 0-100, default 80"),
+    metadata: afsWriteMetadataSchema.optional().describe(
+      "Optional metadata. For Skill writes, include description and any triggerWhen/priority/agentId fields."
+    ),
   }),
   requestContextSchema,
-  execute: async ({ path, content, tags, confidence }, context) => {
+  execute: async ({ path, content, tags, confidence, metadata }, context) => {
     const userId = context.requestContext?.get("userId") as string | undefined
     if (!userId) return { ok: false, error: "Missing authenticated user context" }
 
@@ -75,6 +92,7 @@ export const afsWriteTool = createTool({
         tags,
         confidence,
         sourceType: "prediction_agent",
+        metadata,
       })
       return { ok: true, node }
     } catch (error) {

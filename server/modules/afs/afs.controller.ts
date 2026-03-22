@@ -36,6 +36,7 @@ export async function afsWrite(context: Context<ServerBindings>, body: AfsWriteB
     tags: body.tags,
     confidence: body.confidence,
     sourceType: body.sourceType,
+    metadata: body.metadata,
   })
   return ok(context, node)
 }

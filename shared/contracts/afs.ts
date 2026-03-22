@@ -99,6 +99,12 @@ export const afsWriteBodySchema = z.object({
   tags: z.array(z.string()).optional(),
   confidence: z.number().int().min(0).max(100).optional(),
   sourceType: z.enum(AFS_SOURCE_TYPES).optional(),
+  metadata: z.object({
+    description: z.string().min(1).max(1024).optional(),
+    triggerWhen: z.string().min(1).max(1024).optional(),
+    priority: z.number().int().min(0).max(100).optional(),
+    agentId: z.string().nullable().optional(),
+  }).passthrough().optional(),
 })
 
 export type AfsWriteBody = z.infer<typeof afsWriteBodySchema>

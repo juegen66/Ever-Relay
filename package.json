@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed-skill-test": "npx --yes tsx scripts/seed-afs-skill-test.ts",
     "db:seed-message-html-builder": "npx --yes tsx scripts/seed-afs-skill-message-html-builder.ts",
+    "db:seed-preference-memory-maintainer": "npx --yes tsx scripts/seed-afs-skill-preference-memory-maintainer.ts",
     "db:studio": "drizzle-kit studio",
     "article:assemble": "node scripts/assemble-article.mjs",
     "test": "vitest run",

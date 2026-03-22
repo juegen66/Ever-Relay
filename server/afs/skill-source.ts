@@ -6,7 +6,9 @@
  *   <skillPath>/<skillName>/SKILL.md
  *
  * We simulate this by mapping DB rows to virtual paths. When Mastra calls
- * readFile on a SKILL.md path, we return the content from the DB row.
+ * readFile on a SKILL.md path, we return the content from the DB row. When a
+ * dynamic skill has reference documents, we also expose a virtual
+ * references/<name>.md directory under the skill.
  */
 
 import type {
@@ -15,22 +17,29 @@ import type {
   SkillSourceStat,
 } from "@mastra/core/workspace"
 
+import { afsSkillReferenceService } from "./skill-reference"
 import { afsSkillService } from "./skill"
+import type { AfsScope } from "@/server/db/schema"
+import type { SkillReferenceMeta } from "./skill-reference"
 
 export interface DbSkillSourceConfig {
   userId: string
   agentId?: string
+  scope?: AfsScope
 }
 
 export class DbSkillSource implements SkillSource {
   private readonly userId: string
   private readonly agentId?: string
+  private readonly scope?: AfsScope
   /** Cache of skill rows keyed by name, refreshed on readdir of root */
-  private cache = new Map<string, { description: string; content: string; updatedAt: Date }>()
+  private cache = new Map<string, { id: string; description: string; content: string; updatedAt: Date }>()
+  private referenceCache = new Map<string, SkillReferenceMeta[]>()
 
   constructor(config: DbSkillSourceConfig) {
     this.userId = config.userId
     this.agentId = config.agentId
+    this.scope = config.scope
   }
 
   /**
@@ -39,13 +48,18 @@ export class DbSkillSource implements SkillSource {
   private async refreshCache(): Promise<void> {
     const metas = await afsSkillService.listSkillMeta(this.userId, {
       agentId: this.agentId,
+      scope: this.scope,
     })
 
     this.cache.clear()
+    this.referenceCache.clear()
     for (const meta of metas) {
       // We store just enough to serve exists/stat/readdir without hitting DB again.
       // loadSkillContent is only called for readFile on SKILL.md.
+      if (this.cache.has(meta.name)) continue
+
       this.cache.set(meta.name, {
+        id: meta.id,
         description: meta.description,
         content: "", // lazy — only loaded in readFile
         updatedAt: new Date(meta.updatedAt),
@@ -65,6 +79,28 @@ export class DbSkillSource implements SkillSource {
     return null
   }
 
+  private parseReferenceName(path: string): string | null {
+    const segments = path.replace(/^\/+|\/+$/g, "").split("/")
+    if (segments.length >= 4 && segments[2] === "references") {
+      return segments[3].replace(/\.md$/i, "")
+    }
+    return null
+  }
+
+  private async getReferenceMetas(skillName: string): Promise<SkillReferenceMeta[]> {
+    if (this.cache.size === 0) await this.refreshCache()
+
+    const skill = this.cache.get(skillName)
+    if (!skill) return []
+
+    const cached = this.referenceCache.get(skill.id)
+    if (cached) return cached
+
+    const refs = (await afsSkillReferenceService.listReferenceMeta(this.userId, skill.id)) ?? []
+    this.referenceCache.set(skill.id, refs)
+    return refs
+  }
+
   async exists(path: string): Promise<boolean> {
     const normalized = path.replace(/^\/+|\/+$/g, "")
     const segments = normalized.split("/")
@@ -82,6 +118,17 @@ export class DbSkillSource implements SkillSource {
 
     // SKILL.md exists
     if (segments.length === 3 && segments[2] === "SKILL.md") return true
+
+    if (segments.length === 3 && segments[2] === "references") {
+      const refs = await this.getReferenceMetas(skillName)
+      return refs.length > 0
+    }
+
+    if (segments.length === 4 && segments[2] === "references") {
+      const refs = await this.getReferenceMetas(skillName)
+      const referenceName = this.parseReferenceName(path)
+      return referenceName ? refs.some((ref) => ref.name === referenceName) : false
+    }
 
     return false
   }
@@ -112,48 +159,79 @@ export class DbSkillSource implements SkillSource {
       return { name: "SKILL.md", type: "file", size: 0, createdAt: modifiedAt, modifiedAt }
     }
 
+    if (segments.length === 3 && segments[2] === "references") {
+      return { name: "references", type: "directory", size: 0, createdAt: modifiedAt, modifiedAt }
+    }
+
+    if (segments.length === 4 && segments[2] === "references") {
+      return { name: segments[3], type: "file", size: 0, createdAt: modifiedAt, modifiedAt }
+    }
+
     throw new Error(`DbSkillSource: path not found: ${path}`)
   }
 
   async readFile(path: string): Promise<string> {
     const normalized = path.replace(/^\/+|\/+$/g, "")
     const segments = normalized.split("/")
-
-    if (segments.length < 3 || segments[2] !== "SKILL.md") {
-      throw new Error(`DbSkillSource: can only read SKILL.md files, got: ${path}`)
-    }
+    if (this.cache.size === 0) await this.refreshCache()
 
     const skillName = segments[1]
 
-    // Load full skill from DB
-    const row = await afsSkillService.loadSkillByName(
-      this.userId,
-      skillName,
-      this.agentId
-    )
+    if (segments.length >= 3 && segments[2] === "SKILL.md") {
+      // Load full skill from DB
+      const row = await afsSkillService.loadSkillByName(
+        this.userId,
+        skillName,
+        this.agentId,
+        this.scope
+      )
 
-    if (!row) {
-      throw new Error(`DbSkillSource: skill not found: ${skillName}`)
+      if (!row) {
+        throw new Error(`DbSkillSource: skill not found: ${skillName}`)
+      }
+
+      // Build SKILL.md content with YAML frontmatter + markdown body
+      const triggerLine = row.triggerWhen ? `\ntrigger_when: "${row.triggerWhen}"` : ""
+      const tagsLine = row.tags.length > 0 ? `\ntags: ${JSON.stringify(row.tags)}` : ""
+
+      return [
+        "---",
+        `name: ${row.name}`,
+        `description: "${row.description}"`,
+        `version: ${row.version}`,
+        `priority: ${row.priority}`,
+        triggerLine,
+        tagsLine,
+        "---",
+        "",
+        row.content,
+      ]
+        .filter((line) => line !== "")
+        .join("\n")
     }
 
-    // Build SKILL.md content with YAML frontmatter + markdown body
-    const triggerLine = row.triggerWhen ? `\ntrigger_when: "${row.triggerWhen}"` : ""
-    const tagsLine = row.tags.length > 0 ? `\ntags: ${JSON.stringify(row.tags)}` : ""
+    if (segments.length >= 4 && segments[2] === "references") {
+      const skill = this.cache.get(skillName)
+      const referenceName = this.parseReferenceName(path)
 
-    return [
-      "---",
-      `name: ${row.name}`,
-      `description: "${row.description}"`,
-      `version: ${row.version}`,
-      `priority: ${row.priority}`,
-      triggerLine,
-      tagsLine,
-      "---",
-      "",
-      row.content,
-    ]
-      .filter((line) => line !== "")
-      .join("\n")
+      if (!skill || !referenceName) {
+        throw new Error(`DbSkillSource: reference not found: ${path}`)
+      }
+
+      const row = await afsSkillReferenceService.loadReferenceByName(
+        this.userId,
+        skill.id,
+        referenceName
+      )
+
+      if (!row) {
+        throw new Error(`DbSkillSource: reference not found: ${referenceName}`)
+      }
+
+      return row.content
+    }
+
+    throw new Error(`DbSkillSource: can only read SKILL.md or references/*.md files, got: ${path}`)
   }
 
   async readdir(path: string): Promise<SkillSourceEntry[]> {
@@ -175,7 +253,21 @@ export class DbSkillSource implements SkillSource {
       if (this.cache.size === 0) await this.refreshCache()
       if (!this.cache.has(skillName)) return []
 
-      return [{ name: "SKILL.md", type: "file" as const }]
+      const refs = await this.getReferenceMetas(skillName)
+      return [
+        { name: "SKILL.md", type: "file" as const },
+        ...(refs.length > 0 ? [{ name: "references", type: "directory" as const }] : []),
+      ]
+    }
+
+    if (segments.length === 3 && segments[2] === "references") {
+      const skillName = segments[1]
+      const refs = await this.getReferenceMetas(skillName)
+
+      return refs.map((reference) => ({
+        name: `${reference.name}.md`,
+        type: "file" as const,
+      }))
     }
 
     return []

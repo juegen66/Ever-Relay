@@ -6,7 +6,15 @@ import { DbSkillSource } from "@/server/afs/skill-source"
 import { db } from "@/server/core/database"
 import { afsSkill } from "@/server/db/schema"
 import { createDynamicSkillWorkspace } from "@/server/mastra/workspace"
-import { DESKTOP_COPILOT_AGENT, PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
+import {
+  CANVAS_COPILOT_AGENT,
+  DESKTOP_COPILOT_AGENT,
+  PREDICTION_AGENT_ID,
+} from "@/shared/copilot/constants"
+import {
+  PREFERENCE_MEMORY_MAINTAINER_SKILL_NAME,
+  PREFERRED_WORKSTYLE_SKILL_NAME,
+} from "@/server/afs/preference-skill"
 
 const TEST_USER = "integration-test-dynamic-skill-workspace"
 const DB_MARKER = `DB_SKILL_MARKER_${Date.now()}`
@@ -100,5 +108,38 @@ describe("dynamic skill workspace (integration)", () => {
     expect(skill?.name).toBe("db-agent-skill")
     expect(skill?.description).toBe("Desktop agent skill stored in afs_skill")
     expect(skill?.instructions).toContain(DB_MARKER)
+  })
+
+  it("includes Desktop global meta skills alongside scope-specific preferred-workstyle", async () => {
+    await afsSkillService.upsertSkill(TEST_USER, {
+      scope: "Desktop",
+      name: PREFERENCE_MEMORY_MAINTAINER_SKILL_NAME,
+      description: "Global meta skill for preference learning",
+      tags: ["preference", "global"],
+      content: "# Preference Memory Maintainer\nUse AFS consistently",
+      priority: 20,
+    })
+
+    await afsSkillService.upsertSkill(TEST_USER, {
+      scope: "Canvas",
+      name: PREFERRED_WORKSTYLE_SKILL_NAME,
+      description: "Current canvas workstyle guidance",
+      triggerWhen: "当任务涉及 Canvas 用户偏好时",
+      tags: ["preference", "canvas"],
+      content: "# Preferred Workstyle\n- Prefer compact labels",
+      priority: 40,
+    })
+
+    const canvasMetas = await afsSkillService.listSkillMeta(TEST_USER, {
+      agentId: CANVAS_COPILOT_AGENT,
+      scope: "Canvas",
+    })
+
+    expect(canvasMetas.map((skill) => skill.name)).toContain(
+      PREFERENCE_MEMORY_MAINTAINER_SKILL_NAME
+    )
+    expect(canvasMetas.map((skill) => skill.name)).toContain(
+      PREFERRED_WORKSTYLE_SKILL_NAME
+    )
   })
 })

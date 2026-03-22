@@ -536,9 +536,12 @@ export const afsSkill = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    userAgentNameIdx: uniqueIndex("afs_skill_user_agent_name_idx").on(
-      table.userId, table.agentId, table.name
-    ),
+    userAgentScopeNameIdx: uniqueIndex("afs_skill_user_agent_scope_name_idx").on(
+      table.userId, table.agentId, table.scope, table.name
+    ).where(sql`${table.agentId} is not null`),
+    userScopeNameGlobalIdx: uniqueIndex("afs_skill_user_scope_name_global_idx").on(
+      table.userId, table.scope, table.name
+    ).where(sql`${table.agentId} is null`),
     userScopeActiveIdx: index("afs_skill_user_scope_active_idx").on(
       table.userId, table.scope, table.isActive
     ),
@@ -549,3 +552,45 @@ export const afsSkill = pgTable(
 )
 
 export type AfsSkillRow = typeof afsSkill.$inferSelect
+
+export const AFS_SKILL_REFERENCE_CONTENT_FORMATS = [
+  "markdown",
+  "text",
+  "json",
+] as const
+
+export type AfsSkillReferenceContentFormat =
+  (typeof AFS_SKILL_REFERENCE_CONTENT_FORMATS)[number]
+
+export const afsSkillReference = pgTable(
+  "afs_skill_reference",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    skillId: uuid("skill_id").notNull().references(() => afsSkill.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    content: text("content").notNull(),
+    contentFormat: text("content_format")
+      .$type<AfsSkillReferenceContentFormat>()
+      .notNull()
+      .default("markdown"),
+    loadWhen: text("load_when"),
+    priority: integer("priority").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    skillNameIdx: uniqueIndex("afs_skill_reference_skill_name_idx").on(
+      table.skillId, table.name
+    ),
+    userSkillActiveIdx: index("afs_skill_reference_user_skill_active_idx").on(
+      table.userId, table.skillId, table.isActive, table.priority
+    ),
+  })
+)
+
+export type AfsSkillReferenceRow = typeof afsSkillReference.$inferSelect

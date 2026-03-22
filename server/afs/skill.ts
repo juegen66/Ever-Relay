@@ -41,6 +41,62 @@ function rowToMeta(row: AfsSkillRow): SkillMeta {
   }
 }
 
+function getAgentSpecificity(row: Pick<AfsSkillRow, "agentId">, requestedAgentId?: string): number {
+  if (!requestedAgentId) {
+    return row.agentId ? 0 : 1
+  }
+
+  if (row.agentId === requestedAgentId) return 2
+  if (row.agentId === null) return 1
+  return 0
+}
+
+function getScopeSpecificity(row: Pick<AfsSkillRow, "scope">, requestedScope?: AfsScope): number {
+  if (!requestedScope) return 1
+  if (row.scope === requestedScope) return 2
+  if (row.scope === "Desktop") return 1
+  return 0
+}
+
+function compareVisibleSkills(
+  left: AfsSkillRow,
+  right: AfsSkillRow,
+  options?: { agentId?: string; scope?: AfsScope }
+): number {
+  const scopeDiff =
+    getScopeSpecificity(right, options?.scope) -
+    getScopeSpecificity(left, options?.scope)
+  if (scopeDiff !== 0) return scopeDiff
+
+  const agentDiff =
+    getAgentSpecificity(right, options?.agentId) -
+    getAgentSpecificity(left, options?.agentId)
+  if (agentDiff !== 0) return agentDiff
+
+  const priorityDiff = right.priority - left.priority
+  if (priorityDiff !== 0) return priorityDiff
+
+  return right.updatedAt.getTime() - left.updatedAt.getTime()
+}
+
+function resolveVisibleSkills(
+  rows: AfsSkillRow[],
+  options?: { agentId?: string; scope?: AfsScope }
+): AfsSkillRow[] {
+  const sorted = [...rows].sort((left, right) =>
+    compareVisibleSkills(left, right, options)
+  )
+
+  const deduped = new Map<string, AfsSkillRow>()
+  for (const row of sorted) {
+    if (!deduped.has(row.name)) {
+      deduped.set(row.name, row)
+    }
+  }
+
+  return [...deduped.values()]
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -106,7 +162,9 @@ export class AfsSkillService {
       .where(and(...conditions))
       .orderBy(desc(afsSkill.priority), desc(afsSkill.updatedAt))
 
-    return rows.map((r) => rowToMeta(r as unknown as AfsSkillRow))
+    return resolveVisibleSkills(rows as unknown as AfsSkillRow[], options).map((row) =>
+      rowToMeta(row)
+    )
   }
 
   /**
@@ -128,7 +186,8 @@ export class AfsSkillService {
   async loadSkillByName(
     userId: string,
     name: string,
-    agentId?: string | null
+    agentId?: string | null,
+    scope?: AfsScope
   ): Promise<AfsSkillRow | null> {
     const conditions = [
       eq(afsSkill.userId, userId),
@@ -142,16 +201,34 @@ export class AfsSkillService {
       )
     }
 
-    const row = await db.query.afsSkill.findFirst({
-      where: and(...conditions),
-      orderBy: [desc(afsSkill.priority)],
-    })
+    if (scope) {
+      if (scope === "Desktop") {
+        conditions.push(eq(afsSkill.scope, "Desktop"))
+      } else {
+        conditions.push(
+          or(
+            eq(afsSkill.scope, scope),
+            eq(afsSkill.scope, "Desktop")
+          )!
+        )
+      }
+    }
 
-    return row ?? null
+    const rows = await db
+      .select()
+      .from(afsSkill)
+      .where(and(...conditions))
+
+    const [resolved] = [...(rows as AfsSkillRow[])].sort((left, right) =>
+      compareVisibleSkills(left, right, { agentId: agentId ?? undefined, scope })
+    )
+
+    return resolved ?? null
   }
 
   /**
-   * Create or update a skill. Upserts based on (userId, agentId, name).
+   * Create or update a skill. Upserts based on the visible owner key:
+   * (userId, scope, name, agentId|null).
    */
   async upsertSkill(
     userId: string,
@@ -167,12 +244,14 @@ export class AfsSkillService {
       metadata?: Record<string, unknown>
     }
   ): Promise<AfsSkillRow> {
+    const scope = data.scope ?? "Desktop"
     const existing = await db.query.afsSkill.findFirst({
       where: and(
         eq(afsSkill.userId, userId),
         data.agentId
           ? eq(afsSkill.agentId, data.agentId)
           : isNull(afsSkill.agentId),
+        eq(afsSkill.scope, scope),
         eq(afsSkill.name, data.name)
       ),
     })
@@ -185,7 +264,7 @@ export class AfsSkillService {
           triggerWhen: data.triggerWhen ?? existing.triggerWhen,
           tags: data.tags ?? existing.tags,
           content: data.content,
-          scope: data.scope ?? existing.scope,
+          scope,
           priority: data.priority ?? existing.priority,
           metadata: { ...(existing.metadata ?? {}), ...(data.metadata ?? {}) },
           version: existing.version + 1,
@@ -202,7 +281,7 @@ export class AfsSkillService {
       .values({
         userId,
         agentId: data.agentId ?? null,
-        scope: data.scope ?? "Desktop",
+        scope,
         name: data.name,
         description: data.description,
         triggerWhen: data.triggerWhen ?? null,

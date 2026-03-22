@@ -16,7 +16,17 @@ export class AfsService {
     return afs.read(userId, path)
   }
 
-  write(userId: string, path: string, content: string, options?: { tags?: string[]; confidence?: number; sourceType?: string }) {
+  write(
+    userId: string,
+    path: string,
+    content: string,
+    options?: {
+      tags?: string[]
+      confidence?: number
+      sourceType?: string
+      metadata?: Record<string, unknown>
+    }
+  ) {
     return afs.write(userId, path, content, options)
   }
 

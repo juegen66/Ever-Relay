@@ -4,6 +4,7 @@ import { E2BSandbox } from "@mastra/e2b"
 import { DbSkillSource } from "@/server/afs/skill-source"
 import { codingAppsService } from "@/server/modules/coding-apps/coding-apps.service"
 import { sandboxBindingsService } from "@/server/modules/sandbox/sandbox-bindings.service"
+import type { AfsScope } from "@/server/db/schema"
 
 const PREDICTION_REPORT_BUILDER_SKILL_PATH =
   "/Users/qiaodailong/.codex/skills/prediction-report-builder"
@@ -92,9 +93,10 @@ export function createPredictionSkillWorkspace() {
 export function createDynamicSkillWorkspace(
   userId: string,
   agentId?: string,
-  extraLocalSkills?: string[]
+  extraLocalSkills?: string[],
+  scope?: AfsScope
 ) {
-  const dbSource = new DbSkillSource({ userId, agentId })
+  const dbSource = new DbSkillSource({ userId, agentId, scope })
   const skillPaths = [DB_SKILLS_ROOT, ...(extraLocalSkills ?? [])]
 
   return new Workspace({
