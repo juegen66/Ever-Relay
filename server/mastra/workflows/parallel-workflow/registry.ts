@@ -3,6 +3,7 @@ import {
   SKILL_TEST_DEFAULT_USER_ID,
   PARALLEL_PLANNER_AGENT_ID,
 } from "@/server/mastra/agents/shared/parallel-agent.constants"
+import { WORKER_AGENT_ID } from "@/server/mastra/agents/shared/worker-agent"
 
 export interface ParallelWorkflowSourceConfig {
   sourceAgentId: string
@@ -38,8 +39,8 @@ export const parallelWorkflowRegistry: Record<string, ParallelWorkflowSourceConf
   [SKILL_TEST_AGENT_ID]: {
     sourceAgentId: SKILL_TEST_AGENT_ID,
     plannerAgentId: PARALLEL_PLANNER_AGENT_ID,
-    defaultTaskAgentId: SKILL_TEST_AGENT_ID,
-    allowedTaskAgentIds: [SKILL_TEST_AGENT_ID],
+    defaultTaskAgentId: WORKER_AGENT_ID,
+    allowedTaskAgentIds: [WORKER_AGENT_ID, SKILL_TEST_AGENT_ID],
     workerActiveTools: ["skill-activate"],
     defaultUserId: SKILL_TEST_DEFAULT_USER_ID,
     minimumComplexityScore: 2,

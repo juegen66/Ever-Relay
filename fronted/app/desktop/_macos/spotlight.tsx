@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react"
 
-import { Search } from "lucide-react"
+import { Activity, Search } from "lucide-react"
 
 import type { AppId } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
@@ -16,6 +16,7 @@ const BASE_SPOTLIGHT_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "logo", name: "Logo Studio", category: "Applications" },
   { id: "vibecoding", name: "Coding Apps", category: "Applications" },
+  { id: "activity", name: "Agent Activity", category: "Applications" },
 ]
 
 export function Spotlight() {
@@ -79,6 +80,8 @@ export function Spotlight() {
     canvas: "#ff7a00",
     logo: "#d946ef",
     vibecoding: "#16a34a",
+    report: "#0f766e",
+    activity: "#0891b2",
   }
 
   const iconColorForApp = (id: AppId) =>
@@ -148,7 +151,11 @@ export function Spotlight() {
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-bold text-white"
                   style={{ background: iconColorForApp(app.id) }}
                 >
-                  {app.name.charAt(0)}
+                  {app.id === "activity" ? (
+                    <Activity className="h-4 w-4 text-white" strokeWidth={2.4} />
+                  ) : (
+                    app.name.charAt(0)
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="text-[14px] font-medium">{app.name}</div>

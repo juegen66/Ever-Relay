@@ -6,13 +6,14 @@ import { resolveAppDisplayName } from "@/lib/desktop/resolve-app-display-name"
 import type { DesktopFolder, DesktopItemType, WindowState } from "@/lib/desktop/types"
 import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
+import { ActivityApp } from "./apps/activity-app"
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
 import { ReportApp } from "./apps/report-app"
 import { TextEditApp } from "./apps/textedit-app"
-import { VibecodingApp } from "./apps/vibecoding-app"
 import { ThirdPartyApp } from "./apps/third-party-app"
+import { VibecodingApp } from "./apps/vibecoding-app"
 
 const APP_TITLES: Record<string, string> = {
   finder: "Finder",
@@ -21,10 +22,12 @@ const APP_TITLES: Record<string, string> = {
   vibecoding: "Coding Apps",
   textedit: "TextEdit",
   report: "Predict Report",
+  activity: "Agent Activity",
 }
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
   canvas: CanvasApp,
+  activity: ActivityApp,
   logo: LogoStudioApp,
   vibecoding: VibecodingApp,
   report: ReportApp,

@@ -3,11 +3,11 @@
 import { create } from "zustand"
 
 import type { AppId, BuiltinAppId, WindowState } from "@/lib/desktop/types"
-import { isThirdPartyAppId, thirdPartySlugFromAppId } from "@/lib/third-party-app/types"
-import { useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
+import { isThirdPartyAppId, thirdPartySlugFromAppId } from "@/lib/third-party-app/types"
 
 const DEFAULT_WINDOW_SIZE: Record<BuiltinAppId, { w: number; h: number }> = {
   finder: { w: 780, h: 480 },
@@ -16,6 +16,7 @@ const DEFAULT_WINDOW_SIZE: Record<BuiltinAppId, { w: number; h: number }> = {
   vibecoding: { w: 980, h: 640 },
   textedit: { w: 720, h: 520 },
   report: { w: 900, h: 640 },
+  activity: { w: 940, h: 680 },
 }
 
 function resolveWindowSizeForApp(appId: AppId): { w: number; h: number } {

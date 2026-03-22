@@ -6,6 +6,7 @@ export type BuiltinAppId =
   | "vibecoding"
   | "textedit"
   | "report"
+  | "activity"
 
 /** Third-party iframe apps use ids `tp_<slug>`, e.g. tp_demo_weather */
 export type ThirdPartyAppId = `tp_${string}`

@@ -3,6 +3,8 @@ import { afsMemoryIngestWorkflow } from "@/server/mastra/inngest/orchestrators/a
 import { appBuildWorkflow } from "@/server/mastra/inngest/orchestrators/app-build.orchestrator"
 import { codingAgentWorkflow } from "@/server/mastra/inngest/orchestrators/coding-agent.orchestrator"
 import { logoDesignWorkflow } from "@/server/mastra/inngest/orchestrators/logo-design.orchestrator"
+import { offlineProactiveSchedulerWorkflow } from "@/server/mastra/inngest/orchestrators/offline-proactive-scheduler.orchestrator"
+import { offlineProactiveWorkflow } from "@/server/mastra/inngest/orchestrators/offline-proactive.orchestrator"
 import { parallelWorkflow } from "@/server/mastra/workflows/parallel-workflow"
 
 export const workflows = {
@@ -11,5 +13,7 @@ export const workflows = {
   appBuild: appBuildWorkflow,
   codingAgent: codingAgentWorkflow,
   logoDesign: logoDesignWorkflow,
+  offlineProactive: offlineProactiveWorkflow,
+  offlineProactiveScheduler: offlineProactiveSchedulerWorkflow,
   parallelWorkflow,
 }

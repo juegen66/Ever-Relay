@@ -29,6 +29,7 @@ agentvibecoding420-main/
 coverage/
 
 # Cursor and docs (local/planning)
+changeversion/
 .cursor/
 .factory/
 .worktrees/

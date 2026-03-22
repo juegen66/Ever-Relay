@@ -8,6 +8,7 @@ export const BUILTIN_APP_IDS: BuiltinAppId[] = [
   "vibecoding",
   "textedit",
   "report",
+  "activity",
 ]
 
 /** @deprecated Use BUILTIN_APP_IDS */

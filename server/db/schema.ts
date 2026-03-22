@@ -255,6 +255,54 @@ export const userSandboxes = pgTable(
 )
 
 // ---------------------------------------------------------------------------
+// Agent activity + registry
+// ---------------------------------------------------------------------------
+
+export const agentRegistry = pgTable(
+  "agent_registry",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: text("agent_id").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    offlineCapable: boolean("offline_capable").notNull().default(false),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    agentIdUniqueIdx: uniqueIndex("agent_registry_agent_id_unique_idx").on(table.agentId),
+    offlineCapableIdx: index("agent_registry_offline_capable_idx").on(table.offlineCapable, table.updatedAt),
+  })
+)
+
+export const agentActivity = pgTable(
+  "agent_activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    agentId: text("agent_id")
+      .notNull()
+      .references(() => agentRegistry.agentId),
+    activityType: text("activity_type").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    threadId: text("thread_id"),
+    runId: text("run_id"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userCreatedIdx: index("agent_activity_user_created_idx").on(table.userId, table.createdAt),
+    userAgentCreatedIdx: index("agent_activity_user_agent_created_idx").on(
+      table.userId,
+      table.agentId,
+      table.createdAt
+    ),
+  })
+)
+
+// ---------------------------------------------------------------------------
 // AFS v2 — Unified path-based file system
 //
 // Two tables: afs_memory (writable) + afs_history (append-only)

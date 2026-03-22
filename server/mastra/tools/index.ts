@@ -6,6 +6,7 @@ export {
   deleteDesktopItemTool,
   updateFileContentTool,
 } from "./files-write"
+export { readDesktopFileTool } from "./files-read"
 export {
   createCanvasProjectTool,
   updateCanvasProjectTool,

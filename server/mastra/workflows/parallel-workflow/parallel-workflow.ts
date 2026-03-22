@@ -3,6 +3,9 @@ import { z } from "zod"
 
 import model from "@/server/mastra/model"
 import {
+  loadParallelTaskAgentIds,
+} from "@/server/mastra/workflows/parallel-workflow/available-task-agent-ids"
+import {
   buildParallelTaskPrompt,
 } from "@/server/mastra/workflows/parallel-workflow/build-task-prompt"
 import {
@@ -56,10 +59,12 @@ const planStep = createStep({
       throw new Error(`Planner agent "${config.plannerAgentId}" not found`)
     }
 
+    const allowedTaskAgentIds = await loadParallelTaskAgentIds(config, mastra)
+
     const prompt = [
       "Create a dependency-aware parallel execution plan.",
       `Source agent: ${inputData.sourceAgentId}`,
-      `Allowed task agent ids: ${config.allowedTaskAgentIds.join(", ")}`,
+      `Allowed task agent ids: ${allowedTaskAgentIds.join(", ")}`,
       `Default task agent id: ${config.defaultTaskAgentId}`,
       "",
       "Return a JSON object with a tasks array.",
@@ -85,6 +90,7 @@ const planStep = createStep({
 
     await setState({
       plan,
+      allowedTaskAgentIds,
       completedTaskIds: [],
       allReports: [],
       sourceAgentId: inputData.sourceAgentId,
@@ -118,6 +124,9 @@ const executeWaveStep = createStep({
     }
 
     const plan: ParallelPlan = "tasks" in inputData ? inputData : inputData.plan
+    const allowedTaskAgentIds = state.allowedTaskAgentIds.length > 0
+      ? state.allowedTaskAgentIds
+      : config.allowedTaskAgentIds
     const completedTaskIds = state.completedTaskIds
     const allReports = state.allReports
     const unblockedTasks = getExecutableParallelTasks(plan, completedTaskIds)
@@ -135,7 +144,7 @@ const executeWaveStep = createStep({
       unblockedTasks.map(async (task: ParallelTask) => {
         const agentId = normalizeParallelTaskAgentId(
           task,
-          config.allowedTaskAgentIds,
+          allowedTaskAgentIds,
           config.defaultTaskAgentId
         )
         const agent = mastra?.getAgent(agentId)

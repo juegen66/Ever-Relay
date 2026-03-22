@@ -63,6 +63,7 @@ export type ParallelWorkflowOutput = z.infer<typeof parallelWorkflowOutputSchema
 
 export const parallelWorkflowStateSchema = z.object({
   plan: parallelPlanSchema.nullable(),
+  allowedTaskAgentIds: z.array(z.string().trim().min(1)),
   completedTaskIds: z.array(z.string().trim().min(1)),
   allReports: z.array(parallelTaskReportSchema),
   sourceAgentId: z.string().trim().min(1).nullable(),

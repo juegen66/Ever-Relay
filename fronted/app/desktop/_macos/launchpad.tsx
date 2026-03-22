@@ -2,6 +2,8 @@
 
 import { useMemo } from "react"
 
+import { Activity } from "lucide-react"
+
 import type { AppId } from "@/lib/desktop/types"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
@@ -14,6 +16,7 @@ const BASE_LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: str
   { id: "logo", name: "Logo Studio", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", letter: "LG" },
   { id: "vibecoding", name: "Coding Apps", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "CA" },
   { id: "report", name: "Predict Report", color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)", letter: "PR" },
+  { id: "activity", name: "Agent Activity", color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)", letter: "AA" },
 ]
 
 export function Launchpad() {
@@ -87,9 +90,13 @@ export function Launchpad() {
               className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] shadow-lg transition-transform group-hover:scale-110 group-active:scale-95"
               style={{ background: app.color }}
             >
-              <span className="text-[24px] font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                {app.letter}
-              </span>
+              {app.id === "activity" ? (
+                <Activity className="h-8 w-8 text-white drop-shadow-sm" strokeWidth={2.2} />
+              ) : (
+                <span className="text-[24px] font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
+                  {app.letter}
+                </span>
+              )}
             </div>
             <span className="text-[12px] text-white font-medium" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
               {app.name}

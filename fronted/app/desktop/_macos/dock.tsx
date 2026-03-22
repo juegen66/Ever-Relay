@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useMemo } from "react"
 
-import { Bot, Cloud, FileBarChart, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
+import { Activity, Bot, Cloud, FileBarChart, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
 import type { AppId } from "@/lib/desktop/types"
@@ -38,6 +38,7 @@ const BASE_DOCK_ITEMS: DockItem[] = [
   { kind: "app", id: "logo", name: "Logo Studio", icon: PenTool, color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)" },
   { kind: "app", id: "vibecoding", name: "Coding Apps", icon: Terminal, color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
   { kind: "app", id: "report", name: "Predict Report", icon: FileBarChart, color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)" },
+  { kind: "app", id: "activity", name: "Agent Activity", icon: Activity, color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)" },
   { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", icon: Bot, color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
   { kind: "route", id: "no-chatbot-dashboard", href: "/desktop/no-chatbot", name: "No Chatbot", icon: GitBranch, color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
 ]
@@ -86,7 +87,7 @@ export function Dock() {
     setTooltip(null)
   }, [])
 
-  const getScale = useCallback((index: number) => {
+  const getScale = (index: number) => {
     if (mouseX === null) return 1
     const itemWidth = 52
     const padding = 10
@@ -96,7 +97,7 @@ export function Dock() {
     const maxDist = 100
     if (distance > maxDist) return 1
     return 1 + 0.6 * Math.cos((distance / maxDist) * (Math.PI / 2))
-  }, [mouseX])
+  }
 
   return (
     <div className="fixed bottom-1.5 left-1/2 z-[9998] -translate-x-1/2">

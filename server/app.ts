@@ -4,6 +4,8 @@ import { fail } from "@/server/lib/http/response"
 import { errorHandler } from "@/server/middlewares/error"
 import { loggerMiddleware } from "@/server/middlewares/logger"
 import { requestIdMiddleware } from "@/server/middlewares/request-id"
+import { registerAfsRoutes } from "@/server/modules/afs/afs.route"
+import { registerAgentActivityRoutes } from "@/server/modules/agent-activity/agent-activity.route"
 import { registerAuthRoutes } from "@/server/modules/auth/auth.route"
 import { registerBuildsRoutes } from "@/server/modules/builds/builds.route"
 import { registerCanvasRoutes } from "@/server/modules/canvas/canvas.route"
@@ -14,7 +16,6 @@ import { registerFilesRoutes } from "@/server/modules/files/files.route"
 import { registerHealthRoutes } from "@/server/modules/health/health.route"
 import { registerImageProcessingRoutes } from "@/server/modules/image-processing/image-processing.route"
 import { registerInngestRoutes } from "@/server/modules/inngest/inngest.route"
-import { registerAfsRoutes } from "@/server/modules/afs/afs.route"
 import { registerLogoDesignRoutes } from "@/server/modules/logo-design/logo-design.route"
 import type { ServerBindings } from "@/server/types"
 
@@ -34,6 +35,7 @@ registerFilesRoutes(serverApp)
 registerHealthRoutes(serverApp)
 registerImageProcessingRoutes(serverApp)
 registerInngestRoutes(serverApp)
+registerAgentActivityRoutes(serverApp)
 registerLogoDesignRoutes(serverApp)
 
 serverApp.notFound((context) => {

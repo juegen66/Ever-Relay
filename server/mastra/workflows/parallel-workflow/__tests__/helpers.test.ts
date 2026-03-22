@@ -1,8 +1,24 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+
+vi.mock("@/server/core/database", () => ({
+  pool: {},
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    query: {
+      afsMemory: { findFirst: vi.fn() },
+      afsHistory: { findFirst: vi.fn() },
+      afsSkill: { findFirst: vi.fn() },
+    },
+  },
+}))
 
 import {
   SKILL_TEST_AGENT_ID,
 } from "@/server/mastra/agents/shared/parallel-agent.constants"
+import { WORKER_AGENT_ID } from "@/server/mastra/agents/shared/worker-agent"
 import {
   classifyParallelRequest,
 } from "@/server/mastra/workflows/parallel-workflow/complexity"
@@ -68,7 +84,7 @@ describe("parallel workflow helpers", () => {
         skillTestConfig.allowedTaskAgentIds,
         skillTestConfig.defaultTaskAgentId
       )
-    ).toBe(SKILL_TEST_AGENT_ID)
+    ).toBe(WORKER_AGENT_ID)
   })
 
   it("finalizes worker reports with task defaults", () => {

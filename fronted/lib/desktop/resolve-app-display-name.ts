@@ -11,6 +11,7 @@ const BUILTIN_APP_DISPLAY_NAMES: Record<BuiltinAppId, string> = {
   vibecoding: "Coding Apps",
   textedit: "TextEdit",
   report: "Predict Report",
+  activity: "Agent Activity",
 }
 
 export function resolveAppDisplayName(appId: AppId): string {
