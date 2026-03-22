@@ -11,6 +11,7 @@ beforeEach(() => {
     mainCopilotThreadId: threadId,
     copilotThreadId: threadId,
     activeCodingApp: null,
+    thirdPartyWindowId: null,
     silentAgentId: null,
     silentThreadId: createCopilotThreadId(),
     silentStatus: "idle",
@@ -103,6 +104,15 @@ describe("desktop-agent-store handoff state machine", () => {
       targetAgentId: "canvas_agent",
       targetMode: "canvas",
       status: "queued",
+    })
+  })
+
+  it("tracks the focused third-party window", () => {
+    useDesktopAgentStore.getState().focusThirdPartyCopilot("tp-window-1")
+
+    expect(useDesktopAgentStore.getState()).toMatchObject({
+      copilotAgentMode: "third_party",
+      thirdPartyWindowId: "tp-window-1",
     })
   })
 })

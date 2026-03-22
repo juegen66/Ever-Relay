@@ -2,7 +2,6 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
   EmptyAdapter,
 } from "@copilotkit/runtime"
-import type { Context } from "hono"
 
 import {
   createDesktopCopilotRuntime,
@@ -12,13 +11,19 @@ import type { ServerBindings } from "@/server/types"
 import {
   DESKTOP_COPILOT_ENDPOINT,
   DESKTOP_PREDICTION_ENDPOINT,
+  THIRD_PARTY_APP_SLUG_HEADER,
 } from "@/shared/copilot/constants"
+
+import type { Context } from "hono"
 
 async function handleRuntimeRequest(
   context: Context<ServerBindings>,
   options: {
     endpoint: string
-    runtimeFactory: (userId: string) => ReturnType<typeof createDesktopCopilotRuntime>
+    runtimeFactory: (
+      userId: string,
+      runtimeContext?: { thirdPartyAppSlug?: string }
+    ) => ReturnType<typeof createDesktopCopilotRuntime>
   }
 ) {
   const user = context.get("user")
@@ -26,7 +31,14 @@ async function handleRuntimeRequest(
     return context.json({ error: "Unauthorized" }, 401)
   }
 
-  const runtimeForUser = options.runtimeFactory(user.id)
+  const rawThirdPartyAppSlug = context.req.header(THIRD_PARTY_APP_SLUG_HEADER)
+  const thirdPartyAppSlug =
+    typeof rawThirdPartyAppSlug === "string" && rawThirdPartyAppSlug.trim()
+      ? rawThirdPartyAppSlug.trim()
+      : undefined
+  const runtimeForUser = options.runtimeFactory(user.id, {
+    thirdPartyAppSlug,
+  })
 
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime: runtimeForUser,
@@ -47,6 +59,6 @@ export async function handleCopilotRequest(context: Context<ServerBindings>) {
 export async function handlePredictionCopilotRequest(context: Context<ServerBindings>) {
   return handleRuntimeRequest(context, {
     endpoint: DESKTOP_PREDICTION_ENDPOINT,
-    runtimeFactory: createPredictionCopilotRuntime,
+    runtimeFactory: (userId) => createPredictionCopilotRuntime(userId),
   })
 }

@@ -2,8 +2,9 @@
 
 import { create } from "zustand"
 
-import type { ThirdPartyAppManifest, ThirdPartyToolDefinition } from "./types"
 import { thirdPartyAppIdFromSlug } from "./types"
+
+import type { ThirdPartyAppManifest, ThirdPartyToolDefinition } from "./types"
 
 /** Runtime registration for one iframe instance (one window). */
 export interface ThirdPartyIframeRegistration {
@@ -37,6 +38,19 @@ function seedBuiltInManifests() {
     allowedOrigins: [],
   }
   manifestsBySlug.set(demo.slug, demo)
+
+  const afsTest: ThirdPartyAppManifest = {
+    slug: "test_mcp_afs",
+    displayName: "Test MCP AFS",
+    description: "Local test harness for backend MCP tool loading from the test-mcp-afs server.",
+    source: {
+      type: "url",
+      url: "/third-party-apps/test-mcp-afs/index.html",
+    },
+    defaultSize: { w: 460, h: 560 },
+    allowedOrigins: [],
+  }
+  manifestsBySlug.set(afsTest.slug, afsTest)
 }
 
 seedBuiltInManifests()

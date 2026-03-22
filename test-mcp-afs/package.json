@@ -8,7 +8,9 @@
   },
   "scripts": {
     "mcp": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "mcp:http": "tsx src/http.ts",
+    "dev:http": "tsx watch src/http.ts"
   },
   "dependencies": {
     "@mastra/core": "^1.14.0",

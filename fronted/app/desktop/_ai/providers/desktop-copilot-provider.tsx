@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
 import { CopilotKit, useCopilotChatInternal } from "@copilotkit/react-core"
 import { CopilotSidebar, useChatContext } from "@copilotkit/react-ui"
@@ -30,12 +30,15 @@ import {
 } from "@/lib/copilot/agent-message-carryover"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { thirdPartySlugFromAppId } from "@/lib/third-party-app/types"
 import {
   CANVAS_COPILOT_AGENT,
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   DESKTOP_COPILOT_ENDPOINT,
   LOGO_COPILOT_AGENT,
+  THIRD_PARTY_APP_SLUG_HEADER,
+  THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
 import { DESKTOP_COPILOT_INSTRUCTIONS, DESKTOP_COPILOT_LABELS } from "../copilot-config"
@@ -56,6 +59,10 @@ function resolveActiveAgent(mode: ReturnType<typeof useDesktopAgentStore.getStat
 
   if (mode === "coding") {
     return CODING_COPILOT_AGENT
+  }
+
+  if (mode === "third_party") {
+    return THIRD_PARTY_COPILOT_AGENT
   }
 
   return DESKTOP_COPILOT_AGENT
@@ -324,8 +331,35 @@ function DesktopCopilotBridge({ desktop, children }: DesktopCopilotProviderProps
 export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProviderProps) {
   const copilotAgentMode = useDesktopAgentStore((state) => state.copilotAgentMode)
   const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
+  const thirdPartyWindowId = useDesktopAgentStore((state) => state.thirdPartyWindowId)
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
+  const windows = useDesktopWindowStore((state) => state.windows)
+  const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
   const activeAgent = resolveActiveAgent(copilotAgentMode)
+
+  const thirdPartyAppSlug = useMemo(() => {
+    if (copilotAgentMode !== "third_party") {
+      return undefined
+    }
+
+    const targetWindowId = thirdPartyWindowId ?? activeWindowId
+    if (!targetWindowId) {
+      return undefined
+    }
+
+    const targetWindow = windows.find((windowState) => windowState.id === targetWindowId)
+    return targetWindow ? thirdPartySlugFromAppId(targetWindow.appId) ?? undefined : undefined
+  }, [activeWindowId, copilotAgentMode, thirdPartyWindowId, windows])
+
+  const runtimeHeaders = useMemo(
+    () =>
+      thirdPartyAppSlug
+        ? {
+            [THIRD_PARTY_APP_SLUG_HEADER]: thirdPartyAppSlug,
+          }
+        : undefined,
+    [thirdPartyAppSlug]
+  )
 
   useEffect(() => {
     return () => {
@@ -342,6 +376,7 @@ export function DesktopCopilotProvider({ desktop, children }: DesktopCopilotProv
         key={copilotThreadId}
         runtimeUrl={DESKTOP_COPILOT_ENDPOINT}
         credentials="include"
+        headers={runtimeHeaders}
         agent={activeAgent}
         threadId={copilotThreadId}
         showDevConsole={process.env.NODE_ENV !== "production"}

@@ -8,6 +8,7 @@ import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { thirdPartySlugFromAppId } from "@/lib/third-party-app/types"
 
 function WorkingMemoryContextSync() {
   useWorkingMemory()
@@ -26,6 +27,7 @@ export function DesktopAgentContextProvider({
   const desktopFolders = useDesktopItemsStore((state) => state.desktopFolders)
   const actionLog = useDesktopActionLogStore((state) => state.actions)
   const activeCodingApp = useDesktopAgentStore((state) => state.activeCodingApp)
+  const thirdPartyWindowId = useDesktopAgentStore((state) => state.thirdPartyWindowId)
 
   const { facts, patterns, episodes } = useLongTermMemory()
 
@@ -76,6 +78,28 @@ export function DesktopAgentContextProvider({
             lastOpenedAt: activeCodingApp.lastOpenedAt ?? null,
           }
         : null,
+    },
+  })
+
+  useCopilotReadable({
+    description: "Active third-party app context for embedded iframe work",
+    value: {
+      activeThirdPartyApp: (() => {
+        const targetWindow = windows.find(
+          (windowState) => windowState.id === (thirdPartyWindowId ?? activeWindowId)
+        )
+        if (!targetWindow) return null
+
+        const appSlug = thirdPartySlugFromAppId(targetWindow.appId)
+        if (!appSlug) return null
+
+        return {
+          windowId: targetWindow.id,
+          appId: targetWindow.appId,
+          appSlug,
+          title: targetWindow.fileName ?? targetWindow.folderName ?? targetWindow.appId,
+        }
+      })(),
     },
   })
 

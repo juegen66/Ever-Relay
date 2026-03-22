@@ -5,7 +5,7 @@ import { create } from "zustand"
 import type { CodingApp } from "@/shared/contracts/coding-apps"
 import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
 
-export type CopilotAgentMode = "main" | "canvas" | "logo" | "coding"
+export type CopilotAgentMode = "main" | "canvas" | "logo" | "coding" | "third_party"
 export type SilentPredictionStatus = "idle" | "running" | "stopping"
 export type ActiveCodingApp = Pick<
   CodingApp,
@@ -53,6 +53,7 @@ interface DesktopAgentStore {
   mainCopilotThreadId: string
   copilotThreadId: string
   activeCodingApp: ActiveCodingApp | null
+  thirdPartyWindowId: string | null
   silentAgentId: string | null
   silentThreadId: string
   silentStatus: SilentPredictionStatus
@@ -63,6 +64,8 @@ interface DesktopAgentStore {
   pendingCopilotDispatch: PendingCopilotDispatch | null
   setCopilotSidebarOpen: (open: boolean) => void
   setCopilotAgentMode: (mode: CopilotAgentMode) => void
+  trackThirdPartyWindow: (windowId: string) => void
+  focusThirdPartyCopilot: (windowId: string) => void
   startNewCopilotThread: () => void
   setActiveCodingApp: (app: ActiveCodingApp) => void
   syncActiveCodingApp: (app: ActiveCodingApp) => void
@@ -86,6 +89,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
   mainCopilotThreadId: initialMainCopilotThreadId,
   copilotThreadId: initialMainCopilotThreadId,
   activeCodingApp: null,
+  thirdPartyWindowId: null,
   silentAgentId: null,
   silentThreadId: createCopilotThreadId(),
   silentStatus: "idle",
@@ -95,7 +99,18 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
   pendingHandoff: null,
   pendingCopilotDispatch: null,
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
-  setCopilotAgentMode: (mode) => set({ copilotAgentMode: mode }),
+  setCopilotAgentMode: (mode) =>
+    set((state) => ({
+      copilotAgentMode: mode,
+      thirdPartyWindowId: mode === "third_party" ? state.thirdPartyWindowId : null,
+    })),
+  trackThirdPartyWindow: (windowId) =>
+    set({ thirdPartyWindowId: windowId }),
+  focusThirdPartyCopilot: (windowId) =>
+    set({
+      copilotAgentMode: "third_party",
+      thirdPartyWindowId: windowId,
+    }),
   startNewCopilotThread: () =>
     set((state) => {
       const nextMainThreadId = createCopilotThreadId()
@@ -109,6 +124,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
       return {
         mainCopilotThreadId: nextMainThreadId,
         copilotThreadId: nextMainThreadId,
+        thirdPartyWindowId: state.copilotAgentMode === "third_party" ? state.thirdPartyWindowId : null,
       }
     }),
   setActiveCodingApp: (app) =>
@@ -116,6 +132,7 @@ export const useDesktopAgentStore = create<DesktopAgentStore>((set) => ({
       activeCodingApp: app,
       copilotAgentMode: "coding",
       copilotThreadId: app.threadId,
+      thirdPartyWindowId: null,
     }),
   syncActiveCodingApp: (app) =>
     set((state) =>

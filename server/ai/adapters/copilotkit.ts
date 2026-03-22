@@ -29,16 +29,24 @@ type CopilotRuntimeAgents = NonNullable<
   NonNullable<ConstructorParameters<typeof CopilotRuntime>[0]>["agents"]
 >
 
+type DesktopRuntimeContext = {
+  thirdPartyAppSlug?: string
+}
+
 function createMastraAgent(
   userId: string,
   agentId: CopilotAgentId,
-  source: "desktop" | "prediction"
+  source: "desktop" | "prediction",
+  runtimeContext?: DesktopRuntimeContext
 ) {
   const requestContext = new RequestContext()
   requestContext.set("userId", userId)
   requestContext.set(MASTRA_RESOURCE_ID_KEY, userId)
   requestContext.set("agentId", agentId)
   requestContext.set("source", source)
+  if (runtimeContext?.thirdPartyAppSlug) {
+    requestContext.set("thirdPartyAppSlug", runtimeContext.thirdPartyAppSlug)
+  }
 
   return new MastraAgent({
     agentId,
@@ -51,10 +59,11 @@ function createMastraAgent(
 function createCopilotRuntimeForAgents(
   userId: string,
   agentIds: readonly CopilotAgentId[],
-  source: "desktop" | "prediction"
+  source: "desktop" | "prediction",
+  runtimeContext?: DesktopRuntimeContext
 ) {
   const agents = Object.fromEntries(
-    agentIds.map((agentId) => [agentId, createMastraAgent(userId, agentId, source)])
+    agentIds.map((agentId) => [agentId, createMastraAgent(userId, agentId, source, runtimeContext)])
   ) as CopilotRuntimeAgents
 
   return new CopilotRuntime({
@@ -62,8 +71,11 @@ function createCopilotRuntimeForAgents(
   })
 }
 
-export function createDesktopCopilotRuntime(userId: string) {
-  return createCopilotRuntimeForAgents(userId, SHARED_COPILOT_AGENT_IDS, "desktop")
+export function createDesktopCopilotRuntime(
+  userId: string,
+  runtimeContext?: DesktopRuntimeContext
+) {
+  return createCopilotRuntimeForAgents(userId, SHARED_COPILOT_AGENT_IDS, "desktop", runtimeContext)
 }
 
 export function createPredictionCopilotRuntime(userId: string) {

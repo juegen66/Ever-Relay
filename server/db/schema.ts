@@ -302,6 +302,39 @@ export const agentActivity = pgTable(
   })
 )
 
+export const THIRD_PARTY_MCP_AUTH_TYPES = ["none", "bearer"] as const
+export type ThirdPartyMcpAuthType = (typeof THIRD_PARTY_MCP_AUTH_TYPES)[number]
+
+export const thirdPartyMcpBinding = pgTable(
+  "third_party_mcp_binding",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    appSlug: text("app_slug").notNull(),
+    serverUrl: text("server_url").notNull(),
+    authType: text("auth_type")
+      .$type<ThirdPartyMcpAuthType>()
+      .notNull()
+      .default("none"),
+    authToken: text("auth_token"),
+    isActive: boolean("is_active").notNull().default(true),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userAppSlugUniqueIdx: uniqueIndex("third_party_mcp_binding_user_app_slug_idx").on(
+      table.userId,
+      table.appSlug
+    ),
+    activeUpdatedIdx: index("third_party_mcp_binding_active_updated_idx").on(
+      table.userId,
+      table.isActive,
+      table.updatedAt
+    ),
+  })
+)
+
 // ---------------------------------------------------------------------------
 // AFS v2 — Unified path-based file system
 //

@@ -55,7 +55,8 @@ export function ThirdPartyApp({ windowState }: ThirdPartyAppProps) {
       slug,
       allowedOrigins,
       onReady: () => {
-        syncRegistration([], true)
+        const existing = useThirdPartyAppRegistry.getState().iframeRegistrations[windowState.id]
+        syncRegistration(existing?.tools ?? [], true)
       },
       onToolsRegistered: (tools) => {
         syncRegistration(tools, true)
@@ -91,7 +92,7 @@ export function ThirdPartyApp({ windowState }: ThirdPartyAppProps) {
     )
   }
 
-  const sandboxTokens = ["allow-scripts", "allow-forms", "allow-modals"]
+  const sandboxTokens = ["allow-scripts", "allow-forms", "allow-modals", "allow-same-origin"]
   if (manifest.sandboxExtra) {
     for (const token of manifest.sandboxExtra.split(/\s+/)) {
       if (token && !sandboxTokens.includes(token)) sandboxTokens.push(token)

@@ -34,6 +34,26 @@ pnpm mcp
 pnpm dev
 ```
 
+For the third-party agent integration in the main app, run the local HTTP transport instead:
+
+```bash
+pnpm mcp:http
+# or watch mode:
+pnpm dev:http
+```
+
+Defaults:
+
+- host: `127.0.0.1`
+- port: `3310`
+- MCP path: `/mcp`
+
+Override with env vars if needed:
+
+```bash
+AFS_MCP_HTTP_HOST=127.0.0.1 AFS_MCP_HTTP_PORT=3310 AFS_MCP_HTTP_PATH=/mcp pnpm mcp:http
+```
+
 From the parent repo, you can still use the shell wrapper (uses **this** package’s `tsx`):
 
 ```bash
@@ -41,6 +61,34 @@ From the parent repo, you can still use the shell wrapper (uses **this** package
 ```
 
 Process blocks on stdio; connect via Cursor or Claude Desktop MCP config.
+
+From the parent repo root, you can also start the HTTP transport with:
+
+```bash
+pnpm mcp-afs:http
+```
+
+## Use with the desktop third-party agent
+
+1. Start the main app in dev mode.
+2. Start this local HTTP MCP server with `pnpm mcp-afs:http` from the repo root.
+3. Save a binding for app slug `test_mcp_afs` to `http://127.0.0.1:3310/mcp`.
+4. Open the built-in `Test MCP AFS` third-party app in the desktop.
+5. Focus that window and open Copilot. The backend MCP tools will load automatically.
+
+Example binding request:
+
+```bash
+curl -X PUT http://localhost:3000/api/third-party-mcp/bindings/test_mcp_afs \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <your-token>' \
+  -d '{
+    "serverUrl": "http://127.0.0.1:3310/mcp",
+    "authType": "none"
+  }'
+```
+
+In dev mode, the main app now allows loopback MCP URLs like `127.0.0.1` and `localhost` for this local test flow. Private LAN hosts such as `192.168.x.x` remain blocked.
 
 ### Cursor MCP config
 

@@ -17,6 +17,7 @@ import { registerHealthRoutes } from "@/server/modules/health/health.route"
 import { registerImageProcessingRoutes } from "@/server/modules/image-processing/image-processing.route"
 import { registerInngestRoutes } from "@/server/modules/inngest/inngest.route"
 import { registerLogoDesignRoutes } from "@/server/modules/logo-design/logo-design.route"
+import { registerThirdPartyMcpRoutes } from "@/server/modules/third-party-mcp/third-party-mcp.route"
 import type { ServerBindings } from "@/server/types"
 
 export const serverApp = new Hono<ServerBindings>()
@@ -37,6 +38,7 @@ registerImageProcessingRoutes(serverApp)
 registerInngestRoutes(serverApp)
 registerAgentActivityRoutes(serverApp)
 registerLogoDesignRoutes(serverApp)
+registerThirdPartyMcpRoutes(serverApp)
 
 serverApp.notFound((context) => {
   return fail(context, 404, `Route not found: ${context.req.path}`)

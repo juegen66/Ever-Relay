@@ -1,15 +1,18 @@
 "use client"
 
-import { useFrontendTool } from "@copilotkit/react-core"
 import { useMemo } from "react"
 
-import type { ToolParameter } from "./types"
+import { useFrontendTool } from "@copilotkit/react-core"
+
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
+import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
 import { useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 import type { ThirdPartyToolDefinition } from "@/lib/third-party-app/types"
 import { namespacedThirdPartyToolName } from "@/lib/third-party-app/types"
 
 import { toErrorMessage, toolErr, toolOk } from "./types"
+
+import type { ToolParameter } from "./types"
 
 function jsonSchemaPropsToParameters(schema: unknown): ToolParameter[] {
   if (!schema || typeof schema !== "object") {
@@ -129,11 +132,13 @@ function ThirdPartyDynamicTool(props: {
  */
 export function ThirdPartyToolsMount() {
   const thirdPartyWindowId = useDesktopAgentStore((s) => s.thirdPartyWindowId)
+  const activeWindowId = useDesktopWindowStore((s) => s.activeWindowId)
+  const resolvedWindowId = thirdPartyWindowId ?? activeWindowId
   const registration = useThirdPartyAppRegistry((s) =>
-    thirdPartyWindowId ? s.iframeRegistrations[thirdPartyWindowId] : undefined
+    resolvedWindowId ? s.iframeRegistrations[resolvedWindowId] : undefined
   )
 
-  if (!thirdPartyWindowId || !registration?.ready || !registration.tools.length) {
+  if (!resolvedWindowId || !registration?.ready || !registration.tools.length) {
     return null
   }
 
@@ -142,7 +147,7 @@ export function ThirdPartyToolsMount() {
       {registration.tools.map((tool) => (
         <ThirdPartyDynamicTool
           key={`${registration.slug}:${tool.id}`}
-          windowId={thirdPartyWindowId}
+          windowId={resolvedWindowId}
           slug={registration.slug}
           definition={tool}
         />

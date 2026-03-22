@@ -14,6 +14,7 @@ import {
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
+  THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
 function resolveAgentIdForMode(mode: CopilotAgentMode) {
@@ -27,6 +28,10 @@ function resolveAgentIdForMode(mode: CopilotAgentMode) {
 
   if (mode === "coding") {
     return CODING_COPILOT_AGENT
+  }
+
+  if (mode === "third_party") {
+    return THIRD_PARTY_COPILOT_AGENT
   }
 
   return DESKTOP_COPILOT_AGENT

@@ -9,6 +9,7 @@
     "lint": "eslint ./fronted",
     "mastra:dev": "pnpm exec mastra dev -d server/mastra",
     "mastra:studio": "pnpm exec mastra studio --server-port 4111 --port 4112",
+    "mcp-afs:http": "pnpm --dir test-mcp-afs mcp:http",
     "inngest:dev": "npx --yes inngest-cli@latest dev",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

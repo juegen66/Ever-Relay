@@ -23,6 +23,7 @@ import {
   CODING_COPILOT_AGENT,
   DESKTOP_COPILOT_AGENT,
   LOGO_COPILOT_AGENT,
+  THIRD_PARTY_COPILOT_AGENT,
 } from "@/shared/copilot/constants"
 
 import {
@@ -37,6 +38,7 @@ const AGENT_ID_TO_MODE: Record<string, CopilotAgentMode> = {
   [CANVAS_COPILOT_AGENT]: "canvas",
   [CODING_COPILOT_AGENT]: "coding",
   [LOGO_COPILOT_AGENT]: "logo",
+  [THIRD_PARTY_COPILOT_AGENT]: "third_party",
 }
 
 type HandoffToolArgs = {
@@ -79,6 +81,8 @@ export function useAgentHandoffTools() {
         ? LOGO_COPILOT_AGENT
         : copilotAgentMode === "coding"
           ? CODING_COPILOT_AGENT
+          : copilotAgentMode === "third_party"
+            ? THIRD_PARTY_COPILOT_AGENT
           : DESKTOP_COPILOT_AGENT,
     [copilotAgentMode]
   )

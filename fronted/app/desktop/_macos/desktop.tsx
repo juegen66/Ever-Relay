@@ -53,6 +53,7 @@ export function Desktop() {
   const updateWindowPosition = useDesktopWindowStore((state) => state.updateWindowPosition)
   const updateWindowSize = useDesktopWindowStore((state) => state.updateWindowSize)
   const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
+  const trackThirdPartyWindow = useDesktopAgentStore((state) => state.trackThirdPartyWindow)
   const focusThirdPartyCopilot = useDesktopAgentStore((state) => state.focusThirdPartyCopilot)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
@@ -314,6 +315,7 @@ export function Desktop() {
             onFocus={() => {
               focusWindow(win.id)
               if (isThirdPartyAppId(win.appId)) {
+                trackThirdPartyWindow(win.id)
                 if (useDesktopAgentStore.getState().copilotAgentMode === "third_party") {
                   focusThirdPartyCopilot(win.id)
                 }
