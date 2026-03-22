@@ -23,6 +23,10 @@ import {
 import { predictionAgent, PREDICTION_AGENT_ID } from "./shared/prediction-agent"
 import { thirdPartyCopilotAgent } from "./third-party/third-party-copilot-agent"
 import { skillTestAgent, SKILL_TEST_AGENT_ID } from "./shared/skill-test-agent"
+import {
+  parallelPlannerAgent,
+  PARALLEL_PLANNER_AGENT_ID,
+} from "./shared/parallel-planner-agent"
 import { builderAgent, BUILDER_AGENT_ID } from "./vibecoding/builder-agent"
 import { codingCopilotAgent } from "./vibecoding/coding-copilot-agent"
 import {
@@ -45,6 +49,7 @@ export const agents = {
   [PREDICTION_AGENT_ID]: predictionAgent,
   [CONTEXT_COMPRESSION_AGENT_ID]: contextCompressionAgent,
   [MEMORY_CURATOR_AGENT_ID]: memoryCuratorAgent,
+  [PARALLEL_PLANNER_AGENT_ID]: parallelPlannerAgent,
   [PLANNER_AGENT_ID]: plannerAgent,
   [BUILDER_AGENT_ID]: builderAgent,
   [REVIEWER_AGENT_ID]: reviewerAgent,

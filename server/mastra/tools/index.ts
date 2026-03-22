@@ -12,6 +12,7 @@ export {
 } from "./canvas-write"
 export { executeSandboxCommandTool } from "./sandbox/execute"
 export { renderSvgToPngTool } from "./render"
+export { runParallelWorkflowTool } from "./parallel-workflow"
 export {
   listProjectFilesTool,
   readProjectFileTool,
