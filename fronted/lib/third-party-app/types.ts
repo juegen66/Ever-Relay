@@ -11,7 +11,7 @@ export type ThirdPartyAppSource =
   | { type: "url"; url: string }
   | { type: "html"; html: string }
 
-/** Manifest for a built-in third-party slot (registered in the host). */
+/** Manifest for a registered third-party iframe app. */
 export interface ThirdPartyAppManifest {
   /** Stable id without prefix, e.g. "weather" → app id tp_weather */
   slug: string
@@ -101,7 +101,7 @@ export function thirdPartyAppIdFromSlug(slug: string): string {
   return `${THIRD_PARTY_APP_PREFIX}${s}`
 }
 
-/** Between slug and tool name so slugs may contain single underscores (e.g. demo_weather). */
+/** Between slug and tool name so slugs may contain single underscores (e.g. weather_widget). */
 export const THIRD_PARTY_TOOL_SEP = "__" as const
 
 export function namespacedThirdPartyToolName(slug: string, toolName: string): string {

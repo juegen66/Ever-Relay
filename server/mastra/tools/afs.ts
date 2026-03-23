@@ -27,7 +27,7 @@ export const afsListTool = createTool({
     "List nodes in the AFS (Agentic File System). Desktop is the root directory.\n" +
     "Path protocol: Desktop/<scope>/Memory|History/<bucket>/<subpath>/<name>\n" +
     "Scopes: Canvas, Logo, VibeCoding (sub-apps), or Desktop-level (global)\n" +
-    "Memory buckets: user, note | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n" +
+    "Memory buckets: user, note, skill | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n" +
     "Skill has no buckets — list directly: Desktop/Skill, Desktop/Canvas/Skill\n\n" +
     "Namespace:\n" + NAMESPACE_TREE + "\n\n" +
     "Pass 'Desktop/' to see top-level. Pass 'Desktop/Canvas/Memory/user' to list Canvas user memories.",
@@ -69,7 +69,7 @@ export const afsWriteTool = createTool({
   description:
     "Write a memory or skill entry to AFS. Memory and Skill paths are writable.\n" +
     "Path: Desktop/<scope>/Memory/<bucket>/<name> or Desktop/<scope>/Skill/<name>\n" +
-    "Buckets: user (preferences, facts), note (observations, episodic summaries)\n" +
+    "Buckets: user (preferences, facts), note (observations, episodic summaries), skill (templates, checklists, examples for skills)\n" +
     "Existing entries at the same path are merged (deduplication).\n" +
     "Skill write takes summary fields via metadata: pass metadata.description and optionally metadata.triggerWhen, metadata.priority, metadata.agentId.\n" +
     "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference, Desktop/Canvas/Skill/poster-layout",

@@ -206,6 +206,7 @@ export function useDesktopCoreTools() {
     {
       name: "open_app",
       description: "Open an app window in the CloudOS desktop.",
+      followUp: true,
       parameters: OPEN_APP_PARAMS,
       handler: async (args) => {
         const appId = toAppId(String(args.appId ?? ""))
@@ -226,6 +227,7 @@ export function useDesktopCoreTools() {
     {
       name: "list_open_windows",
       description: "List current desktop windows and their app ids.",
+      followUp: true,
       handler: async () => {
         const list = windows.map((windowState) => ({
           id: windowState.id,
@@ -247,6 +249,7 @@ export function useDesktopCoreTools() {
     {
       name: "list_desktop_items",
       description: "List desktop items currently visible to the user.",
+      followUp: true,
       handler: async () => {
         const items = desktopFolders.map((item) => ({
           id: item.id,
@@ -267,6 +270,7 @@ export function useDesktopCoreTools() {
     {
       name: "refresh_desktop_items",
       description: "Reload desktop items from backend.",
+      followUp: true,
       handler: async () => {
         await refreshDesktopItems()
         const count = readDesktopFoldersFromCache().length
@@ -284,6 +288,7 @@ export function useDesktopCoreTools() {
       name: "move_desktop_item",
       description:
         "Move a desktop item into a folder, or back to desktop. If targetFolderId is omitted, item is moved to desktop.",
+      followUp: true,
       parameters: MOVE_DESKTOP_ITEM_PARAMS,
       handler: async (args) => {
         return moveDesktopItem({

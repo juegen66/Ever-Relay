@@ -719,7 +719,7 @@ export function PluginManagerApp() {
                   id="plugin-name"
                   value={createDisplayName}
                   onChange={(event) => setCreateDisplayName(event.target.value)}
-                  placeholder="Demo Weather"
+                  placeholder="Weather Widget"
                   className="border-black/10 bg-white/90"
                 />
               </div>
@@ -729,7 +729,7 @@ export function PluginManagerApp() {
                   id="plugin-slug"
                   value={createAppSlug}
                   onChange={(event) => setCreateAppSlug(event.target.value)}
-                  placeholder="demo_weather"
+                  placeholder="weather_widget"
                   className="border-black/10 bg-white/90 font-mono text-[13px]"
                 />
                 <p className="text-[12px] text-[#738091]">

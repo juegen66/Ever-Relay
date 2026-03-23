@@ -55,7 +55,7 @@ describe("third-party MCP controller", () => {
     getBindingForUserApp.mockResolvedValueOnce({
       id: "00000000-0000-0000-0000-000000000100",
       userId: "user-1",
-      appSlug: "demo_weather",
+      appSlug: "weather_widget",
       serverUrl: "https://example.com/mcp",
       authType: "bearer",
       authToken: "secret-token",
@@ -68,16 +68,16 @@ describe("third-party MCP controller", () => {
     const context = createContext()
     await getThirdPartyMcpBinding(
       context as never,
-      { appSlug: "demo_weather" }
+      { appSlug: "weather_widget" }
     )
 
-    expect(getBindingForUserApp).toHaveBeenCalledWith("user-1", "demo_weather")
+    expect(getBindingForUserApp).toHaveBeenCalledWith("user-1", "weather_widget")
     expect(context.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         data: {
           binding: expect.objectContaining({
-            appSlug: "demo_weather",
+            appSlug: "weather_widget",
             hasAuthToken: true,
             authType: "bearer",
           }),
@@ -91,7 +91,7 @@ describe("third-party MCP controller", () => {
     upsertBinding.mockResolvedValueOnce({
       id: "00000000-0000-0000-0000-000000000101",
       userId: "user-1",
-      appSlug: "demo_weather",
+      appSlug: "weather_widget",
       serverUrl: "https://example.com/mcp",
       authType: "none",
       authToken: null,
@@ -104,7 +104,7 @@ describe("third-party MCP controller", () => {
     const context = createContext()
     await upsertThirdPartyMcpBinding(
       context as never,
-      { appSlug: "demo_weather" },
+      { appSlug: "weather_widget" },
       {
         serverUrl: "https://example.com/mcp",
         authType: "none",
@@ -113,7 +113,7 @@ describe("third-party MCP controller", () => {
 
     expect(upsertBinding).toHaveBeenCalledWith({
       userId: "user-1",
-      appSlug: "demo_weather",
+      appSlug: "weather_widget",
       serverUrl: "https://example.com/mcp",
       authType: "none",
       authToken: undefined,
@@ -123,7 +123,7 @@ describe("third-party MCP controller", () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({
-          appSlug: "demo_weather",
+          appSlug: "weather_widget",
           hasAuthToken: false,
         }),
       })

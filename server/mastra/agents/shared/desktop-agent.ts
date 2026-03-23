@@ -14,6 +14,7 @@ import {
 } from "@/server/mastra/tools/afs"
 import { listCanvasProjectsTool } from "@/server/mastra/tools/canvas"
 import { listDesktopItemsTool } from "@/server/mastra/tools/desktop"
+import { readDesktopFileTool } from "@/server/mastra/tools/files-read"
 import { DESKTOP_COPILOT_AGENT } from "@/shared/copilot/constants"
 
 export const desktopAgent = new Agent({
@@ -65,6 +66,7 @@ export const desktopAgent = new Agent({
   },
   tools: {
     listDesktopItems: listDesktopItemsTool,
+    readDesktopFile: readDesktopFileTool,
     listCanvasProjects: listCanvasProjectsTool,
     afsList: afsListTool,
     afsRead: afsReadTool,

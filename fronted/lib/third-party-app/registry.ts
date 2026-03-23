@@ -23,38 +23,8 @@ export interface ThirdPartyBridgeHandle {
   ) => Promise<{ ok: true; result: unknown } | { ok: false; error: string }>
 }
 
-const BUILT_IN_MANIFESTS: ThirdPartyAppManifest[] = [
-  {
-    slug: "demo_weather",
-    displayName: "Demo Weather",
-    description: "Sample third-party app using EverRelay iframe RPC (local demo).",
-    source: {
-      type: "url",
-      url: "/third-party-apps/demo-weather/index.html",
-    },
-    defaultSize: { w: 420, h: 520 },
-    allowedOrigins: [],
-  },
-  {
-    slug: "test_mcp_afs",
-    displayName: "Test MCP AFS",
-    description: "Local test harness for backend MCP tool loading from the test-mcp-afs server.",
-    source: {
-      type: "url",
-      url: "/third-party-apps/test-mcp-afs/index.html",
-    },
-    defaultSize: { w: 460, h: 560 },
-    allowedOrigins: [],
-  },
-]
-
-const BUILT_IN_MANIFEST_SLUGS = new Set(BUILT_IN_MANIFESTS.map((manifest) => manifest.slug))
-
 function createInitialManifestsRecord() {
-  return BUILT_IN_MANIFESTS.reduce<Record<string, ThirdPartyAppManifest>>((acc, manifest) => {
-    acc[manifest.slug] = manifest
-    return acc
-  }, {})
+  return {}
 }
 
 interface ThirdPartyAppRegistryState {
@@ -95,21 +65,11 @@ export const useThirdPartyAppRegistry = create<ThirdPartyAppRegistryState>((set,
       }),
 
     syncManagedManifests: (manifests) =>
-      set((state) => {
-        const next = createInitialManifestsRecord()
-
-        for (const [slug, manifest] of Object.entries(state.manifests)) {
-          if (BUILT_IN_MANIFEST_SLUGS.has(slug)) {
-            next[slug] = manifest
-          }
-        }
-
+      set(() => {
+        const next: Record<string, ThirdPartyAppManifest> = createInitialManifestsRecord()
         for (const manifest of manifests) {
-          if (!BUILT_IN_MANIFEST_SLUGS.has(manifest.slug)) {
-            next[manifest.slug] = manifest
-          }
+          next[manifest.slug] = manifest
         }
-
         return { manifests: next }
       }),
 

@@ -77,7 +77,7 @@ export const OPEN_APP_PARAMS: ToolParameter[] = [
     name: "appId",
     type: "string",
     description:
-      "App id to open: finder|canvas|logo|vibecoding|textedit|report, or a third-party id tp_<slug> (e.g. tp_demo_weather). To open a specific text file, use open_text_file.",
+      "App id to open: finder|canvas|logo|vibecoding|textedit|report, or a third-party id tp_<slug> (e.g. tp_weather_widget). To open a specific text file, use open_text_file.",
     required: true,
   },
 ]

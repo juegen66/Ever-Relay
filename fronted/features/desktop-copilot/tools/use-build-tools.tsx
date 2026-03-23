@@ -112,6 +112,7 @@ export function useBuildTools() {
     {
       name: "trigger_build",
       description: "Trigger backend multi-agent build workflow and open progress panel.",
+      followUp: true,
       parameters: TRIGGER_BUILD_PARAMS,
       handler: async (args) => {
         return triggerBuild({
@@ -127,6 +128,7 @@ export function useBuildTools() {
     {
       name: "start_new_chat_thread",
       description: "Create a fresh Copilot chat thread only when the user explicitly asks for a brand-new conversation.",
+      followUp: true,
       parameters: START_NEW_CHAT_THREAD_PARAMS,
       handler: async (args) => {
         return startNewChatThread({

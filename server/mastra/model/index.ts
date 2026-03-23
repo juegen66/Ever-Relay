@@ -1,5 +1,6 @@
+import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { anthropic } from "@ai-sdk/anthropic"
+
 
 // const claude = createClaude({
 //   apiKey: process.env.CLAUDE_API_KEY ?? "",
@@ -14,6 +15,16 @@ const perplexityProvider = createOpenAI({
 
 const perplexity = perplexityProvider("sonar")
 
+const anthropicProvider = createAnthropic({
+  apiKey: "sk-dummy",
+  baseURL: "http://localhost:8317/v1",
+  headers: {
+    "anthropic-version": "2023-06-01",
+  },
+})
+
+
+
 const lzmodel = createOpenAI({
   apiKey: process.env.API_KEY ?? "",
   baseURL: process.env.BASE_URL ?? "https://api.laozhang.ai/v1",
@@ -24,7 +35,7 @@ const tuzimodel = createOpenAI({
   baseURL: process.env.TUZI_BASE_URL ?? "https://api.tu-zi.com/v1",
 })
 
-const lzmodel4oMini = lzmodel.chat("gemini-3-flash-preview")
+const lzmodel4oMini = anthropicProvider.chat("gpt-5.4")
 const tuzimodel4oMini = tuzimodel.chat("gpt-4o-mini")
 
 const model = {

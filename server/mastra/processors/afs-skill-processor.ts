@@ -15,10 +15,8 @@ import {
   PREFERENCE_MEMORY_MAINTAINER_SKILL_NAME,
   PREFERRED_WORKSTYLE_SKILL_NAME,
 } from "@/server/afs/preference-skill"
-import { afsSkillReferenceService } from "@/server/afs/skill-reference"
 import { afsSkillService } from "@/server/afs/skill"
 import type { SkillMeta } from "@/server/afs/skill"
-import type { SkillReferenceMeta } from "@/server/afs/skill-reference"
 
 import type { ProcessInputStepArgs, Processor } from "@mastra/core/processors"
 import type { AfsScope } from "@/server/db/schema"
@@ -41,10 +39,6 @@ export class AfsSkillProcessor implements Processor<"afs-skill-processor"> {
   private skillMetas: SkillMeta[] = []
   /** Activated skill ids keep scope-correct resolution even when names repeat */
   private activatedSkillIds = new Set<string>()
-  /** Loaded reference ids are injected only after explicit demand */
-  private loadedReferenceIds = new Set<string>()
-  /** Reference metadata cache keyed by skill id */
-  private referenceMetas = new Map<string, SkillReferenceMeta[]>()
 
   constructor(config: AfsSkillProcessorConfig) {
     this.userId = config.userId
@@ -84,77 +78,13 @@ export class AfsSkillProcessor implements Processor<"afs-skill-processor"> {
       const content = await afsSkillService.loadSkillContent(skillId)
       if (!meta || !content) continue
 
-      const referenceSection = await this.formatAvailableReferences(skillId)
-      sections.push(
-        `# Skill: ${meta.name}\n\n${content.content}${referenceSection}`
-      )
+      sections.push(`# Skill: ${meta.name}\n\n${content.content}`)
     }
 
     if (sections.length === 0) return ""
 
     return [
       "# Activated Skills",
-      "",
-      sections.join("\n\n---\n\n"),
-    ].join("\n")
-  }
-
-  private async getReferenceMetas(skillId: string): Promise<SkillReferenceMeta[]> {
-    const cached = this.referenceMetas.get(skillId)
-    if (cached) return cached
-
-    const refs = (await afsSkillReferenceService.listReferenceMeta(this.userId, skillId)) ?? []
-    this.referenceMetas.set(skillId, refs)
-    return refs
-  }
-
-  private async formatAvailableReferences(skillId: string): Promise<string> {
-    const refs = await this.getReferenceMetas(skillId)
-    if (refs.length === 0) return ""
-
-    const items = refs.map((reference) => {
-      const loadWhen = reference.loadWhen ? ` Load when: ${reference.loadWhen}.` : ""
-      return `- **${reference.name}** (${reference.title}): ${reference.description}.${loadWhen}`
-    })
-
-    return [
-      "",
-      "## Available References",
-      "",
-      ...items,
-      "",
-      "Use the `skill-load-reference` tool to load only the references you need.",
-    ].join("\n")
-  }
-
-  private async formatLoadedReferences(): Promise<string> {
-    if (this.loadedReferenceIds.size === 0) return ""
-
-    const sections: string[] = []
-
-    for (const referenceId of this.loadedReferenceIds) {
-      const reference = await afsSkillReferenceService.loadReferenceContent(
-        this.userId,
-        referenceId
-      )
-      if (!reference) continue
-
-      const skillName =
-        this.skillMetas.find((skill) => skill.id === reference.skillId)?.name ??
-        reference.skillId
-
-      sections.push(
-        `# Skill Reference: ${reference.title}\n\n` +
-          `Source skill: ${skillName}\n` +
-          `Reference name: ${reference.name}\n\n` +
-          `${reference.content}`
-      )
-    }
-
-    if (sections.length === 0) return ""
-
-    return [
-      "# Activated Skill References",
       "",
       sections.join("\n\n---\n\n"),
     ].join("\n")
@@ -207,130 +137,6 @@ export class AfsSkillProcessor implements Processor<"afs-skill-processor"> {
     })
   }
 
-  private createSkillLoadReferenceTool() {
-    const activatedSkillIds = this.activatedSkillIds
-    const loadedReferenceIds = this.loadedReferenceIds
-
-    return createTool({
-      id: "skill-load-reference",
-      description:
-        "Load one reference document for an already-activated skill. Use this when the active skill points to detailed templates, examples, or topic-specific guidance that should not be injected all at once.",
-      inputSchema: z.object({
-        skillName: z.string().describe("The activated skill that owns the reference"),
-        referenceName: z.string().describe("The reference name shown under Available References"),
-      }),
-      execute: async ({ skillName, referenceName }) => {
-        const skill = this.skillMetas.find(
-          (meta) => meta.name === skillName && activatedSkillIds.has(meta.id)
-        )
-
-        if (!skill) {
-          const activated = this.skillMetas
-            .filter((meta) => activatedSkillIds.has(meta.id))
-            .map((meta) => meta.name)
-
-          return {
-            success: false,
-            message: activated.length > 0
-              ? `Skill "${skillName}" is not activated. Activated skills: ${activated.join(", ")}`
-              : "No skills are activated yet. Activate a skill before loading its references.",
-          }
-        }
-
-        const refs = await this.getReferenceMetas(skill.id)
-        const match = refs.find((reference) => reference.name === referenceName)
-
-        if (!match) {
-          return {
-            success: false,
-            message: refs.length > 0
-              ? `Reference "${referenceName}" not found for skill "${skillName}". Available references: ${refs.map((reference) => reference.name).join(", ")}`
-              : `Skill "${skillName}" has no available references.`,
-          }
-        }
-
-        if (loadedReferenceIds.has(match.id)) {
-          return {
-            success: true,
-            message: `Reference "${referenceName}" is already loaded for skill "${skillName}".`,
-          }
-        }
-
-        loadedReferenceIds.add(match.id)
-        console.warn(
-          "\n[AFS Skill] ═══════════════════════════════════════\n" +
-            `[AFS Skill] 📚 Loaded reference: "${referenceName}" for skill "${skillName}"\n` +
-            "[AFS Skill] ═══════════════════════════════════════\n"
-        )
-
-        return {
-          success: true,
-          message: `Reference "${referenceName}" loaded for skill "${skillName}".`,
-        }
-      },
-    })
-  }
-
-  private createSkillUpsertReferenceTool() {
-    return createTool({
-      id: "skill-upsert-reference",
-      description:
-        "Create or update a named reference document for a skill. Use this to keep the base skill concise while moving heavy templates, examples, and subtopic guidance into on-demand references.",
-      inputSchema: z.object({
-        skillName: z.string().describe("The owning skill name"),
-        referenceName: z.string().describe("Stable reference id, e.g. meeting-note-template"),
-        title: z.string().describe("Human-readable reference title"),
-        description: z.string().describe("Short summary shown in the reference manifest"),
-        content: z.string().describe("Reference content to load on demand"),
-        loadWhen: z.string().optional().describe("When this reference should be loaded"),
-        priority: z.number().int().min(0).max(100).optional().describe("Higher priority references appear first"),
-        contentFormat: z.enum(["markdown", "text", "json"]).optional().describe("Reference content format"),
-      }),
-      execute: async ({
-        skillName,
-        referenceName,
-        title,
-        description,
-        content,
-        loadWhen,
-        priority,
-        contentFormat,
-      }) => {
-        const skill = await afsSkillService.loadSkillByName(
-          this.userId,
-          skillName,
-          this.agentId,
-          this.scope
-        )
-
-        if (!skill) {
-          return {
-            success: false,
-            message: `Skill "${skillName}" not found in the current scope. Create or activate it before writing references.`,
-          }
-        }
-
-        const row = await afsSkillReferenceService.upsertReference(this.userId, skill.id, {
-          name: referenceName,
-          title,
-          description,
-          content,
-          loadWhen: loadWhen ?? null,
-          priority,
-          contentFormat,
-        })
-
-        this.referenceMetas.delete(skill.id)
-
-        return {
-          success: true,
-          message: `Reference "${referenceName}" saved for skill "${skillName}".`,
-          referenceId: row.id,
-        }
-      },
-    })
-  }
-
   // ---------------------------------------------------------------------------
   // Processor interface
   // ---------------------------------------------------------------------------
@@ -342,7 +148,6 @@ export class AfsSkillProcessor implements Processor<"afs-skill-processor"> {
         agentId: this.agentId,
         scope: this.scope,
       })
-      this.referenceMetas.clear()
       if (this.skillMetas.length > 0) {
         console.warn(
           "\n[AFS Skill] ═══════════════════════════════════════\n" +
@@ -407,28 +212,13 @@ export class AfsSkillProcessor implements Processor<"afs-skill-processor"> {
       }
     }
 
-    if (this.loadedReferenceIds.size > 0) {
-      const references = await this.formatLoadedReferences()
-      if (references) {
-        messageList.addSystem({ role: "system", content: references })
-      }
-    }
-
     // Provide skill tools
     const skillTools: Record<string, unknown> = {}
     if (hasSkills) {
       const activateTool = this.createSkillActivateTool()
-      const loadReferenceTool = this.createSkillLoadReferenceTool()
-      const upsertReferenceTool = this.createSkillUpsertReferenceTool()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(activateTool as any).needsApprovalFn = () => false
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(loadReferenceTool as any).needsApprovalFn = () => false
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(upsertReferenceTool as any).needsApprovalFn = () => false
       skillTools["skill-activate"] = activateTool
-      skillTools["skill-load-reference"] = loadReferenceTool
-      skillTools["skill-upsert-reference"] = upsertReferenceTool
     }
 
     return {

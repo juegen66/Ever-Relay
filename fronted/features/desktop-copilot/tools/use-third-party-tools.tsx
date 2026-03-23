@@ -98,6 +98,7 @@ function ThirdPartyDynamicTool(props: {
     {
       name: copilotName,
       description: definition.description || `Third-party tool ${definition.name}`,
+      followUp: true,
       parameters,
       handler: async (args) => {
         const bridge = useThirdPartyAppRegistry.getState().getBridgeForWindow(windowId)

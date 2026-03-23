@@ -180,6 +180,7 @@ export function useTextEditTools() {
     {
       name: "open_text_file",
       description: "Open a text file using the exact same flow as double-clicking that text file icon.",
+      followUp: true,
       parameters: OPEN_TEXT_FILE_PARAMS,
       handler: async (args) => {
         return openTextFile({
@@ -195,6 +196,7 @@ export function useTextEditTools() {
     {
       name: "read_text_file_content",
       description: "Read text file content. Prefers in-editor content if the file is currently open.",
+      followUp: true,
       parameters: READ_TEXT_FILE_CONTENT_PARAMS,
       handler: async (args) => {
         return readTextFileContent({
@@ -209,6 +211,7 @@ export function useTextEditTools() {
     {
       name: "write_text_file_content",
       description: "Write full content into a text file editor. Saving is handled by TextEdit auto-save.",
+      followUp: true,
       parameters: WRITE_TEXT_FILE_CONTENT_PARAMS,
       handler: async (args) => {
         return writeTextFileContent({

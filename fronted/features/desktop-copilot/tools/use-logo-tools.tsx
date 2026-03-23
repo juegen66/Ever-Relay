@@ -77,6 +77,7 @@ export function useLogoTools() {
     {
       name: "confirm_logo_brief",
       description: "Confirm finalized logo brief and trigger backend logo workflow.",
+      followUp: true,
       parameters: CONFIRM_LOGO_BRIEF_PARAMS,
       handler: async (args) => {
         return confirmLogoBrief({
@@ -95,6 +96,7 @@ export function useLogoTools() {
     {
       name: "open_logo_sidebar",
       description: "Open logo copilot sidebar for follow-up clarification questions.",
+      followUp: true,
       parameters: OPEN_LOGO_SIDEBAR_PARAMS,
       handler: async (args) => {
         return openLogoSidebar({

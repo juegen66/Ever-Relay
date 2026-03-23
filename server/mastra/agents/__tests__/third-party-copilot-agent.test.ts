@@ -45,19 +45,19 @@ describe("third-party copilot agent", () => {
 
   it("merges MCP tools when third-party app context is present", async () => {
     listToolsForAgent.mockResolvedValueOnce({
-      mcp_demo_weather__ping: remotePingTool,
+      mcp_weather_widget__ping: remotePingTool,
     })
 
     const tools = await thirdPartyCopilotAgent.listTools({
       requestContext: new RequestContext([
         ["userId", "user-1"],
-        ["thirdPartyAppSlug", "demo_weather"],
+        ["thirdPartyAppSlug", "weather_widget"],
       ]),
     })
 
-    expect(listToolsForAgent).toHaveBeenCalledWith("user-1", "demo_weather")
+    expect(listToolsForAgent).toHaveBeenCalledWith("user-1", "weather_widget")
     expect(tools).toHaveProperty("afsRead")
-    expect(tools).toHaveProperty("mcp_demo_weather__ping")
+    expect(tools).toHaveProperty("mcp_weather_widget__ping")
   })
 
   it("skips MCP loading when app context is absent", async () => {

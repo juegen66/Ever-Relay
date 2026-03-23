@@ -159,6 +159,7 @@ export function useCodingAppTools() {
     {
       name: "list_coding_apps",
       description: "List coding apps available to the current user.",
+      followUp: true,
       parameters: [],
       handler: async () => listCodingApps(),
     },
@@ -170,6 +171,7 @@ export function useCodingAppTools() {
       name: "create_coding_app",
       description:
         "Create a new coding app workspace, activate it, and bind the sidebar to that app thread.",
+      followUp: true,
       parameters: CREATE_CODING_APP_PARAMS,
       handler: async (args) =>
         createCodingApp({
@@ -185,6 +187,7 @@ export function useCodingAppTools() {
     {
       name: "get_active_coding_app",
       description: "Return the coding app currently bound to the sidebar thread, if any.",
+      followUp: true,
       parameters: [],
       handler: async () => getActiveCodingApp(),
     },
@@ -196,6 +199,7 @@ export function useCodingAppTools() {
       name: "activate_coding_app",
       description:
         "Switch the sidebar into a specific coding app thread and make that app the active sandbox context.",
+      followUp: true,
       parameters: ACTIVATE_CODING_APP_PARAMS,
       handler: async (args) =>
         activateCodingApp({

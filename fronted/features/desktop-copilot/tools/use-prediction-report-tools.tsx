@@ -15,7 +15,7 @@ export function usePredictionReportTools() {
       name: "generate_prediction_report",
       description:
         "Generate and display a prediction report in the Predict Report desktop app. Pass a complete HTML document string as the report content. This will store the report and open the app window automatically.",
-      followUp: false,
+      followUp: true,
       parameters: [
         {
           name: "html",

@@ -1,0 +1,15 @@
+{
+  "version": 3,
+  "skills": {
+    "technical-blog-writing": {
+      "source": "openclaw/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/openclaw/skills.git",
+      "skillPath": "skills/okaris/technical-blog-writing/SKILL.md",
+      "skillFolderHash": "",
+      "installedAt": "2026-03-23T11:05:30.426Z",
+      "updatedAt": "2026-03-23T11:16:26.091Z"
+    }
+  },
+  "dismissed": {}
+}

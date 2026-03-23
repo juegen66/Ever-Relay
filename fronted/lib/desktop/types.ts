@@ -9,7 +9,7 @@ export type BuiltinAppId =
   | "activity"
   | "plugins"
 
-/** Third-party iframe apps use ids `tp_<slug>`, e.g. tp_demo_weather */
+/** Third-party iframe apps use ids `tp_<slug>`, e.g. tp_weather_widget */
 export type ThirdPartyAppId = `tp_${string}`
 
 export type AppId = BuiltinAppId | ThirdPartyAppId

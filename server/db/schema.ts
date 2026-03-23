@@ -372,7 +372,7 @@ export const thirdPartyMcpBinding = pgTable(
 export const AFS_SCOPES = ["Desktop", "Canvas", "Logo", "VibeCoding"] as const
 export type AfsScope = (typeof AFS_SCOPES)[number]
 
-export const AFS_MEMORY_BUCKETS = ["user", "note"] as const
+export const AFS_MEMORY_BUCKETS = ["user", "note", "skill"] as const
 export type AfsMemoryBucket = (typeof AFS_MEMORY_BUCKETS)[number]
 
 export const AFS_HISTORY_BUCKETS = ["actions", "sessions", "prediction-runs", "workflow-runs", "canvas-activity"] as const

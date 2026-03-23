@@ -163,6 +163,7 @@ export function useCodingTools() {
       name: "open_coding_sidebar",
       description:
         "Open the coding sidebar so clarification questions or final confirmation can happen there.",
+      followUp: true,
       parameters: OPEN_CODING_SIDEBAR_PARAMS,
       handler: async (args) => {
         return openCodingSidebar({
@@ -178,6 +179,7 @@ export function useCodingTools() {
       name: "set_coding_project_status",
       description:
         "Update the Vibecoding workspace status for the active project during clarification and confirmation phases.",
+      followUp: true,
       parameters: SET_CODING_PROJECT_STATUS_PARAMS,
       handler: async (args) => {
         return setCodingProjectStatus({
@@ -195,6 +197,7 @@ export function useCodingTools() {
       name: "trigger_coding_workflow",
       description:
         "Trigger the backend coding workflow with a confirmed report and open the workflow progress panel.",
+      followUp: true,
       parameters: TRIGGER_CODING_WORKFLOW_PARAMS,
       handler: async (args) => {
         return triggerCodingWorkflow({

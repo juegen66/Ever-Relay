@@ -37,6 +37,7 @@ export function useCanvasAgentTools() {
     {
       name: "open_canvas_sidebar",
       description: "Open the Canvas copilot sidebar so canvas-specific follow-up can happen there.",
+      followUp: true,
       parameters: OPEN_CANVAS_SIDEBAR_PARAMS,
       handler: async (args) => {
         return openCanvasSidebar({

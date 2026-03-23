@@ -174,6 +174,7 @@ export function useCanvasTools() {
     {
       name: "open_canvas_project",
       description: "Open Canvas app and navigate to a specific project by id or name.",
+      followUp: true,
       parameters: OPEN_CANVAS_PROJECT_PARAMS,
       handler: async (args) => {
         return openCanvasProject({
@@ -189,6 +190,7 @@ export function useCanvasTools() {
     {
       name: "add_svg_to_canvas",
       description: "Generate SVG via backend and insert it into the currently opened canvas project.",
+      followUp: true,
       parameters: ADD_SVG_TO_CANVAS_PARAMS,
       handler: async (args) => {
         return addSvgToCanvas({

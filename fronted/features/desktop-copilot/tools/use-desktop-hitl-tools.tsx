@@ -100,6 +100,7 @@ export function useDesktopHitlTools() {
       name: "create_desktop_item",
       description:
         "Create a desktop item (file/folder) directly without approval. If the same name, itemType, and parentId already exist, return the existing item instead of creating a duplicate.",
+      followUp: true,
       parameters: CREATE_ITEM_PARAMS,
       handler: async (args) => {
         try {

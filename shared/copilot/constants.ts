@@ -9,7 +9,7 @@ export const DESKTOP_COPILOT_ENDPOINT = "/api/copilotkit"
 export const DESKTOP_PREDICTION_ENDPOINT = "/api/copilotkit/predict"
 
 /** When false, the background prediction agent is disabled: no `/api/copilotkit/predict` traffic. */
-export const DESKTOP_PREDICTION_ENABLED = false
+export const DESKTOP_PREDICTION_ENABLED = true
 export const DESKTOP_COPILOT_SILENT_CHAT_ID = "desktop-copilot-silent"
 export const DESKTOP_PREDICTION_CHAT_ID = "desktop-prediction-silent"
 export const DESKTOP_COPILOT_SILENT_EVENT = "cloudos:copilot:silent-send"

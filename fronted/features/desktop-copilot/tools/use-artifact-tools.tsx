@@ -11,6 +11,7 @@ export function useArtifactTools() {
       name: "render_artifact",
       description:
         "Display a message HTML artifact inline in the chat. This is the rendering endpoint for message-html-builder style outputs, not image generation. You must write the full HTML code yourself and pass it in the 'html' parameter. Parameters: html (required, the complete HTML string), title (optional). Do NOT use prompt, size, or n — those are for image APIs.",
+      followUp: true,
       parameters: RENDER_ARTIFACT_PARAMS,
       handler: async () =>
         toolOk(
