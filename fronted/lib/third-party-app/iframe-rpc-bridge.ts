@@ -1,14 +1,14 @@
 "use client"
 
-import type {
-  ThirdPartyRpcCallPayload,
-  ThirdPartyRpcEnvelope,
-  ThirdPartyRpcErrorPayload,
-  ThirdPartyRpcRegisterPayload,
-  ThirdPartyRpcResultPayload,
-  ThirdPartyToolDefinition,
+import {
+  THIRD_PARTY_RPC_CHANNEL,
+  type ThirdPartyRpcCallPayload,
+  type ThirdPartyRpcEnvelope,
+  type ThirdPartyRpcErrorPayload,
+  type ThirdPartyRpcRegisterPayload,
+  type ThirdPartyRpcResultPayload,
+  type ThirdPartyToolDefinition,
 } from "./types"
-import { THIRD_PARTY_RPC_CHANNEL } from "./types"
 
 export interface IframeRpcBridgeOptions {
   iframe: HTMLIFrameElement
@@ -43,7 +43,7 @@ function parseEnvelope(data: unknown): ThirdPartyRpcEnvelope | null {
   return o as unknown as ThirdPartyRpcEnvelope
 }
 
-function resolveTargetOrigin(iframe: HTMLIFrameElement, allowedOrigins: string[]): string {
+function resolveTargetOrigin(iframe: HTMLIFrameElement, _allowedOrigins: string[]): string {
   try {
     const src = iframe.getAttribute("src")
     if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
@@ -183,7 +183,7 @@ export class IframeRpcBridge {
         break
       }
       case "result": {
-        const p = env.payload as ThirdPartyRpcResultPayload & ThirdPartyRpcErrorPayload
+        const p = env.payload as ThirdPartyRpcResultPayload | ThirdPartyRpcErrorPayload
         const callId = typeof p?.callId === "string" ? p.callId : ""
         const pending = callId ? this.pending.get(callId) : undefined
         if (!pending) break

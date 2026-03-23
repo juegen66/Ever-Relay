@@ -16,7 +16,9 @@ const BASE_SPOTLIGHT_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "logo", name: "Logo Studio", category: "Applications" },
   { id: "vibecoding", name: "Coding Apps", category: "Applications" },
+  { id: "report", name: "Predict Report", category: "Applications" },
   { id: "activity", name: "Agent Activity", category: "Applications" },
+  { id: "plugins", name: "Plugin Manager", category: "Developer Tools" },
 ]
 
 export function Spotlight() {
@@ -82,6 +84,7 @@ export function Spotlight() {
     vibecoding: "#16a34a",
     report: "#0f766e",
     activity: "#0891b2",
+    plugins: "#a16207",
   }
 
   const iconColorForApp = (id: AppId) =>

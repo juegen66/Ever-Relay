@@ -3,7 +3,7 @@
  * Message envelope uses a fixed channel to avoid collisions with other postMessage users.
  */
 
-export const THIRD_PARTY_RPC_CHANNEL = "cloudos:third-party:rpc" as const
+export const THIRD_PARTY_RPC_CHANNEL = "everrelay:plugin:rpc" as const
 
 export const THIRD_PARTY_APP_PREFIX = "tp_" as const
 

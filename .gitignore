@@ -28,6 +28,13 @@ agentvibecoding420-main/
 # Test coverage
 coverage/
 
+# Third-party app bundles (most remain generated, but built-in exported assets are committed)
+fronted/public/third-party-apps/*
+!fronted/public/third-party-apps/demo-weather/
+!fronted/public/third-party-apps/demo-weather/**
+!fronted/public/third-party-apps/test-mcp-afs/
+!fronted/public/third-party-apps/test-mcp-afs/**
+
 # Cursor and docs (local/planning)
 changeversion/
 .cursor/

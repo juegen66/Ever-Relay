@@ -12,6 +12,7 @@ const BUILTIN_APP_DISPLAY_NAMES: Record<BuiltinAppId, string> = {
   textedit: "TextEdit",
   report: "Predict Report",
   activity: "Agent Activity",
+  plugins: "Plugin Manager",
 }
 
 export function resolveAppDisplayName(appId: AppId): string {

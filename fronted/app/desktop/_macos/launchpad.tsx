@@ -17,6 +17,7 @@ const BASE_LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: str
   { id: "vibecoding", name: "Coding Apps", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "CA" },
   { id: "report", name: "Predict Report", color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)", letter: "PR" },
   { id: "activity", name: "Agent Activity", color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)", letter: "AA" },
+  { id: "plugins", name: "Plugin Manager", color: "linear-gradient(135deg, #b45309 0%, #0f766e 100%)", letter: "PM" },
 ]
 
 export function Launchpad() {

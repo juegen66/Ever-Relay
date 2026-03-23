@@ -24,6 +24,7 @@ import { Launchpad } from "./launchpad"
 import { NotificationPopup } from "./notification-center"
 import { PendingTasksWidget } from "./pending-tasks-widget"
 import { Spotlight } from "./spotlight"
+import { ThirdPartyAppManifestSync } from "./third-party-app-manifest-sync"
 import { ActionLogDebugPanel } from "../_ai/devtools/action-log-debug-panel"
 
 type FolderNativeDragStartDetail = {
@@ -307,6 +308,8 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       onClick={handleDesktopClick}
     >
+      <ThirdPartyAppManifestSync />
+
       {windows.map((win) => (
         <div key={win.id} style={win.minimized ? { display: "none" } : undefined}>
           <AppWindow

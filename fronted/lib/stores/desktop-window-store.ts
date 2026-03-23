@@ -17,6 +17,7 @@ const DEFAULT_WINDOW_SIZE: Record<BuiltinAppId, { w: number; h: number }> = {
   textedit: { w: 720, h: 520 },
   report: { w: 900, h: 640 },
   activity: { w: 940, h: 680 },
+  plugins: { w: 1060, h: 720 },
 }
 
 function resolveWindowSizeForApp(appId: AppId): { w: number; h: number } {

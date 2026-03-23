@@ -10,6 +10,7 @@ import { ActivityApp } from "./apps/activity-app"
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
+import { PluginManagerApp } from "./apps/plugin-manager-app"
 import { ReportApp } from "./apps/report-app"
 import { TextEditApp } from "./apps/textedit-app"
 import { ThirdPartyApp } from "./apps/third-party-app"
@@ -23,6 +24,7 @@ const APP_TITLES: Record<string, string> = {
   textedit: "TextEdit",
   report: "Predict Report",
   activity: "Agent Activity",
+  plugins: "Plugin Manager",
 }
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
@@ -31,6 +33,7 @@ const APP_COMPONENTS: Record<string, React.ComponentType> = {
   logo: LogoStudioApp,
   vibecoding: VibecodingApp,
   report: ReportApp,
+  plugins: PluginManagerApp,
 }
 
 // Dark title bar apps

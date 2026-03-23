@@ -2,7 +2,18 @@
 
 import { useState, useRef, useCallback, useMemo } from "react"
 
-import { Activity, Bot, Cloud, FileBarChart, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
+import {
+  Activity,
+  Bot,
+  Cloud,
+  FileBarChart,
+  FolderOpen,
+  GitBranch,
+  Palette,
+  PenTool,
+  Puzzle,
+  Terminal,
+} from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
 import type { AppId } from "@/lib/desktop/types"
@@ -39,6 +50,7 @@ const BASE_DOCK_ITEMS: DockItem[] = [
   { kind: "app", id: "vibecoding", name: "Coding Apps", icon: Terminal, color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
   { kind: "app", id: "report", name: "Predict Report", icon: FileBarChart, color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)" },
   { kind: "app", id: "activity", name: "Agent Activity", icon: Activity, color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)" },
+  { kind: "app", id: "plugins", name: "Plugin Manager", icon: Puzzle, color: "linear-gradient(135deg, #b45309 0%, #0f766e 100%)" },
   { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", icon: Bot, color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
   { kind: "route", id: "no-chatbot-dashboard", href: "/desktop/no-chatbot", name: "No Chatbot", icon: GitBranch, color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
 ]
@@ -65,10 +77,10 @@ export function Dock() {
       color: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
       separatorBefore: false,
     }))
-    const reportIdx = BASE_DOCK_ITEMS.findIndex((i) => i.kind === "app" && i.id === "report")
-    if (reportIdx === -1) return [...BASE_DOCK_ITEMS.slice(0, -2), ...tpItems, ...BASE_DOCK_ITEMS.slice(-2)]
-    const before = BASE_DOCK_ITEMS.slice(0, reportIdx + 1)
-    const after = BASE_DOCK_ITEMS.slice(reportIdx + 1)
+    const anchorIdx = BASE_DOCK_ITEMS.findIndex((i) => i.kind === "app" && i.id === "plugins")
+    if (anchorIdx === -1) return [...BASE_DOCK_ITEMS.slice(0, -2), ...tpItems, ...BASE_DOCK_ITEMS.slice(-2)]
+    const before = BASE_DOCK_ITEMS.slice(0, anchorIdx + 1)
+    const after = BASE_DOCK_ITEMS.slice(anchorIdx + 1)
     return [...before, ...tpItems, ...after]
   }, [thirdPartyManifests])
 

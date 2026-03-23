@@ -23,23 +23,19 @@ export interface ThirdPartyBridgeHandle {
   ) => Promise<{ ok: true; result: unknown } | { ok: false; error: string }>
 }
 
-const manifestsBySlug = new Map<string, ThirdPartyAppManifest>()
-
-function seedBuiltInManifests() {
-  const demo: ThirdPartyAppManifest = {
+const BUILT_IN_MANIFESTS: ThirdPartyAppManifest[] = [
+  {
     slug: "demo_weather",
     displayName: "Demo Weather",
-    description: "Sample third-party app using CloudOS iframe RPC (local demo).",
+    description: "Sample third-party app using EverRelay iframe RPC (local demo).",
     source: {
       type: "url",
       url: "/third-party-apps/demo-weather/index.html",
     },
     defaultSize: { w: 420, h: 520 },
     allowedOrigins: [],
-  }
-  manifestsBySlug.set(demo.slug, demo)
-
-  const afsTest: ThirdPartyAppManifest = {
+  },
+  {
     slug: "test_mcp_afs",
     displayName: "Test MCP AFS",
     description: "Local test harness for backend MCP tool loading from the test-mcp-afs server.",
@@ -49,11 +45,17 @@ function seedBuiltInManifests() {
     },
     defaultSize: { w: 460, h: 560 },
     allowedOrigins: [],
-  }
-  manifestsBySlug.set(afsTest.slug, afsTest)
-}
+  },
+]
 
-seedBuiltInManifests()
+const BUILT_IN_MANIFEST_SLUGS = new Set(BUILT_IN_MANIFESTS.map((manifest) => manifest.slug))
+
+function createInitialManifestsRecord() {
+  return BUILT_IN_MANIFESTS.reduce<Record<string, ThirdPartyAppManifest>>((acc, manifest) => {
+    acc[manifest.slug] = manifest
+    return acc
+  }, {})
+}
 
 interface ThirdPartyAppRegistryState {
   /** slug → manifest */
@@ -64,6 +66,7 @@ interface ThirdPartyAppRegistryState {
   bridges: Record<string, ThirdPartyBridgeHandle>
   registerManifest: (manifest: ThirdPartyAppManifest) => void
   unregisterManifest: (slug: string) => void
+  syncManagedManifests: (manifests: ThirdPartyAppManifest[]) => void
   getManifest: (slug: string) => ThirdPartyAppManifest | undefined
   listManifests: () => ThirdPartyAppManifest[]
   setIframeRegistration: (registration: ThirdPartyIframeRegistration | null) => void
@@ -74,13 +77,8 @@ interface ThirdPartyAppRegistryState {
 }
 
 export const useThirdPartyAppRegistry = create<ThirdPartyAppRegistryState>((set, get) => {
-  const initialManifests: Record<string, ThirdPartyAppManifest> = {}
-  for (const m of manifestsBySlug.values()) {
-    initialManifests[m.slug] = m
-  }
-
   return {
-    manifests: initialManifests,
+    manifests: createInitialManifestsRecord(),
     iframeRegistrations: {},
     bridges: {},
 
@@ -93,6 +91,25 @@ export const useThirdPartyAppRegistry = create<ThirdPartyAppRegistryState>((set,
       set((state) => {
         const next = { ...state.manifests }
         delete next[slug]
+        return { manifests: next }
+      }),
+
+    syncManagedManifests: (manifests) =>
+      set((state) => {
+        const next = createInitialManifestsRecord()
+
+        for (const [slug, manifest] of Object.entries(state.manifests)) {
+          if (BUILT_IN_MANIFEST_SLUGS.has(slug)) {
+            next[slug] = manifest
+          }
+        }
+
+        for (const manifest of manifests) {
+          if (!BUILT_IN_MANIFEST_SLUGS.has(manifest.slug)) {
+            next[manifest.slug] = manifest
+          }
+        }
+
         return { manifests: next }
       }),
 

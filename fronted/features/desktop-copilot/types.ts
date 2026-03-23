@@ -9,6 +9,7 @@ export const BUILTIN_APP_IDS: BuiltinAppId[] = [
   "textedit",
   "report",
   "activity",
+  "plugins",
 ]
 
 /** @deprecated Use BUILTIN_APP_IDS */
@@ -19,7 +20,7 @@ export function toAppId(value: string): AppId | null {
     return value as BuiltinAppId
   }
   if (isThirdPartyAppId(value)) {
-    return value
+    return value as AppId
   }
   return null
 }

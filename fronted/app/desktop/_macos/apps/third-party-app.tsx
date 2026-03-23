@@ -115,7 +115,7 @@ export function ThirdPartyApp({ windowState }: ThirdPartyAppProps) {
             src={(() => {
               const base = manifest.source.url
               const sep = base.includes("?") ? "&" : "?"
-              return `${base}${sep}cloudosWindowId=${encodeURIComponent(windowState.id)}`
+              return `${base}${sep}everrelayWindowId=${encodeURIComponent(windowState.id)}`
             })()}
             sandbox={sandbox}
             className="block h-full w-full border-0"
