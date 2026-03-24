@@ -13,7 +13,11 @@ import type {
 import { requireUserId } from "@/server/lib/http/auth"
 import { fail, ok } from "@/server/lib/http/response"
 import type { ServerBindings } from "@/server/types"
-import { CanvasSvgValidationError, canvasService } from "./canvas.service"
+import {
+  CanvasSvgGenerationError,
+  CanvasSvgValidationError,
+  canvasService,
+} from "./canvas.service"
 
 export async function listProjects(
   context: Context<ServerBindings>,
@@ -121,6 +125,9 @@ export async function generateSvg(
   } catch (error) {
     if (error instanceof CanvasSvgValidationError) {
       return fail(context, 400, error.message)
+    }
+    if (error instanceof CanvasSvgGenerationError) {
+      return fail(context, 503, error.message)
     }
     throw error
   }
