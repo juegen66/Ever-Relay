@@ -1,6 +1,7 @@
 import { Memory } from "@mastra/memory"
 import { PostgresStore } from "@mastra/pg"
 import { z } from "zod"
+
 import { pool } from "@/server/core/database"
 
 const ActiveProject = z.object({

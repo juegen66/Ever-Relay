@@ -1,4 +1,18 @@
-export type AppId = "finder" | "canvas" | "logo" | "vibecoding" | "textedit"
+/** Built-in EverRelay apps */
+export type BuiltinAppId =
+  | "finder"
+  | "canvas"
+  | "logo"
+  | "vibecoding"
+  | "textedit"
+  | "report"
+  | "activity"
+  | "plugins"
+
+/** Third-party iframe apps use ids `tp_<slug>`, e.g. tp_weather_widget */
+export type ThirdPartyAppId = `tp_${string}`
+
+export type AppId = BuiltinAppId | ThirdPartyAppId
 
 export type DesktopItemType = "folder" | "text" | "image" | "code" | "spreadsheet" | "generic"
 

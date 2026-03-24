@@ -7,7 +7,10 @@ import { authMiddleware } from "@/server/middlewares/auth"
 import { validateJsonBody } from "@/server/middlewares/validation"
 import type { ServerBindings } from "@/server/types"
 import { prepareHandoff } from "./copilot-handoff.controller"
-import { handleCopilotRequest } from "./copilot-runtime.controller"
+import {
+  handleCopilotRequest,
+  handlePredictionCopilotRequest,
+} from "./copilot-runtime.controller"
 
 export function registerCopilotRoutes(app: Hono<ServerBindings>) {
   // Handoff API
@@ -19,7 +22,11 @@ export function registerCopilotRoutes(app: Hono<ServerBindings>) {
       prepareHandoff(context, getValidatedBody<PrepareHandoffBody>(context))
   )
 
-  // CopilotKit runtime (SSE / streaming)
+  // Dedicated prediction runtime (SSE / streaming)
+  app.all("/api/copilotkit/predict", authMiddleware, handlePredictionCopilotRequest)
+  app.all("/api/copilotkit/predict/*", authMiddleware, handlePredictionCopilotRequest)
+
+  // Shared desktop runtime (SSE / streaming)
   app.all("/api/copilotkit", authMiddleware, handleCopilotRequest)
   app.all("/api/copilotkit/*", authMiddleware, handleCopilotRequest)
 }

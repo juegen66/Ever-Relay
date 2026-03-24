@@ -36,13 +36,19 @@ export async function afsWrite(context: Context<ServerBindings>, body: AfsWriteB
     tags: body.tags,
     confidence: body.confidence,
     sourceType: body.sourceType,
+    metadata: body.metadata,
   })
   return ok(context, node)
 }
 
 export async function afsSearch(context: Context<ServerBindings>, query: AfsSearchQuery) {
   const userId = requireUserId(context)
-  const results = await afsService.search(userId, query.query, query.scope, query.limit)
+  const results = await afsService.search(userId, query.query, {
+    mode: query.mode,
+    scope: query.scope,
+    pathPrefix: query.pathPrefix,
+    limit: query.limit,
+  })
   return ok(context, { results })
 }
 

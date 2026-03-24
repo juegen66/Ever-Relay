@@ -67,7 +67,7 @@ export function HeroSection() {
         >
           <Image
             src="/images/wallpaper.jpg"
-            alt="CloudOS Desktop Preview"
+            alt="EverRelay Desktop Preview"
             width={1920}
             height={1080}
             className="w-full"

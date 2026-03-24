@@ -16,7 +16,17 @@ export class AfsService {
     return afs.read(userId, path)
   }
 
-  write(userId: string, path: string, content: string, options?: { tags?: string[]; confidence?: number; sourceType?: string }) {
+  write(
+    userId: string,
+    path: string,
+    content: string,
+    options?: {
+      tags?: string[]
+      confidence?: number
+      sourceType?: string
+      metadata?: Record<string, unknown>
+    }
+  ) {
     return afs.write(userId, path, content, options)
   }
 
@@ -24,8 +34,12 @@ export class AfsService {
     return afs.delete(userId, path)
   }
 
-  search(userId: string, query: string, scope?: string, limit?: number) {
-    return afs.search(userId, query, { scope, limit })
+  search(
+    userId: string,
+    query: string,
+    options?: { mode?: "exact" | "semantic" | "hybrid"; scope?: string; pathPrefix?: string; limit?: number }
+  ) {
+    return afs.search(userId, query, options)
   }
 
   // ---- namespace introspection ----
@@ -114,6 +128,22 @@ export class AfsService {
         },
       }
     })
+  }
+
+  // ---- skill convenience methods ----
+
+  async listSkills(userId: string, scope?: AfsScope): Promise<AfsNode[]> {
+    const path = scope && scope !== "Desktop"
+      ? `Desktop/${scope}/Skill`
+      : "Desktop/Skill"
+    return this.list(userId, path)
+  }
+
+  async readSkill(userId: string, name: string, scope?: AfsScope): Promise<AfsNode | null> {
+    const path = scope && scope !== "Desktop"
+      ? `Desktop/${scope}/Skill/${name}`
+      : `Desktop/Skill/${name}`
+    return this.read(userId, path)
   }
 
   // ---- lifecycle management ----

@@ -24,7 +24,7 @@ export const validateCodingRunStep = createStep({
       await codingRunsService.markStage(inputData.runId, "validate")
 
       const prompt = [
-        "Review this CloudOS coding workflow result and return JSON only.",
+        "Review this EverRelay coding workflow result and return JSON only.",
         "Required keys: verdict (pass|fail), feedback, findings, nextStep.",
         `Confirmed report: ${JSON.stringify(inputData.report)}`,
         `Plan summary:\n${inputData.planText}`,

@@ -19,13 +19,25 @@ export type SuggestionCard = {
   meta?: Record<string, unknown>
 }
 
+export type ProactivePredictionReminder = {
+  key: string
+  predictionId: string
+  title: string
+  message: string
+  confidence: number
+}
+
 interface PredictionStore {
   predictions: PredictionCard[]
   suggestions: SuggestionCard[]
+  proactiveReminder: ProactivePredictionReminder | null
   lastUpdated: number | null
   isLoading: boolean
-  setPredictions: (cards: PredictionCard[]) => void
-  setSuggestions: (cards: SuggestionCard[]) => void
+  setPredictionSnapshot: (input: {
+    predictions: PredictionCard[]
+    suggestions: SuggestionCard[]
+    proactiveReminder: ProactivePredictionReminder | null
+  }) => void
   setLoading: (v: boolean) => void
   clear: () => void
 }
@@ -33,10 +45,22 @@ interface PredictionStore {
 export const usePredictionStore = create<PredictionStore>((set) => ({
   predictions: [],
   suggestions: [],
+  proactiveReminder: null,
   lastUpdated: null,
   isLoading: false,
-  setPredictions: (cards) => set({ predictions: cards, lastUpdated: Date.now() }),
-  setSuggestions: (cards) => set({ suggestions: cards, lastUpdated: Date.now() }),
+  setPredictionSnapshot: ({ predictions, suggestions, proactiveReminder }) =>
+    set({
+      predictions,
+      suggestions,
+      proactiveReminder,
+      lastUpdated: Date.now(),
+    }),
   setLoading: (v) => set({ isLoading: v }),
-  clear: () => set({ predictions: [], suggestions: [], lastUpdated: null }),
+  clear: () =>
+    set({
+      predictions: [],
+      suggestions: [],
+      proactiveReminder: null,
+      lastUpdated: null,
+    }),
 }))

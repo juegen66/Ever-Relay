@@ -6,12 +6,14 @@ export {
   deleteDesktopItemTool,
   updateFileContentTool,
 } from "./files-write"
+export { readDesktopFileTool } from "./files-read"
 export {
   createCanvasProjectTool,
   updateCanvasProjectTool,
 } from "./canvas-write"
 export { executeSandboxCommandTool } from "./sandbox/execute"
 export { renderSvgToPngTool } from "./render"
+export { runParallelWorkflowTool } from "./parallel-workflow"
 export {
   listProjectFilesTool,
   readProjectFileTool,

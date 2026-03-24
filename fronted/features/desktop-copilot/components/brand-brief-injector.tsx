@@ -2,8 +2,6 @@
 
 import { useEffect } from "react"
 
-import { useCopilotChatInternal } from "@copilotkit/react-core"
-
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import type { BrandBriefPayload } from "@/shared/copilot/brand-brief"
 import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
@@ -13,8 +11,8 @@ import { DESKTOP_COPILOT_BRAND_BRIEF_EVENT } from "@/shared/copilot/constants"
  * Sidebar remains closed by default; logo agent can open it via open_logo_sidebar when clarification is needed.
  */
 export function BrandBriefInjector() {
-  const { sendMessage } = useCopilotChatInternal({})
-  const setCopilotAgentMode = useDesktopAgentStore((state) => state.setCopilotAgentMode)
+  const copilotThreadId = useDesktopAgentStore((state) => state.copilotThreadId)
+  const queuePendingCopilotDispatch = useDesktopAgentStore((state) => state.queuePendingCopilotDispatch)
 
   useEffect(() => {
     const onBrandBrief = (event: Event) => {
@@ -22,23 +20,20 @@ export function BrandBriefInjector() {
       const message = detail?.message?.trim()
       if (!message) return
 
-      setCopilotAgentMode("logo")
-
-      void sendMessage(
-        {
-          id: crypto.randomUUID(),
-          role: "user",
-          content: message,
-        },
-        { followUp: true }
-      )
+      queuePendingCopilotDispatch({
+        id: crypto.randomUUID(),
+        threadId: copilotThreadId,
+        targetMode: "logo",
+        role: "user",
+        content: message,
+      })
     }
 
     window.addEventListener(DESKTOP_COPILOT_BRAND_BRIEF_EVENT, onBrandBrief as EventListener)
     return () => {
       window.removeEventListener(DESKTOP_COPILOT_BRAND_BRIEF_EVENT, onBrandBrief as EventListener)
     }
-  }, [sendMessage, setCopilotAgentMode])
+  }, [copilotThreadId, queuePendingCopilotDispatch])
 
   return null
 }

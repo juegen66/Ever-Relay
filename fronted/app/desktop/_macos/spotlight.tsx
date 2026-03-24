@@ -1,25 +1,45 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 
-import { Search } from "lucide-react"
+import { Activity, Search } from "lucide-react"
 
 import type { AppId } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { getThirdPartyAppIdForSlug, useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
+import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
-const ALL_APPS: { id: AppId; name: string; category: string }[] = [
+const BASE_SPOTLIGHT_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "finder", name: "Finder", category: "Applications" },
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "logo", name: "Logo Studio", category: "Applications" },
   { id: "vibecoding", name: "Coding Apps", category: "Applications" },
+  { id: "report", name: "Predict Report", category: "Applications" },
+  { id: "activity", name: "Agent Activity", category: "Applications" },
+  { id: "plugins", name: "Plugin Manager", category: "Developer Tools" },
 ]
 
 export function Spotlight() {
   const onClose = useDesktopUIStore((state) => state.closeSpotlight)
   const onOpenApp = useDesktopWindowStore((state) => state.openApp)
   const logAction = useDesktopActionLogStore((state) => state.logAction)
+  const thirdPartyManifestsRecord = useThirdPartyAppRegistry((s) => s.manifests)
+  const thirdPartyManifests = useMemo(
+    () => Object.values(thirdPartyManifestsRecord),
+    [thirdPartyManifestsRecord],
+  )
+
+  const allApps = useMemo(() => {
+    const extra = thirdPartyManifests.map((m) => ({
+      id: getThirdPartyAppIdForSlug(m.slug) as AppId,
+      name: m.displayName,
+      category: "Third-party",
+    }))
+    return [...BASE_SPOTLIGHT_APPS, ...extra]
+  }, [thirdPartyManifests])
+
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -30,12 +50,12 @@ export function Spotlight() {
   }, [])
 
   const filtered = query.trim()
-    ? ALL_APPS.filter(
+    ? allApps.filter(
         (app) =>
           app.name.toLowerCase().includes(query.toLowerCase()) ||
           app.category.toLowerCase().includes(query.toLowerCase())
       )
-    : ALL_APPS.slice(0, 6)
+    : allApps.slice(0, 6)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
@@ -62,7 +82,13 @@ export function Spotlight() {
     canvas: "#ff7a00",
     logo: "#d946ef",
     vibecoding: "#16a34a",
+    report: "#0f766e",
+    activity: "#0891b2",
+    plugins: "#a16207",
   }
+
+  const iconColorForApp = (id: AppId) =>
+    APP_ICONS[id] ?? (isThirdPartyAppId(id) ? "#6366f1" : "#666")
 
   return (
     <div
@@ -126,9 +152,13 @@ export function Spotlight() {
               >
                 <div
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-bold text-white"
-                  style={{ background: APP_ICONS[app.id] || "#666" }}
+                  style={{ background: iconColorForApp(app.id) }}
                 >
-                  {app.name.charAt(0)}
+                  {app.id === "activity" ? (
+                    <Activity className="h-4 w-4 text-white" strokeWidth={2.4} />
+                  ) : (
+                    app.name.charAt(0)
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="text-[14px] font-medium">{app.name}</div>

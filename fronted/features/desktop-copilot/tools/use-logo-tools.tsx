@@ -7,7 +7,13 @@ import { useFrontendTool } from "@copilotkit/react-core"
 import { logoDesignApi } from "@/lib/api/modules/logo-design"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 
-import { CONFIRM_LOGO_BRIEF_PARAMS, OPEN_LOGO_SIDEBAR_PARAMS, toErrorMessage } from "./types"
+import {
+  CONFIRM_LOGO_BRIEF_PARAMS,
+  OPEN_LOGO_SIDEBAR_PARAMS,
+  toErrorMessage,
+  toolErr,
+  toolOk,
+} from "./types"
 
 export function useLogoTools() {
   const setCopilotSidebarOpen = useDesktopAgentStore((state) => state.setCopilotSidebarOpen)
@@ -17,10 +23,7 @@ export function useLogoTools() {
     async (args: { fullPrompt?: string; brandBrief?: Record<string, unknown> }) => {
       const fullPrompt = typeof args.fullPrompt === "string" ? args.fullPrompt.trim() : ""
       if (!fullPrompt) {
-        return {
-          ok: false,
-          error: "fullPrompt is required",
-        }
+        return toolErr("fullPrompt is required")
       }
 
       const brandBrief =
@@ -34,17 +37,20 @@ export function useLogoTools() {
           brandBrief,
         })
 
-        return {
-          ok: true,
-          runId: response.runId,
-          stage: response.stage,
-          status: response.status,
-        }
+        return toolOk(
+          `Succeeded: logo design workflow started (runId ${response.runId}, stage ${String(response.stage)}, status ${String(response.status)}).`,
+          {
+            runId: response.runId,
+            stage: response.stage,
+            workflowStatus: response.status,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
+          }
+        )
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     []
@@ -55,17 +61,23 @@ export function useLogoTools() {
     setCopilotSidebarOpen(true)
 
     const reason = typeof args.reason === "string" ? args.reason.trim() : ""
-    return {
-      ok: true,
-      opened: true,
-      reason: reason || null,
-    }
+    return toolOk(
+      "Succeeded: logo sidebar is open; agent mode is set to logo.",
+      {
+        opened: true,
+        reason: reason || null,
+      },
+      {
+        nextAction: "ask_user_follow_up",
+      }
+    )
   }, [setCopilotAgentMode, setCopilotSidebarOpen])
 
   useFrontendTool(
     {
       name: "confirm_logo_brief",
       description: "Confirm finalized logo brief and trigger backend logo workflow.",
+      followUp: true,
       parameters: CONFIRM_LOGO_BRIEF_PARAMS,
       handler: async (args) => {
         return confirmLogoBrief({
@@ -84,6 +96,7 @@ export function useLogoTools() {
     {
       name: "open_logo_sidebar",
       description: "Open logo copilot sidebar for follow-up clarification questions.",
+      followUp: true,
       parameters: OPEN_LOGO_SIDEBAR_PARAMS,
       handler: async (args) => {
         return openLogoSidebar({

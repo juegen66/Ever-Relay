@@ -1,28 +1,26 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useCallback, useRef } from "react"
 
 import { X } from "lucide-react"
 
-export interface NotificationItem {
-  id: string
-  app: string
-  title: string
-  message: string
-  time: string
-  iconColor: string
-}
+import type { DesktopNotificationItem } from "@/lib/stores/desktop-notification-store"
 
 interface NotificationPopupProps {
-  notification: NotificationItem
+  notification: DesktopNotificationItem
   onDismiss: () => void
 }
 
 export function NotificationPopup({ notification, onDismiss }: NotificationPopupProps) {
+  const onDismissRef = useRef(onDismiss)
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 5000)
-    return () => clearTimeout(timer)
+    onDismissRef.current = onDismiss
   }, [onDismiss])
+
+  useEffect(() => {
+    const timer = setTimeout(() => onDismissRef.current(), 5000)
+    return () => clearTimeout(timer)
+  }, [notification.id])
 
   return (
     <div className="fixed top-8 right-3 z-[10003] w-[340px] animate-notify-in">

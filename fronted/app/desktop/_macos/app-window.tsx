@@ -2,12 +2,18 @@
 
 import { useRef, useCallback, useEffect, useState } from "react"
 
+import { resolveAppDisplayName } from "@/lib/desktop/resolve-app-display-name"
 import type { DesktopFolder, DesktopItemType, WindowState } from "@/lib/desktop/types"
+import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
+import { ActivityApp } from "./apps/activity-app"
 import { CanvasApp } from "./apps/canvas-app"
 import { FolderViewer } from "./apps/folder-viewer"
 import { LogoStudioApp } from "./apps/logo-studio-app"
+import { PluginManagerApp } from "./apps/plugin-manager-app"
+import { ReportApp } from "./apps/report-app"
 import { TextEditApp } from "./apps/textedit-app"
+import { ThirdPartyApp } from "./apps/third-party-app"
 import { VibecodingApp } from "./apps/vibecoding-app"
 
 const APP_TITLES: Record<string, string> = {
@@ -16,12 +22,18 @@ const APP_TITLES: Record<string, string> = {
   logo: "Logo Studio",
   vibecoding: "Coding Apps",
   textedit: "TextEdit",
+  report: "Predict Report",
+  activity: "Agent Activity",
+  plugins: "Plugin Manager",
 }
 
 const APP_COMPONENTS: Record<string, React.ComponentType> = {
   canvas: CanvasApp,
+  activity: ActivityApp,
   logo: LogoStudioApp,
   vibecoding: VibecodingApp,
+  report: ReportApp,
+  plugins: PluginManagerApp,
 }
 
 // Dark title bar apps
@@ -162,7 +174,9 @@ export function AppWindow({
 
   const isFinderView = appId === "finder" && folderViewerProps
   const isFileViewer = appId === "textedit" && windowState.fileId
-  const AppContent = (isFinderView || isFileViewer) ? null : APP_COMPONENTS[appId]
+  const isThirdParty = isThirdPartyAppId(appId)
+  const AppContent =
+    isFinderView || isFileViewer || isThirdParty ? null : APP_COMPONENTS[appId]
   const shouldAnimateWindowBounds = maximized || isTogglingMaximize
 
   const windowStyle = maximized
@@ -284,7 +298,9 @@ export function AppWindow({
             ? windowState.folderName || "Desktop"
             : isFileViewer
               ? windowState.fileName || "Untitled"
-              : APP_TITLES[appId]}
+              : isThirdParty
+                ? resolveAppDisplayName(windowState.appId)
+                : APP_TITLES[appId] ?? appId}
         </div>
         <div className="w-[62px]" />
       </div>
@@ -309,6 +325,8 @@ export function AppWindow({
             fileId={windowState.fileId!}
             fileName={windowState.fileName || "Untitled"}
           />
+        ) : isThirdParty ? (
+          <ThirdPartyApp windowState={windowState} />
         ) : AppContent ? (
           <AppContent />
         ) : null}

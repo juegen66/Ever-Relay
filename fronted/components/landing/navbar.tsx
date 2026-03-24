@@ -30,7 +30,7 @@ export function Navbar() {
             <Monitor className="h-4 w-4 text-white" />
           </div>
           <span className="text-[17px] font-bold tracking-tight text-[#1a1a2e]">
-            Cloud<span className="text-[#34c759]">OS</span>
+            Ever<span className="text-[#34c759]">Relay</span>
           </span>
         </Link>
 

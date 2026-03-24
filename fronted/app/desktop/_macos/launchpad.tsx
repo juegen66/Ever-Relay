@@ -1,21 +1,49 @@
 "use client"
 
+import { useMemo } from "react"
+
+import { Activity } from "lucide-react"
+
 import type { AppId } from "@/lib/desktop/types"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { getThirdPartyAppIdForSlug, useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 
-const LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
+const BASE_LAUNCHPAD_APPS: { id: AppId; name: string; color: string; letter: string }[] = [
   { id: "finder", name: "Finder", color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)", letter: "F" },
   { id: "canvas", name: "Canvas", color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)", letter: "C" },
   { id: "logo", name: "Logo Studio", color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)", letter: "LG" },
   { id: "vibecoding", name: "Coding Apps", color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)", letter: "CA" },
+  { id: "report", name: "Predict Report", color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)", letter: "PR" },
+  { id: "activity", name: "Agent Activity", color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)", letter: "AA" },
+  { id: "plugins", name: "Plugin Manager", color: "linear-gradient(135deg, #b45309 0%, #0f766e 100%)", letter: "PM" },
 ]
 
 export function Launchpad() {
   const track = useTrackAction()
   const onOpenApp = useDesktopWindowStore((state) => state.openApp)
   const onClose = useDesktopUIStore((state) => state.closeLaunchpad)
+  const thirdPartyManifestsRecord = useThirdPartyAppRegistry((s) => s.manifests)
+  const thirdPartyManifests = useMemo(
+    () => Object.values(thirdPartyManifestsRecord),
+    [thirdPartyManifestsRecord],
+  )
+
+  const launchpadApps = useMemo(() => {
+    const extra = thirdPartyManifests.map((m) => ({
+      id: getThirdPartyAppIdForSlug(m.slug) as AppId,
+      name: m.displayName,
+      color: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+      letter: m.displayName
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 3)
+        .toUpperCase(),
+    }))
+    return [...BASE_LAUNCHPAD_APPS, ...extra]
+  }, [thirdPartyManifests])
 
   return (
     <div
@@ -49,7 +77,7 @@ export function Launchpad() {
         className="grid grid-cols-5 gap-x-12 gap-y-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {LAUNCHPAD_APPS.map((app) => (
+        {launchpadApps.map((app) => (
           <button
             key={app.id}
             className="flex flex-col items-center gap-2 group"
@@ -63,9 +91,13 @@ export function Launchpad() {
               className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] shadow-lg transition-transform group-hover:scale-110 group-active:scale-95"
               style={{ background: app.color }}
             >
-              <span className="text-[24px] font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
-                {app.letter}
-              </span>
+              {app.id === "activity" ? (
+                <Activity className="h-8 w-8 text-white drop-shadow-sm" strokeWidth={2.2} />
+              ) : (
+                <span className="text-[24px] font-bold text-white" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.2)" }}>
+                  {app.letter}
+                </span>
+              )}
             </div>
             <span className="text-[12px] text-white font-medium" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
               {app.name}

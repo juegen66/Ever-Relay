@@ -77,8 +77,10 @@ export function ActionLogDebugPanel() {
   const [triggerMessage, setTriggerMessage] = useState<string | null>(null)
   const actions = useDesktopActionLogStore((state) => state.actions)
   const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
+  const silentStatus = useDesktopAgentStore((state) => state.silentStatus)
   const predictions = usePredictionStore((state) => state.predictions)
   const suggestions = usePredictionStore((state) => state.suggestions)
+  const proactiveReminder = usePredictionStore((state) => state.proactiveReminder)
   const lastUpdated = usePredictionStore((state) => state.lastUpdated)
   const isLoading = usePredictionStore((state) => state.isLoading)
 
@@ -97,19 +99,24 @@ export function ActionLogDebugPanel() {
   }, [triggerMessage])
 
   const handleTriggerPredict = () => {
-    const triggered = queueDesktopPredictionRun()
+    void queueDesktopPredictionRun({ force: true }).then((result) => {
+      if (result === "started") {
+        setTriggerMessage("Triggered background predict run.")
+        return
+      }
 
-    if (triggered) {
-      setTriggerMessage("Triggered background predict run.")
-      return
-    }
+      if (result === "restarted") {
+        setTriggerMessage("Restarted prediction with a fresh thread.")
+        return
+      }
 
-    if (silentRunning || isLoading) {
-      setTriggerMessage("Predict is already running.")
-      return
-    }
+      if (result === "running" || silentRunning || isLoading) {
+        setTriggerMessage("Predict is already running.")
+        return
+      }
 
-    setTriggerMessage("Predict trigger skipped by debounce.")
+      setTriggerMessage("Predict trigger skipped by debounce.")
+    })
   }
 
   if (!visible) {
@@ -157,7 +164,7 @@ export function ActionLogDebugPanel() {
               <button
                 type="button"
                 onClick={handleTriggerPredict}
-                disabled={isLoading}
+                disabled={silentStatus === "stopping"}
                 className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-[10px] font-medium text-white/80 transition hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Sparkles className="h-3 w-3" />
@@ -195,6 +202,21 @@ export function ActionLogDebugPanel() {
                 ))}
               </div>
             )}
+            {proactiveReminder && (
+              <div className="mt-2 rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-cyan-100">
+                    Proactive reminder
+                  </span>
+                  <span className="text-[10px] text-cyan-300">
+                    {proactiveReminder.confidence}%
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[10px] leading-tight text-cyan-100/80">
+                  {proactiveReminder.title}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Log */}
@@ -206,8 +228,8 @@ export function ActionLogDebugPanel() {
               <p className="mt-2 text-[11px] text-white/30">No actions recorded yet. Try opening apps, files, or searching.</p>
             ) : (
               <div className="mt-1.5 space-y-0.5">
-                {[...actions].reverse().slice(0, 20).map((action, i) => (
-                  <div key={`${action.ts}-${i}`} className="flex items-center gap-2 rounded px-1.5 py-1 text-[11px] hover:bg-white/5">
+                {[...actions].reverse().slice(0, 20).map((action) => (
+                  <div key={`${action.ts}-${action.type}`} className="flex items-center gap-2 rounded px-1.5 py-1 text-[11px] hover:bg-white/5">
                     <span className="shrink-0 font-mono text-[10px] text-white/30">{formatTs(action.ts)}</span>
                     <span className="truncate text-white/70">{actionLabel(action)}</span>
                   </div>

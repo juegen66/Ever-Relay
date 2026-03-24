@@ -72,7 +72,7 @@ export class EmailService {
     async sendVerificationCode(
         to: string,
         code: string,
-        appName = "Apple Browser"
+        appName = "EverRelay"
     ): Promise<SendEmailResult> {
         const html = this.buildVerificationCodeHtml(code, appName)
         return this.send({

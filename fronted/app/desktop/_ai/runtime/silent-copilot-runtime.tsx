@@ -8,21 +8,24 @@ import { CopilotToolsRegistry } from "@/features/desktop-copilot/tools/use-regis
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import {
-  DESKTOP_COPILOT_ENDPOINT,
   DESKTOP_PREDICTION_CHAT_ID,
+  DESKTOP_PREDICTION_ENABLED,
+  DESKTOP_PREDICTION_ENDPOINT,
   DESKTOP_COPILOT_SILENT_CHAT_ID,
   DESKTOP_COPILOT_SILENT_EVENT,
   PREDICTION_AGENT_ID,
 } from "@/shared/copilot/constants"
 import type { SilentCopilotMessagePayload } from "@/shared/copilot/silent"
 
-import { queueDesktopPredictionRun } from "../lib/prediction-control"
+import { PREDICTION_INTERVAL_MS, queueDesktopPredictionRun } from "../lib/prediction-control"
 import { DesktopAgentContextProvider } from "../providers/desktop-agent-context-provider"
 
-const PREDICTION_PROMPT =
-  "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions. Call update_predictions with the result."
-
-const PREDICTION_INTERVAL_MS = 5 * 60 * 1000
+const PREDICTION_PROMPT = [
+  "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions.",
+  "",
+  "IMPORTANT: If ANY prediction has confidence ≥ 80%, you MUST first activate the prediction-report-builder skill via skill-activate, generate a detailed HTML report, and call generate_prediction_report BEFORE calling update_predictions.",
+  "After handling the report (if needed), call update_predictions with the full result.",
+].join("\n")
 
 function toUserText(input: string) {
   return input.trim()
@@ -75,16 +78,14 @@ function SilentMessageRuntime() {
 
 function DesktopPredictionScheduler() {
   useEffect(() => {
-    queueDesktopPredictionRun()
+    void queueDesktopPredictionRun()
 
     const interval = window.setInterval(() => {
-      queueDesktopPredictionRun()
+      void queueDesktopPredictionRun()
     }, PREDICTION_INTERVAL_MS)
 
     return () => {
       window.clearInterval(interval)
-      useDesktopAgentStore.getState().resetSilentPredictionSession()
-      usePredictionStore.getState().setLoading(false)
     }
   }, [])
 
@@ -96,7 +97,7 @@ function SilentPredictionRuntime() {
     id: DESKTOP_PREDICTION_CHAT_ID,
   })
   const silentRunRequestId = useDesktopAgentStore((state) => state.silentRunRequestId)
-  const silentRunning = useDesktopAgentStore((state) => state.silentRunning)
+  const silentStatus = useDesktopAgentStore((state) => state.silentStatus)
   const finishSilentPredictionRun = useDesktopAgentStore(
     (state) => state.finishSilentPredictionRun
   )
@@ -109,7 +110,7 @@ function SilentPredictionRuntime() {
 
   useEffect(() => {
     if (
-      !silentRunning ||
+      silentStatus !== "running" ||
       silentRunRequestId === 0 ||
       handledRunRef.current === silentRunRequestId
     ) {
@@ -132,36 +133,46 @@ function SilentPredictionRuntime() {
           }
         )
       } catch (error) {
-        console.error("[silent-copilot-runtime] Failed to generate predictions", error)
-      } finally {
-          reset()
+        const message = error instanceof Error ? error.message : String(error)
 
-        if (
-          active &&
-          useDesktopAgentStore.getState().silentRunning &&
-          useDesktopAgentStore.getState().silentRunRequestId === silentRunRequestId
-        ) {
-          finishSilentPredictionRun()
+        if (active && message.includes("Thread already running")) {
+          const state = useDesktopAgentStore.getState()
+
+          if (state.silentRunRequestId === silentRunRequestId) {
+            state.markSilentPredictionStopping(silentRunRequestId)
+            void queueDesktopPredictionRun({ force: true })
+          }
+
+          return
         }
 
-        usePredictionStore.getState().setLoading(false)
+        console.error("[silent-copilot-runtime] Failed to generate predictions", error)
+      } finally {
+        if (active) {
+          reset()
+
+          if (useDesktopAgentStore.getState().silentRunRequestId === silentRunRequestId) {
+            finishSilentPredictionRun(silentRunRequestId)
+            usePredictionStore.getState().setLoading(false)
+          }
+        }
       }
     })()
 
     return () => {
       active = false
     }
-  }, [finishSilentPredictionRun, reset, sendMessage, silentRunRequestId, silentRunning])
+  }, [finishSilentPredictionRun, reset, sendMessage, silentRunRequestId, silentStatus])
 
   useEffect(() => {
     // The prediction tool callback is the point where the app has the data it needs.
     // If the underlying Copilot run keeps streaming after that, stop it so the next
     // manual trigger is not blocked by a stale "running" flag.
-    if (!silentRunning && isLoading) {
+    if (silentStatus === "stopping" && isLoading) {
       stopGeneration()
       reset()
     }
-  }, [isLoading, reset, silentRunning, stopGeneration])
+  }, [isLoading, reset, silentStatus, stopGeneration])
 
   useEffect(() => {
     return () => {
@@ -176,21 +187,43 @@ function SilentPredictionRuntime() {
   return null
 }
 
+let runtimeCleanupTimer: number | null = null
+
 export function SilentCopilotRuntime() {
   const silentThreadId = useDesktopAgentStore((state) => state.silentThreadId)
+
+  useEffect(() => {
+    if (runtimeCleanupTimer !== null) {
+      window.clearTimeout(runtimeCleanupTimer)
+      runtimeCleanupTimer = null
+    }
+
+    return () => {
+      runtimeCleanupTimer = window.setTimeout(() => {
+        useDesktopAgentStore.getState().resetSilentPredictionSession()
+        usePredictionStore.getState().setLoading(false)
+        runtimeCleanupTimer = null
+      }, 0)
+    }
+  }, [])
+
+  if (!DESKTOP_PREDICTION_ENABLED) {
+    return <SilentMessageRuntime />
+  }
 
   return (
     <>
       <SilentMessageRuntime />
       <CopilotKit
-        runtimeUrl={DESKTOP_COPILOT_ENDPOINT}
+        key={silentThreadId}
+        runtimeUrl={DESKTOP_PREDICTION_ENDPOINT}
         credentials="include"
         agent={PREDICTION_AGENT_ID}
         threadId={silentThreadId}
         showDevConsole={false}
       >
         <CopilotToolsRegistry agentId={PREDICTION_AGENT_ID} />
-        <DesktopAgentContextProvider />
+        <DesktopAgentContextProvider includeWorkingMemory={false} />
         <DesktopPredictionScheduler />
         <SilentPredictionRuntime />
       </CopilotKit>

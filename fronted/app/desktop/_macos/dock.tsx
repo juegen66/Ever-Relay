@@ -1,13 +1,25 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useMemo } from "react"
 
-import { Bot, FolderOpen, GitBranch, Palette, PenTool, Terminal } from "lucide-react"
+import {
+  Activity,
+  Bot,
+  Cloud,
+  FileBarChart,
+  FolderOpen,
+  GitBranch,
+  Palette,
+  PenTool,
+  Puzzle,
+  Terminal,
+} from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
 import type { AppId } from "@/lib/desktop/types"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { getThirdPartyAppIdForSlug, useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
 
 import type { LucideIcon } from "lucide-react"
 
@@ -25,19 +37,22 @@ interface DockAppItem extends DockItemBase {
 
 interface DockRouteItem extends DockItemBase {
   kind: "route"
-  id: "copilot-chat" | "workflow-dashboard"
-  href: "/desktop/chat" | "/desktop/workflow"
+  id: "copilot-chat" | "no-chatbot-dashboard"
+  href: "/desktop/chat" | "/desktop/no-chatbot"
 }
 
 type DockItem = DockAppItem | DockRouteItem
 
-const DOCK_ITEMS: DockItem[] = [
+const BASE_DOCK_ITEMS: DockItem[] = [
   { kind: "app", id: "finder", name: "Finder", icon: FolderOpen, color: "linear-gradient(135deg, #1e90ff 0%, #0055d4 100%)" },
   { kind: "app", id: "canvas", name: "Canvas", icon: Palette, color: "linear-gradient(135deg, #ff9f1c 0%, #ff6a00 100%)" },
   { kind: "app", id: "logo", name: "Logo Studio", icon: PenTool, color: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)" },
   { kind: "app", id: "vibecoding", name: "Coding Apps", icon: Terminal, color: "linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%)" },
+  { kind: "app", id: "report", name: "Predict Report", icon: FileBarChart, color: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)" },
+  { kind: "app", id: "activity", name: "Agent Activity", icon: Activity, color: "linear-gradient(135deg, #0f766e 0%, #06b6d4 100%)" },
+  { kind: "app", id: "plugins", name: "Plugin Manager", icon: Puzzle, color: "linear-gradient(135deg, #b45309 0%, #0f766e 100%)" },
   { kind: "route", id: "copilot-chat", href: "/desktop/chat", name: "Copilot", icon: Bot, color: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)" },
-  { kind: "route", id: "workflow-dashboard", href: "/desktop/workflow", name: "Workflow", icon: GitBranch, color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
+  { kind: "route", id: "no-chatbot-dashboard", href: "/desktop/no-chatbot", name: "No Chatbot", icon: GitBranch, color: "linear-gradient(135deg, #111827 0%, #374151 100%)" },
 ]
 
 export function Dock() {
@@ -47,6 +62,27 @@ export function Dock() {
   const openApp = useDesktopWindowStore((state) => state.openApp)
   const openWindows = useDesktopWindowStore((state) => state.windows)
   const bouncingApp = useDesktopWindowStore((state) => state.bouncingApp)
+  const thirdPartyManifestsRecord = useThirdPartyAppRegistry((s) => s.manifests)
+  const thirdPartyManifests = useMemo(
+    () => Object.values(thirdPartyManifestsRecord),
+    [thirdPartyManifestsRecord],
+  )
+
+  const dockItems = useMemo((): DockItem[] => {
+    const tpItems: DockAppItem[] = thirdPartyManifests.map((m) => ({
+      kind: "app",
+      id: getThirdPartyAppIdForSlug(m.slug) as AppId,
+      name: m.displayName,
+      icon: Cloud,
+      color: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+      separatorBefore: false,
+    }))
+    const anchorIdx = BASE_DOCK_ITEMS.findIndex((i) => i.kind === "app" && i.id === "plugins")
+    if (anchorIdx === -1) return [...BASE_DOCK_ITEMS.slice(0, -2), ...tpItems, ...BASE_DOCK_ITEMS.slice(-2)]
+    const before = BASE_DOCK_ITEMS.slice(0, anchorIdx + 1)
+    const after = BASE_DOCK_ITEMS.slice(anchorIdx + 1)
+    return [...before, ...tpItems, ...after]
+  }, [thirdPartyManifests])
 
   const dockRef = useRef<HTMLDivElement>(null)
   const [mouseX, setMouseX] = useState<number | null>(null)
@@ -63,17 +99,17 @@ export function Dock() {
     setTooltip(null)
   }, [])
 
-  const getScale = useCallback((index: number) => {
+  const getScale = (index: number) => {
     if (mouseX === null) return 1
     const itemWidth = 52
     const padding = 10
-    const separatorsBefore = DOCK_ITEMS.slice(0, index + 1).filter((item) => item.separatorBefore).length
+    const separatorsBefore = dockItems.slice(0, index + 1).filter((item) => item.separatorBefore).length
     const itemCenter = index * (itemWidth + 4) + itemWidth / 2 + padding + separatorsBefore * 12
     const distance = Math.abs(mouseX - itemCenter)
     const maxDist = 100
     if (distance > maxDist) return 1
     return 1 + 0.6 * Math.cos((distance / maxDist) * (Math.PI / 2))
-  }, [mouseX])
+  }
 
   return (
     <div className="fixed bottom-1.5 left-1/2 z-[9998] -translate-x-1/2">
@@ -103,7 +139,7 @@ export function Dock() {
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        {DOCK_ITEMS.map((item, index) => {
+        {dockItems.map((item, index) => {
           const Icon = item.icon
           const scale = getScale(index)
           const isOpen = item.kind === "app"

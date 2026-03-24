@@ -8,9 +8,12 @@ import { toDesktopFolder } from "@/lib/desktop-items"
 import { useTrackAction } from "@/lib/hooks/use-track-action"
 import { useDesktopItemsQuery } from "@/lib/query/files"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
+import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopItemsStore } from "@/lib/stores/desktop-items-store"
+import { useDesktopNotificationStore } from "@/lib/stores/desktop-notification-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
 import { useDesktopWindowStore } from "@/lib/stores/desktop-window-store"
+import { isThirdPartyAppId } from "@/lib/third-party-app/types"
 
 import { AboutMac } from "./about-mac"
 import { AppWindow } from "./app-window"
@@ -18,16 +21,17 @@ import { ContextMenu } from "./context-menu"
 import { DesktopIcon } from "./desktop-icon"
 import { Dock } from "./dock"
 import { Launchpad } from "./launchpad"
-import { NotificationPopup, type NotificationItem } from "./notification-center"
+import { NotificationPopup } from "./notification-center"
 import { PendingTasksWidget } from "./pending-tasks-widget"
 import { Spotlight } from "./spotlight"
+import { ThirdPartyAppManifestSync } from "./third-party-app-manifest-sync"
 import { ActionLogDebugPanel } from "../_ai/devtools/action-log-debug-panel"
 
 type FolderNativeDragStartDetail = {
   itemId: string
 }
 
-const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
+const STARTUP_NOTIFICATIONS = [
   { app: "Coding Apps", title: "Sandbox Ready", message: "Your latest coding workspace is ready to continue in the sidebar.", time: "now", iconColor: "#22c55e" },
   { app: "Canvas", title: "Project Synced", message: "Latest edits are saved to your active canvas project.", time: "2m ago", iconColor: "#ff7a00" },
   { app: "Finder", title: "Desktop Ready", message: "Your workspace files are available from Finder.", time: "5m ago", iconColor: "#1e90ff" },
@@ -36,7 +40,7 @@ const STARTUP_NOTIFICATIONS: Omit<NotificationItem, "id">[] = [
 export function Desktop() {
   const pathname = usePathname()
   const track = useTrackAction()
-  const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/workflow"
+  const isFullscreenOverlayRoute = pathname === "/desktop/chat" || pathname === "/desktop/no-chatbot"
 
   const windows = useDesktopWindowStore((state) => state.windows)
   const activeWindowId = useDesktopWindowStore((state) => state.activeWindowId)
@@ -50,6 +54,8 @@ export function Desktop() {
   const updateWindowPosition = useDesktopWindowStore((state) => state.updateWindowPosition)
   const updateWindowSize = useDesktopWindowStore((state) => state.updateWindowSize)
   const clearActiveWindow = useDesktopWindowStore((state) => state.clearActiveWindow)
+  const trackThirdPartyWindow = useDesktopAgentStore((state) => state.trackThirdPartyWindow)
+  const focusThirdPartyCopilot = useDesktopAgentStore((state) => state.focusThirdPartyCopilot)
   const fitWindowsToViewport = useDesktopWindowStore((state) => state.fitWindowsToViewport)
 
   const desktopItemsQuery = useDesktopItemsQuery()
@@ -85,30 +91,46 @@ export function Desktop() {
   const setShowAboutMac = useDesktopUIStore((state) => state.setShowAboutMac)
   const toggleSpotlight = useDesktopUIStore((state) => state.toggleSpotlight)
   const closeTransientUi = useDesktopUIStore((state) => state.closeTransientUi)
+  const notifications = useDesktopNotificationStore((state) => state.notifications)
+  const enqueueNotification = useDesktopNotificationStore((state) => state.enqueueNotification)
+  const dismissDesktopNotification = useDesktopNotificationStore(
+    (state) => state.dismissNotification
+  )
 
   const [desktopReady, setDesktopReady] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const desktopRef = useRef<HTMLDivElement>(null)
-  const notificationQueueRef = useRef<Omit<NotificationItem, "id">[]>([])
   const activeNativeDragItemIdRef = useRef<string | null>(null)
   const desktopItemsRef = useRef(desktopFolders)
   const moveItemToDesktopAtRef = useRef(moveItemToDesktopAt)
 
+  const enqueueNotificationRef = useRef(enqueueNotification)
   useEffect(() => {
-    setTimeout(() => setDesktopReady(true), 100)
-    notificationQueueRef.current = [...STARTUP_NOTIFICATIONS]
+    enqueueNotificationRef.current = enqueueNotification
+  }, [enqueueNotification])
+
+  useEffect(() => {
+    const readyTimer = setTimeout(() => setDesktopReady(true), 100)
+    const queue = [...STARTUP_NOTIFICATIONS]
+    const timers: ReturnType<typeof setTimeout>[] = []
+
     const showNext = (delay: number) => {
-      setTimeout(() => {
-        const next = notificationQueueRef.current.shift()
+      const timer = setTimeout(() => {
+        const next = queue.shift()
         if (next) {
-          setNotifications((prev) => [...prev, { ...next, id: String(Date.now()) }])
-          if (notificationQueueRef.current.length > 0) {
+          enqueueNotificationRef.current(next)
+          if (queue.length > 0) {
             showNext(6000)
           }
         }
       }, delay)
+      timers.push(timer)
     }
     showNext(2000)
+
+    return () => {
+      clearTimeout(readyTimer)
+      timers.forEach(clearTimeout)
+    }
   }, [])
 
   useEffect(() => {
@@ -219,9 +241,9 @@ export function Desktop() {
   const dismissNotification = useCallback(
     (id: string) => {
       track({ type: "notification_dismissed", notificationId: id })
-      setNotifications((prev) => prev.filter((n) => n.id !== id))
+      dismissDesktopNotification(id)
     },
-    [track]
+    [dismissDesktopNotification, track]
   )
 
   const folderViewerProps = useMemo(
@@ -286,12 +308,22 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       onClick={handleDesktopClick}
     >
+      <ThirdPartyAppManifestSync />
+
       {windows.map((win) => (
         <div key={win.id} style={win.minimized ? { display: "none" } : undefined}>
           <AppWindow
             windowState={win}
             isActive={win.id === activeWindowId}
-            onFocus={() => focusWindow(win.id)}
+            onFocus={() => {
+              focusWindow(win.id)
+              if (isThirdPartyAppId(win.appId)) {
+                trackThirdPartyWindow(win.id)
+                if (useDesktopAgentStore.getState().copilotAgentMode === "third_party") {
+                  focusThirdPartyCopilot(win.id)
+                }
+              }
+            }}
             onClose={() => closeWindow(win.id)}
             onMinimize={() => minimizeWindow(win.id)}
             onMaximize={() => maximizeWindow(win.id)}

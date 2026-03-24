@@ -2,17 +2,34 @@
 
 import { create } from "zustand"
 
-import type { AppId, WindowState } from "@/lib/desktop/types"
+import type { AppId, BuiltinAppId, WindowState } from "@/lib/desktop/types"
 import { useDesktopActionLogStore } from "@/lib/stores/desktop-action-log-store"
 import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
 import { useDesktopUIStore } from "@/lib/stores/desktop-ui-store"
+import { useThirdPartyAppRegistry } from "@/lib/third-party-app/registry"
+import { isThirdPartyAppId, thirdPartySlugFromAppId } from "@/lib/third-party-app/types"
 
-const DEFAULT_WINDOW_SIZE: Record<AppId, { w: number; h: number }> = {
+const DEFAULT_WINDOW_SIZE: Record<BuiltinAppId, { w: number; h: number }> = {
   finder: { w: 780, h: 480 },
   canvas: { w: 1160, h: 760 },
   logo: { w: 980, h: 700 },
   vibecoding: { w: 980, h: 640 },
   textedit: { w: 720, h: 520 },
+  report: { w: 900, h: 640 },
+  activity: { w: 940, h: 680 },
+  plugins: { w: 1060, h: 720 },
+}
+
+function resolveWindowSizeForApp(appId: AppId): { w: number; h: number } {
+  if (isThirdPartyAppId(appId)) {
+    const slug = thirdPartySlugFromAppId(appId)
+    if (slug) {
+      const manifest = useThirdPartyAppRegistry.getState().getManifest(slug)
+      if (manifest?.defaultSize) return manifest.defaultSize
+    }
+    return { w: 640, h: 480 }
+  }
+  return DEFAULT_WINDOW_SIZE[appId as BuiltinAppId] ?? { w: 600, h: 400 }
 }
 
 function getViewportSize() {
@@ -97,7 +114,7 @@ export const useDesktopWindowStore = create<DesktopWindowStore>((set, get) => ({
       set((state) => (state.bouncingApp === appId ? { bouncingApp: null } : {}))
     }, 600)
 
-    const size = DEFAULT_WINDOW_SIZE[appId] || { w: 600, h: 400 }
+    const size = resolveWindowSizeForApp(appId)
     const id = `${appId}-${Date.now()}`
     const offset = (windows.length % 6) * 28
     const bounds = getInitialWindowBounds(size.w, size.h, offset)

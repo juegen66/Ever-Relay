@@ -297,6 +297,12 @@
   pointer-events: none !important;
 }
 
+/* Shadow artifact card (render_artifact tool) */
+.shadow-artifact-card {
+  max-height: 560px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
 /* ========== Landing Page Animations ========== */
 @keyframes hero-fade-in {
   from { opacity: 0; transform: translateY(30px); }

@@ -25,7 +25,7 @@ describe("delete", () => {
     const result = await afs.delete("u1", "Desktop/Memory/user/profile")
 
     expect(result).toBe(true)
-    expect(db.update).toHaveBeenCalled()
+    expect(db.update).toHaveBeenCalledTimes(2)
     const setArg = updateChain.set.mock.calls[0][0]
     expect(setArg.deletedAt).toBeInstanceOf(Date)
   })

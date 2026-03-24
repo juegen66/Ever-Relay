@@ -18,6 +18,8 @@ import {
   SET_CODING_PROJECT_STATUS_PARAMS,
   TRIGGER_CODING_WORKFLOW_PARAMS,
   toErrorMessage,
+  toolErr,
+  toolOk,
 } from "./types"
 
 export function useCodingTools() {
@@ -35,11 +37,16 @@ export function useCodingTools() {
 
       const reason = typeof args.reason === "string" ? args.reason.trim() : ""
 
-      return {
-        ok: true,
-        opened: true,
-        reason: reason || null,
-      }
+      return toolOk(
+        "Succeeded: coding sidebar is open and agent mode is set to coding.",
+        {
+          opened: true,
+          reason: reason || null,
+        },
+        {
+          nextAction: "ask_user_follow_up",
+        }
+      )
     },
     [setCopilotAgentMode, setCopilotSidebarOpen]
   )
@@ -55,10 +62,7 @@ export function useCodingTools() {
           ? args.appId.trim()
           : activeCodingApp?.id
       if (!appId) {
-        return {
-          ok: false,
-          error: "No active coding app. Create or activate a coding app first.",
-        }
+        return toolErr("No active coding app. Create or activate a coding app first.")
       }
 
       const status =
@@ -70,11 +74,9 @@ export function useCodingTools() {
       ]
 
       if (!allowedStatuses.includes(status as CodingWorkspacePhase)) {
-        return {
-          ok: false,
-          error:
-            "status must be one of: reviewing_request, needs_clarification, ready_for_confirmation",
-        }
+        return toolErr(
+          "status must be one of: reviewing_request, needs_clarification, ready_for_confirmation"
+        )
       }
 
       const summary =
@@ -91,12 +93,17 @@ export function useCodingTools() {
         summary,
       })
 
-      return {
-        ok: true,
-        appId,
-        status,
-        summary: summary ?? null,
-      }
+      return toolOk(
+        `Succeeded: updated coding workspace status to "${status}" for app ${appId}.`,
+        {
+          appId,
+          projectStatus: status,
+          summary: summary ?? null,
+        },
+        {
+          nextAction: "continue_reasoning",
+        }
+      )
     },
     [activeCodingApp?.id, setProjectPhase]
   )
@@ -113,17 +120,11 @@ export function useCodingTools() {
           : activeCodingApp?.id
 
       if (!report) {
-        return {
-          ok: false,
-          error: "report is required",
-        }
+        return toolErr("report is required")
       }
 
       if (!appId) {
-        return {
-          ok: false,
-          error: "No active coding app. Create or activate a coding app first.",
-        }
+        return toolErr("No active coding app. Create or activate a coding app first.")
       }
 
       try {
@@ -138,17 +139,20 @@ export function useCodingTools() {
         })
         openWorkflowProgress(response.runId, "coding")
 
-        return {
-          ok: true,
-          runId: response.runId,
-          stage: response.stage,
-          status: response.status,
-        }
+        return toolOk(
+          `Succeeded: coding workflow started (runId ${response.runId}, stage ${String(response.stage)}, status ${String(response.status)}). Progress panel should open.`,
+          {
+            runId: response.runId,
+            stage: response.stage,
+            workflowStatus: response.status,
+          },
+          {
+            shouldStop: true,
+            nextAction: "reply_to_user",
+          }
+        )
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     [activeCodingApp?.id, markWorkflowRunning, openWorkflowProgress]
@@ -159,6 +163,7 @@ export function useCodingTools() {
       name: "open_coding_sidebar",
       description:
         "Open the coding sidebar so clarification questions or final confirmation can happen there.",
+      followUp: true,
       parameters: OPEN_CODING_SIDEBAR_PARAMS,
       handler: async (args) => {
         return openCodingSidebar({
@@ -174,6 +179,7 @@ export function useCodingTools() {
       name: "set_coding_project_status",
       description:
         "Update the Vibecoding workspace status for the active project during clarification and confirmation phases.",
+      followUp: true,
       parameters: SET_CODING_PROJECT_STATUS_PARAMS,
       handler: async (args) => {
         return setCodingProjectStatus({
@@ -191,6 +197,7 @@ export function useCodingTools() {
       name: "trigger_coding_workflow",
       description:
         "Trigger the backend coding workflow with a confirmed report and open the workflow progress panel.",
+      followUp: true,
       parameters: TRIGGER_CODING_WORKFLOW_PARAMS,
       handler: async (args) => {
         return triggerCodingWorkflow({

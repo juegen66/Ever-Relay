@@ -10,7 +10,10 @@ import { apiSuccessSchema } from "./common"
 export const AFS_SCOPES = ["Desktop", "Canvas", "Logo", "VibeCoding"] as const
 export type AfsScope = (typeof AFS_SCOPES)[number]
 
-export const AFS_MEMORY_BUCKETS = ["user", "note"] as const
+export const AFS_KINDS = ["Memory", "History", "Skill"] as const
+export type AfsKind = (typeof AFS_KINDS)[number]
+
+export const AFS_MEMORY_BUCKETS = ["user", "note", "skill"] as const
 export type AfsMemoryBucket = (typeof AFS_MEMORY_BUCKETS)[number]
 
 export const AFS_HISTORY_BUCKETS = ["actions", "sessions", "prediction-runs", "workflow-runs", "canvas-activity"] as const
@@ -41,6 +44,20 @@ export const afsNodeSchema = z.object({
 })
 
 export type AfsNode = z.infer<typeof afsNodeSchema>
+
+export function isAfsMemoryPathPrefix(path: string) {
+  const segments = path.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean)
+
+  if (segments[0] === "Desktop") {
+    segments.shift()
+  }
+
+  if (segments[0] && AFS_SCOPES.includes(segments[0] as AfsScope) && segments[0] !== "Desktop") {
+    segments.shift()
+  }
+
+  return segments[0] === "Memory"
+}
 
 // ---------------------------------------------------------------------------
 // API: list
@@ -82,6 +99,12 @@ export const afsWriteBodySchema = z.object({
   tags: z.array(z.string()).optional(),
   confidence: z.number().int().min(0).max(100).optional(),
   sourceType: z.enum(AFS_SOURCE_TYPES).optional(),
+  metadata: z.object({
+    description: z.string().min(1).max(1024).optional(),
+    triggerWhen: z.string().min(1).max(1024).optional(),
+    priority: z.number().int().min(0).max(100).optional(),
+    agentId: z.string().nullable().optional(),
+  }).passthrough().optional(),
 })
 
 export type AfsWriteBody = z.infer<typeof afsWriteBodySchema>
@@ -94,8 +117,29 @@ export const afsWriteResponseSchema = apiSuccessSchema(afsNodeSchema)
 
 export const afsSearchQuerySchema = z.object({
   query: z.string().min(1),
+  mode: z.enum(["exact", "semantic", "hybrid"]).default("exact"),
   scope: z.string().optional(),
+  pathPrefix: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+}).superRefine((value, ctx) => {
+  if (value.mode === "semantic" || value.mode === "hybrid") {
+    if (!value.pathPrefix) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pathPrefix is required when mode is semantic or hybrid",
+        path: ["pathPrefix"],
+      })
+      return
+    }
+
+    if (!isAfsMemoryPathPrefix(value.pathPrefix)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "pathPrefix must point to a Memory subtree when mode is semantic or hybrid",
+        path: ["pathPrefix"],
+      })
+    }
+  }
 })
 
 export type AfsSearchQuery = z.infer<typeof afsSearchQuerySchema>

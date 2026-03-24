@@ -3,12 +3,16 @@ __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 
+# Standalone local MCP demo (ignore its env only)
+test-mcp-afs/.env
+
 # Common ignores
 node_modules/
 .pnpm-store/
 .next/
 fronted/.next/
 tsconfig.tsbuildinfo
+.env
 .env*.local
 .DS_Store
 .idea/
@@ -24,9 +28,18 @@ agentvibecoding420-main/
 # Test coverage
 coverage/
 
+# Third-party app bundles (most remain generated, but built-in exported assets are committed)
+fronted/public/third-party-apps/*
+!fronted/public/third-party-apps/demo-weather/
+!fronted/public/third-party-apps/demo-weather/**
+!fronted/public/third-party-apps/test-mcp-afs/
+!fronted/public/third-party-apps/test-mcp-afs/**
+
 # Cursor and docs (local/planning)
+changeversion/
 .cursor/
 .factory/
+.worktrees/
 docs/
 skills/
 article/

@@ -11,7 +11,7 @@ export const codingReviewerAgent = new Agent({
   model: model.lzmodel4oMini,
   memory: createAgentMemory(),
   instructions: [
-    "You are the validation gate for the CloudOS coding workflow.",
+    "You are the validation gate for the EverRelay coding workflow.",
     "Review the confirmed coding report and sandbox execution output.",
     "Return JSON only with keys: verdict (pass|fail), feedback, findings, nextStep.",
     "Use fail only when the sandbox execution obviously did not satisfy the requested minimal validation.",

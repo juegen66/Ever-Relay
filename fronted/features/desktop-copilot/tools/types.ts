@@ -5,6 +5,15 @@ export type ToolParameter = {
   required?: boolean
 }
 
+export type ToolLifecycleStatus = "completed" | "blocked" | "retry_later"
+
+export type ToolOutcomeMeta = {
+  status?: ToolLifecycleStatus
+  shouldStop?: boolean
+  retryable?: boolean
+  nextAction?: string | null
+}
+
 export function toErrorMessage(error: unknown) {
   if (error instanceof Error && error.message.trim()) {
     return error.message
@@ -12,12 +21,63 @@ export function toErrorMessage(error: unknown) {
   return "Unknown error"
 }
 
+/** Natural-language outcome for the model; keep `ok` for structured checks. */
+export function toolOk<T extends Record<string, unknown> = Record<string, never>>(
+  message: string,
+  data: T = {} as T,
+  meta: ToolOutcomeMeta = {}
+) {
+  return {
+    ok: true as const,
+    message,
+    ...data,
+    status: meta.status ?? "completed",
+    shouldStop: meta.shouldStop ?? false,
+    retryable: meta.retryable ?? false,
+    nextAction: meta.nextAction ?? null,
+  }
+}
+
+export function toolErr<T extends Record<string, unknown> = Record<string, never>>(
+  error: string,
+  data: T = {} as T,
+  meta: ToolOutcomeMeta = {}
+) {
+  return {
+    ok: false as const,
+    message: `Failed: ${error}`,
+    error,
+    ...data,
+    status: meta.status ?? "blocked",
+    shouldStop: meta.shouldStop ?? true,
+    retryable: meta.retryable ?? false,
+    nextAction: meta.nextAction ?? "reply_to_user",
+  }
+}
+
+export function toolRetryLater<T extends Record<string, unknown> = Record<string, never>>(
+  message: string,
+  data: T = {} as T,
+  meta: Omit<ToolOutcomeMeta, "status" | "retryable"> = {}
+) {
+  return {
+    ok: false as const,
+    message: `Retry later: ${message}`,
+    error: message,
+    ...data,
+    status: "retry_later" as const,
+    shouldStop: meta.shouldStop ?? true,
+    retryable: true as const,
+    nextAction: meta.nextAction ?? "wait_and_retry",
+  }
+}
+
 export const OPEN_APP_PARAMS: ToolParameter[] = [
   {
     name: "appId",
     type: "string",
     description:
-      "App id to open: finder|canvas|logo|vibecoding|textedit. To open a specific text file, use open_text_file.",
+      "App id to open: finder|canvas|logo|vibecoding|textedit|report, or a third-party id tp_<slug> (e.g. tp_weather_widget). To open a specific text file, use open_text_file.",
     required: true,
   },
 ]
@@ -47,6 +107,22 @@ export const ADD_SVG_TO_CANVAS_PARAMS: ToolParameter[] = [
   { name: "scale", type: "number", description: "Optional scale multiplier between 0.1 and 4. Default is 1.", required: false },
   { name: "width", type: "number", description: "Optional generated SVG width (120-2400).", required: false },
   { name: "height", type: "number", description: "Optional generated SVG height (120-2400).", required: false },
+]
+
+export const RENDER_ARTIFACT_PARAMS: ToolParameter[] = [
+  {
+    name: "html",
+    type: "string",
+    description:
+      "The complete HTML document string to display. This should be the final message-html-builder style artifact, not a prompt for image generation. Pass the actual HTML markup.",
+    required: true,
+  },
+  {
+    name: "title",
+    type: "string",
+    description: "Optional title shown above the artifact.",
+    required: false,
+  },
 ]
 
 export const CREATE_ITEM_PARAMS: ToolParameter[] = [
@@ -196,11 +272,21 @@ export const OPEN_LOGO_SIDEBAR_PARAMS: ToolParameter[] = [
   },
 ]
 
+export const OPEN_CANVAS_SIDEBAR_PARAMS: ToolParameter[] = [
+  {
+    name: "reason",
+    type: "string",
+    description: "Optional reason shown in tool result for why the Canvas copilot was opened.",
+    required: false,
+  },
+]
+
 export const HANDOFF_TO_AGENT_PARAMS: ToolParameter[] = [
   {
     name: "targetAgentId",
     type: "string",
-    description: "Agent id to switch to, for example main_agent or logo_agent.",
+    description:
+      "Agent id to switch to: main_agent, canvas_agent, logo_agent, coding_agent, or third_party_agent (embedded iframe apps).",
     required: true,
   },
   {

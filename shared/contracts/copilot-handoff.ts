@@ -70,6 +70,7 @@ export type HandoffMetadataPayload = z.infer<typeof handoffMetadataPayloadSchema
 
 export const prepareHandoffDataSchema = z.object({
   metadata: handoffMetadataPayloadSchema,
+  handoffDocument: z.string().trim().min(1),
   droppedMessageCount: z.number().int().min(0),
   truncateBeforeMessageId: z.string().trim().min(1).nullable(),
 })

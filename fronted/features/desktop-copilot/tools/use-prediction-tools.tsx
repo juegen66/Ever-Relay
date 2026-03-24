@@ -2,24 +2,23 @@
 
 import { useFrontendTool } from "@copilotkit/react-core"
 
-import { useDesktopAgentStore } from "@/lib/stores/desktop-agent-store"
+import { useDesktopNotificationStore } from "@/lib/stores/desktop-notification-store"
 import { usePredictionStore } from "@/lib/stores/prediction-store"
 import type { PredictionCard, SuggestionCard } from "@/lib/stores/prediction-store"
-import { PREDICTION_AGENT_ID } from "@/shared/copilot/constants"
+
+import { selectProactiveReminder } from "./select-proactive-reminder"
+import { toolOk } from "./types"
 
 export function usePredictionTools() {
-  const setPredictions = usePredictionStore((state) => state.setPredictions)
-  const setSuggestions = usePredictionStore((state) => state.setSuggestions)
+  const setPredictionSnapshot = usePredictionStore((state) => state.setPredictionSnapshot)
   const setLoading = usePredictionStore((state) => state.setLoading)
-  const finishSilentPredictionRun = useDesktopAgentStore(
-    (state) => state.finishSilentPredictionRun
-  )
 
   useFrontendTool(
     {
       name: "update_predictions",
       description:
-        "Update the workflow dashboard with AI-generated predictions and improvement suggestions. Call this after analyzing user behavior.",
+        "Update the No Chatbot dashboard with AI-generated predictions and improvement suggestions. Call this after analyzing user behavior.",
+      followUp: false,
       parameters: [
         {
           name: "predictions",
@@ -36,31 +35,47 @@ export function usePredictionTools() {
           required: true,
         },
       ],
-      handler: async (args) => {
-        const { silentAgentId, silentRunning } = useDesktopAgentStore.getState()
-        if (!silentRunning || silentAgentId !== PREDICTION_AGENT_ID) {
-          return {
-            ok: false,
-            ignored: true,
-            reason: "No active prediction run",
-          }
-        }
-
+      handler: (args) => {
         const predictions = (args.predictions ?? []) as PredictionCard[]
         const suggestions = (args.suggestions ?? []) as SuggestionCard[]
+        const proactiveReminder = selectProactiveReminder(predictions)
+        const previousReminder = usePredictionStore.getState().proactiveReminder
 
         setLoading(false)
-        setPredictions(predictions)
-        setSuggestions(suggestions)
-        finishSilentPredictionRun()
+        setPredictionSnapshot({
+          predictions,
+          suggestions,
+          proactiveReminder,
+        })
 
-        return {
-          ok: true,
-          predictionsCount: predictions.length,
-          suggestionsCount: suggestions.length,
+        if (
+          proactiveReminder &&
+          proactiveReminder.key !== previousReminder?.key
+        ) {
+          useDesktopNotificationStore.getState().enqueueNotification({
+            app: "Predict",
+            title: proactiveReminder.title,
+            message: `${proactiveReminder.message} Click the Predict Report app in the Dock to view the detailed analysis.`,
+            time: "now",
+            iconColor: "#0f766e",
+          })
         }
+
+        return toolOk(
+          `Succeeded: dashboard updated with ${predictions.length} prediction(s) and ${suggestions.length} suggestion(s).`,
+          {
+            predictionsCount: predictions.length,
+            suggestionsCount: suggestions.length,
+            proactiveReminder: proactiveReminder
+              ? {
+                  predictionId: proactiveReminder.predictionId,
+                  confidence: proactiveReminder.confidence,
+                }
+              : null,
+          }
+        )
       },
     },
-    [finishSilentPredictionRun, setPredictions, setSuggestions, setLoading]
+    [setLoading, setPredictionSnapshot]
   )
 }

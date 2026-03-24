@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 
 const FRONTMATTER_PATTERN = /^---[\s\S]*?---\n/
 
@@ -21,7 +21,27 @@ function sliceBlock(source: string, startMarker: string, endMarker?: string) {
   return source.slice(startIndex, endIndex).trim()
 }
 
-const canvasDesignSkillPath = join(process.cwd(), "skills/canvas-design/SKILL.md")
+function resolveCanvasDesignSkillPath() {
+  let currentDir = process.cwd()
+
+  while (true) {
+    const candidate = join(currentDir, "skills/canvas-design/SKILL.md")
+    if (existsSync(candidate)) {
+      return candidate
+    }
+
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) {
+      throw new Error(
+        "Unable to locate skills/canvas-design/SKILL.md from the current working directory"
+      )
+    }
+
+    currentDir = parentDir
+  }
+}
+
+const canvasDesignSkillPath = resolveCanvasDesignSkillPath()
 
 export const canvasDesignPrompt = stripFrontmatter(
   readFileSync(canvasDesignSkillPath, "utf-8")

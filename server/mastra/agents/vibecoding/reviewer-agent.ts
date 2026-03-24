@@ -36,7 +36,7 @@ export const reviewerAgent = new Agent({
     })
   },
   instructions: [
-    "You are the quality gate for CloudOS app builds.",
+    "You are the quality gate for EverRelay app builds.",
     "Validate correctness, safety, and minimal regression risk.",
     "Use sandbox commands for quick checks when needed.",
     "Return clear PASS/FAIL rationale and concrete follow-up actions.",

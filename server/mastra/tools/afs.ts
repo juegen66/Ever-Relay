@@ -1,10 +1,25 @@
 import { createTool } from "@mastra/core/tools"
 import { z } from "zod"
 
+import { isAfsMemoryPathPrefix } from "@/shared/contracts/afs"
 import { afs } from "@/server/afs"
 import { requestContextSchema } from "./common"
 
 const NAMESPACE_TREE = afs.getNamespaceTree()
+const afsWriteMetadataSchema = z.object({
+  description: z.string().min(1).max(1024).optional().describe(
+    "Required for Skill writes. Used as the skill summary shown in the available-skills list."
+  ),
+  triggerWhen: z.string().min(1).max(1024).optional().describe(
+    "Optional trigger guidance for Skill writes."
+  ),
+  priority: z.number().int().min(0).max(100).optional().describe(
+    "Optional Skill priority. Higher numbers sort first."
+  ),
+  agentId: z.string().nullable().optional().describe(
+    "Optional agent-specific override for Skill writes. Leave null for global skills."
+  ),
+}).passthrough()
 
 export const afsListTool = createTool({
   id: "afs_list",
@@ -12,7 +27,8 @@ export const afsListTool = createTool({
     "List nodes in the AFS (Agentic File System). Desktop is the root directory.\n" +
     "Path protocol: Desktop/<scope>/Memory|History/<bucket>/<subpath>/<name>\n" +
     "Scopes: Canvas, Logo, VibeCoding (sub-apps), or Desktop-level (global)\n" +
-    "Memory buckets: user, note | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n\n" +
+    "Memory buckets: user, note, skill | History buckets: actions, sessions, prediction-runs, workflow-runs, canvas-activity\n" +
+    "Skill has no buckets — list directly: Desktop/Skill, Desktop/Canvas/Skill\n\n" +
     "Namespace:\n" + NAMESPACE_TREE + "\n\n" +
     "Pass 'Desktop/' to see top-level. Pass 'Desktop/Canvas/Memory/user' to list Canvas user memories.",
   inputSchema: z.object({
@@ -51,19 +67,23 @@ export const afsReadTool = createTool({
 export const afsWriteTool = createTool({
   id: "afs_write",
   description:
-    "Write a memory entry to AFS. Only Memory paths are writable.\n" +
-    "Path: Desktop/<scope>/Memory/<bucket>/<name>\n" +
-    "Buckets: user (preferences, facts), note (observations, episodic summaries)\n" +
+    "Write a memory or skill entry to AFS. Memory and Skill paths are writable.\n" +
+    "Path: Desktop/<scope>/Memory/<bucket>/<name> or Desktop/<scope>/Skill/<name>\n" +
+    "Buckets: user (preferences, facts), note (observations, episodic summaries), skill (templates, checklists, examples for skills)\n" +
     "Existing entries at the same path are merged (deduplication).\n" +
-    "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference",
+    "Skill write takes summary fields via metadata: pass metadata.description and optionally metadata.triggerWhen, metadata.priority, metadata.agentId.\n" +
+    "Example: Desktop/Memory/user/prefers-morning-design, Desktop/Logo/Memory/note/brand-color-preference, Desktop/Canvas/Skill/poster-layout",
   inputSchema: z.object({
     path: z.string().describe("Target path, e.g. Desktop/Memory/user/prefers-morning-design"),
     content: z.string().describe("Memory content text"),
     tags: z.array(z.string()).optional().describe("Optional tags for retrieval"),
     confidence: z.number().int().min(0).max(100).optional().describe("Confidence 0-100, default 80"),
+    metadata: afsWriteMetadataSchema.optional().describe(
+      "Optional metadata. For Skill writes, include description and any triggerWhen/priority/agentId fields."
+    ),
   }),
   requestContextSchema,
-  execute: async ({ path, content, tags, confidence }, context) => {
+  execute: async ({ path, content, tags, confidence, metadata }, context) => {
     const userId = context.requestContext?.get("userId") as string | undefined
     if (!userId) return { ok: false, error: "Missing authenticated user context" }
 
@@ -72,6 +92,7 @@ export const afsWriteTool = createTool({
         tags,
         confidence,
         sourceType: "prediction_agent",
+        metadata,
       })
       return { ok: true, node }
     } catch (error) {
@@ -83,19 +104,49 @@ export const afsWriteTool = createTool({
 export const afsSearchTool = createTool({
   id: "afs_search",
   description:
-    "Search across AFS by keyword. Searches all scopes or a specific scope.\n" +
-    "Use scope to limit: Desktop/Canvas searches only Canvas scope.",
+    "Search across AFS in exact, semantic, or hybrid mode.\n" +
+    "Use mode=exact for fast literal keyword search across Memory, History, and Skill.\n" +
+    "Use mode=semantic only for Memory when you need conceptual similarity, and always constrain it with pathPrefix.\n" +
+    "Use mode=hybrid for memory recall tasks: it combines exact keyword matches with semantic memory retrieval, then appends semantic-only matches after exact hits.\n" +
+    "Semantic and hybrid modes require pathPrefix to point to a Memory subtree, e.g. Desktop/Canvas/Memory/note.\n" +
+    "Use scope/pathPrefix to limit the search space: Desktop/Canvas/Memory/note searches only that subtree.",
   inputSchema: z.object({
     query: z.string().describe("Keyword to search for"),
+    mode: z.enum(["exact", "semantic", "hybrid"]).default("exact").describe("Search mode"),
     scope: z.string().optional().describe("Optional scope path, e.g. Desktop/Canvas"),
+    pathPrefix: z.string().optional().describe("Optional subtree path. Required for semantic and hybrid modes, e.g. Desktop/Canvas/Memory/note"),
     limit: z.number().int().min(1).max(100).optional().describe("Max results, default 20"),
+  }).superRefine((value, ctx) => {
+    if (value.mode === "semantic" || value.mode === "hybrid") {
+      if (!value.pathPrefix) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pathPrefix"],
+          message: "pathPrefix is required when mode is semantic or hybrid",
+        })
+        return
+      }
+
+      if (!isAfsMemoryPathPrefix(value.pathPrefix)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pathPrefix"],
+          message: "pathPrefix must point to a Memory subtree when mode is semantic or hybrid",
+        })
+      }
+    }
   }),
   requestContextSchema,
-  execute: async ({ query, scope, limit }, context) => {
+  execute: async ({ query, mode, scope, pathPrefix, limit }, context) => {
     const userId = context.requestContext?.get("userId") as string | undefined
     if (!userId) return { ok: false, error: "Missing authenticated user context" }
 
-    const results = await afs.search(userId, query, { scope, limit: limit ?? 20 })
+    const results = await afs.search(userId, query, {
+      mode,
+      scope,
+      pathPrefix,
+      limit: limit ?? 20,
+    })
     return { ok: true, count: results.length, results }
   },
 })
@@ -103,7 +154,7 @@ export const afsSearchTool = createTool({
 export const afsDeleteTool = createTool({
   id: "afs_delete",
   description:
-    "Soft-delete a memory node. Only Memory paths can be deleted.",
+    "Soft-delete a memory or skill node. Memory and Skill paths can be deleted.",
   inputSchema: z.object({
     path: z.string().describe("Full path of the memory node to delete"),
   }),

@@ -103,6 +103,36 @@ function mergeReport(
   }
 }
 
+/**
+ * Markdown document stored for audit/history and replayed by the frontend
+ * back into the target agent after mode switch.
+ */
+export function formatHandoffDocument(report: HandoffReport): string {
+  const lines: string[] = [
+    `# Agent handoff`,
+    ``,
+    `## Task`,
+    report.task,
+    ``,
+    `## Prior context (compressed)`,
+    report.contextDigest,
+  ]
+
+  const appendList = (title: string, items: string[]) => {
+    if (items.length === 0) return
+    lines.push(``, `## ${title}`, ...items.map((item) => `- ${item}`))
+  }
+
+  appendList("Done", report.done)
+  appendList("Next steps", report.nextSteps)
+  appendList("Constraints", report.constraints)
+  appendList("Artifacts", report.artifacts)
+  appendList("Open questions", report.openQuestions)
+  appendList("Risk notes", report.riskNotes)
+
+  return lines.join("\n")
+}
+
 export async function buildHandoffMetadata(
   body: PrepareHandoffBody
 ): Promise<HandoffMetadata | null> {

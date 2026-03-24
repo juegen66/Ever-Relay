@@ -15,6 +15,8 @@ import {
   ACTIVATE_CODING_APP_PARAMS,
   CREATE_CODING_APP_PARAMS,
   toErrorMessage,
+  toolErr,
+  toolOk,
 } from "./types"
 
 type CodingAppSummary = Pick<
@@ -48,17 +50,13 @@ export function useCodingAppTools() {
       const apps = await loadApps()
       const { activeCodingApp: nextActiveCodingApp } = useDesktopAgentStore.getState()
 
-      return {
-        ok: true,
+      return toolOk(`Succeeded: loaded ${apps.length} coding app(s).`, {
         count: apps.length,
         activeApp: nextActiveCodingApp ? formatCodingApp(nextActiveCodingApp) : null,
         apps: apps.map((app) => formatCodingApp(app)),
-      }
+      })
     } catch (error) {
-      return {
-        ok: false,
-        error: toErrorMessage(error),
-      }
+      return toolErr(toErrorMessage(error))
     }
   }, [loadApps])
 
@@ -71,10 +69,7 @@ export function useCodingAppTools() {
           : undefined
 
       if (!name) {
-        return {
-          ok: false,
-          error: "name is required",
-        }
+        return toolErr("name is required")
       }
 
       try {
@@ -85,15 +80,11 @@ export function useCodingAppTools() {
 
         setCopilotSidebarOpen(true)
 
-        return {
-          ok: true,
+        return toolOk(`Succeeded: created coding app "${app.name}" and opened the sidebar.`, {
           activeApp: formatCodingApp(app),
-        }
+        })
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     [createApp, setCopilotSidebarOpen]
@@ -101,16 +92,17 @@ export function useCodingAppTools() {
 
   const getActiveCodingApp = useCallback(async () => {
     if (!activeCodingApp) {
-      return {
-        ok: true,
+      return toolOk("Succeeded: there is no active coding app bound to the sidebar right now.", {
         activeApp: null,
-      }
+      })
     }
 
-    return {
-      ok: true,
-      activeApp: formatCodingApp(activeCodingApp),
-    }
+    return toolOk(
+      `Succeeded: active coding app is "${activeCodingApp.name}" (${activeCodingApp.id}).`,
+      {
+        activeApp: formatCodingApp(activeCodingApp),
+      }
+    )
   }, [activeCodingApp])
 
   const activateCodingApp = useCallback(
@@ -119,19 +111,15 @@ export function useCodingAppTools() {
       const targetName = normalizeName(args.name)
 
       if (!appId && !targetName) {
-        return {
-          ok: false,
-          error: "appId or name is required",
-        }
+        return toolErr("appId or name is required")
       }
 
       if (activeCodingApp?.id === appId) {
         setCopilotSidebarOpen(true)
-        return {
-          ok: true,
+        return toolOk("Succeeded: already active — no switch needed.", {
           skipped: true,
           activeApp: formatCodingApp(activeCodingApp),
-        }
+        })
       }
 
       try {
@@ -145,11 +133,9 @@ export function useCodingAppTools() {
             apps.find((app) => normalizeName(app.name).includes(targetName))
 
           if (!partialMatch) {
-            return {
-              ok: false,
-              error: `Coding app not found: ${args.name ?? "unknown"}`,
+            return toolErr(`Coding app not found: ${args.name ?? "unknown"}`, {
               candidates: apps.map((app) => ({ id: app.id, name: app.name })),
-            }
+            })
           }
 
           nextAppId = partialMatch.id
@@ -159,15 +145,11 @@ export function useCodingAppTools() {
 
         setCopilotSidebarOpen(true)
 
-        return {
-          ok: true,
+        return toolOk(`Succeeded: activated coding app "${app.name}" (${app.id}).`, {
           activeApp: formatCodingApp(app),
-        }
+        })
       } catch (error) {
-        return {
-          ok: false,
-          error: toErrorMessage(error),
-        }
+        return toolErr(toErrorMessage(error))
       }
     },
     [activateApp, activeCodingApp, loadApps, setCopilotSidebarOpen]
@@ -177,6 +159,7 @@ export function useCodingAppTools() {
     {
       name: "list_coding_apps",
       description: "List coding apps available to the current user.",
+      followUp: true,
       parameters: [],
       handler: async () => listCodingApps(),
     },
@@ -188,6 +171,7 @@ export function useCodingAppTools() {
       name: "create_coding_app",
       description:
         "Create a new coding app workspace, activate it, and bind the sidebar to that app thread.",
+      followUp: true,
       parameters: CREATE_CODING_APP_PARAMS,
       handler: async (args) =>
         createCodingApp({
@@ -203,6 +187,7 @@ export function useCodingAppTools() {
     {
       name: "get_active_coding_app",
       description: "Return the coding app currently bound to the sidebar thread, if any.",
+      followUp: true,
       parameters: [],
       handler: async () => getActiveCodingApp(),
     },
@@ -214,6 +199,7 @@ export function useCodingAppTools() {
       name: "activate_coding_app",
       description:
         "Switch the sidebar into a specific coding app thread and make that app the active sandbox context.",
+      followUp: true,
       parameters: ACTIVATE_CODING_APP_PARAMS,
       handler: async (args) =>
         activateCodingApp({

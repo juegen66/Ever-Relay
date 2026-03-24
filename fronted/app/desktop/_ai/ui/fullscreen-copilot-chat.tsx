@@ -7,6 +7,16 @@ import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createPortal } from "react-dom"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 
 import { useStartNewCopilotChat } from "../hooks/use-start-new-copilot-chat"
@@ -15,10 +25,16 @@ export function FullscreenCopilotChat() {
   const router = useRouter()
   const startNewChat = useStartNewCopilotChat()
   const [mounted, setMounted] = useState(false)
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false)
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true))
   }, [])
+
+  const handleConfirmNewChat = () => {
+    setShowNewChatDialog(false)
+    startNewChat()
+  }
 
   if (!mounted) {
     return null
@@ -50,14 +66,7 @@ export function FullscreenCopilotChat() {
           size="sm"
           variant="secondary"
           className="h-8 border border-white/35 bg-white/20 text-white hover:bg-white/30"
-          onClick={() => {
-            const shouldStartNewChat = window.confirm("Start a new chat? This clears the current conversation view.")
-            if (!shouldStartNewChat) {
-              return
-            }
-
-            startNewChat()
-          }}
+          onClick={() => setShowNewChatDialog(true)}
         >
           New Chat
         </Button>
@@ -68,6 +77,23 @@ export function FullscreenCopilotChat() {
           <CopilotChat className="desktop-copilot-fullscreen h-full min-h-0 w-full text-sm" />
         </div>
       </div>
+
+      <AlertDialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start New Chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear the current conversation view and start a fresh chat session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmNewChat}>
+              New Chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>,
     document.body
   )
