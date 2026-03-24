@@ -190,7 +190,7 @@ export class OfflineContextService {
         : "- none"
 
     return [
-      "You are the fixed discovery agent for CloudOS offline proactive workflows.",
+      "You are the fixed discovery agent for EverRelay offline proactive workflows.",
       "Your job is to decide whether the system should act for this user right now.",
       "If there is a high-value actionable task, choose exactly one target agent from the provided runnable list.",
       "If there is no strong opportunity, return an empty targetAgentId and explain the skip reason in background.",

@@ -14,7 +14,7 @@ export const APP_BUILD_WORKFLOW_ID = "app-build"
 
 export const appBuildWorkflow = createWorkflow({
   id: APP_BUILD_WORKFLOW_ID,
-  description: "CloudOS app build workflow: plan -> generate -> validate",
+  description: "EverRelay app build workflow: plan -> generate -> validate",
   inputSchema: buildWorkflowInputSchema,
   outputSchema: buildValidateOutputSchema,
   concurrency: {

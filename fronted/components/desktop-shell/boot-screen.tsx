@@ -251,7 +251,7 @@ export function BootScreen({ onComplete, callbackURL = "/desktop" }: BootScreenP
           </svg>
         </div>
 
-        <div className="mb-5 text-[17px] font-medium text-white">CloudOS Account</div>
+        <div className="mb-5 text-[17px] font-medium text-white">EverRelay Account</div>
 
         <form
           onSubmit={handleEmailLogin}

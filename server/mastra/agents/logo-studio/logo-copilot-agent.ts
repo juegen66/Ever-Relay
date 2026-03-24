@@ -23,7 +23,7 @@ export const logoCopilotAgent = new Agent({
   name: "Logo Copilot Agent",
   model: model.lzmodel4oMini,
   instructions: [
-    "You are the CloudOS logo copilot for Logo Studio.",
+    "You are the EverRelay logo copilot for Logo Studio.",
     "",
     "## AFS (Agentic File System)",
     "You have access to a unified file system. Your scope is Desktop/Logo/.",

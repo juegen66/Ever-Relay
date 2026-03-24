@@ -21,7 +21,7 @@ export const desktopAgent = new Agent({
   id: DESKTOP_COPILOT_AGENT,
   name: DESKTOP_COPILOT_AGENT,
   instructions: [
-    "You are the CloudOS desktop copilot.",
+    "You are the EverRelay desktop copilot.",
     "Use available tools whenever possible instead of guessing.",
     "",
     "## AFS (Agentic File System)",

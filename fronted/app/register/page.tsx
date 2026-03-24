@@ -200,7 +200,7 @@ export default function RegisterPage() {
             <Monitor className="h-6 w-6 text-white" />
           </div>
           <span className="text-[28px] font-bold tracking-tight text-[#1a1a2e]">
-            Cloud<span className="text-[#34c759]">OS</span>
+            Ever<span className="text-[#34c759]">Relay</span>
           </span>
         </Link>
         <p className="mt-4 text-[14px] text-[#8a8680]">Your desktop in the cloud.</p>
@@ -215,7 +215,7 @@ export default function RegisterPage() {
               <Monitor className="h-4 w-4 text-white" />
             </div>
             <span className="text-[16px] font-bold text-[#1a1a2e]">
-              Cloud<span className="text-[#34c759]">OS</span>
+              Ever<span className="text-[#34c759]">Relay</span>
             </span>
           </Link>
         </div>
@@ -224,7 +224,7 @@ export default function RegisterPage() {
           <div className="w-full max-w-[440px]">
             {/* Title */}
             <h1 className="text-center text-[32px] font-bold leading-tight tracking-tight text-[#1a1a2e] md:text-[40px]">
-              Register for<br />CloudOS
+              Register for<br />EverRelay
             </h1>
 
             {success ? (
@@ -483,7 +483,7 @@ export default function RegisterPage() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#34c759]">
               <Monitor className="h-3 w-3 text-white" />
             </div>
-            <span className="text-[13px] font-semibold text-[#8a8680]">CloudOS</span>
+            <span className="text-[13px] font-semibold text-[#8a8680]">EverRelay</span>
           </Link>
           <p className="text-[11px] text-[#c5c0b8]">Not affiliated with Apple Inc.</p>
         </div>

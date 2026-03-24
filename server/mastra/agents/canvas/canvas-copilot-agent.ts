@@ -36,7 +36,7 @@ export const canvasCopilotAgent = new Agent({
     ]
   },
   instructions: [
-    "You are the CloudOS canvas copilot for the Canvas app.",
+    "You are the EverRelay canvas copilot for the Canvas app.",
     "",
     "## AFS (Agentic File System)",
     "You have access to a unified file system. Your scope is Desktop/Canvas/.",

@@ -30,7 +30,7 @@ export const auth = betterAuth({
         if (type === "email-verification") {
           console.log(`[OTP] Sending verification code to ${email}`)
           try {
-            await emailService.sendVerificationCode(email, otp, "CloudOS")
+            await emailService.sendVerificationCode(email, otp, "EverRelay")
             console.log(`[OTP] Verification code sent successfully to ${email}`)
           } catch (err) {
             console.error(`[OTP] Failed to send verification code to ${email}:`, err)

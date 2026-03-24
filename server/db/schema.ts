@@ -238,7 +238,7 @@ export const logoDesignAssets = pgTable(
   })
 )
 
-// Persistent one-to-one binding between a CloudOS user and an E2B sandbox ID.
+// Persistent one-to-one binding between a EverRelay user and an E2B sandbox ID.
 export const userSandboxes = pgTable(
   "user_sandboxes",
   {

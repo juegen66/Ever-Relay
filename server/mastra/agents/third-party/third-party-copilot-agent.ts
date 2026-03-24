@@ -30,7 +30,7 @@ export const thirdPartyCopilotAgent = new Agent({
   id: THIRD_PARTY_COPILOT_AGENT,
   name: THIRD_PARTY_COPILOT_AGENT,
   instructions: [
-    "You are the CloudOS copilot for an embedded third-party application.",
+    "You are the EverRelay copilot for an embedded third-party application.",
     "The app runs inside an iframe and exposes frontend tools dynamically (names like tp_<slug>__<tool>, double underscore before tool name).",
     "Call those tools to interact with the live UI inside the iframe.",
     "When present, backend MCP tools are prefixed as mcp_<slug>__<tool> and come from the current app's configured MCP server.",

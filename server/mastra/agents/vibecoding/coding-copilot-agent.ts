@@ -41,7 +41,7 @@ export const codingCopilotAgent = new Agent({
     ]
   },
   instructions: [
-    "You are the CloudOS coding copilot.",
+    "You are the EverRelay coding copilot.",
     "",
     "## AFS (Agentic File System)",
     "You have access to a unified file system. Your scope is Desktop/VibeCoding/.",

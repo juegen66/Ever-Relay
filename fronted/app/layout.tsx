@@ -8,7 +8,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'CloudOS - Your Desktop in the Cloud',
+  title: 'EverRelay - Your Desktop in the Cloud',
   description: 'A beautiful web-based desktop environment. Access your workspace from any browser, anywhere.',
 }
 

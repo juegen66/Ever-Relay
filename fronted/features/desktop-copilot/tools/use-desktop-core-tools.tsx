@@ -205,7 +205,7 @@ export function useDesktopCoreTools() {
   useFrontendTool(
     {
       name: "open_app",
-      description: "Open an app window in the CloudOS desktop.",
+      description: "Open an app window in the EverRelay desktop.",
       followUp: true,
       parameters: OPEN_APP_PARAMS,
       handler: async (args) => {

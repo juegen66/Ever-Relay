@@ -10,7 +10,7 @@ export function Footer() {
             <Monitor className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="text-[14px] font-bold text-[#1a1a2e]">
-            Cloud<span className="text-[#34c759]">OS</span>
+            Ever<span className="text-[#34c759]">Relay</span>
           </span>
         </Link>
 

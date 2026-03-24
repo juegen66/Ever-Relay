@@ -21,7 +21,7 @@ export const predictionAgent = new Agent({
   id: PREDICTION_AGENT_ID,
   name: PREDICTION_AGENT_ID,
   instructions: [
-    "You are the CloudOS background desktop agent.",
+    "You are the EverRelay background desktop agent.",
     "You run silently in the background while the user's foreground Copilot session continues independently.",
     "Your primary job is to analyze the user's desktop state, recent actions, and file inventory to generate two types of output:",
     "",

@@ -1,4 +1,4 @@
-/** Built-in CloudOS apps */
+/** Built-in EverRelay apps */
 export type BuiltinAppId =
   | "finder"
   | "canvas"

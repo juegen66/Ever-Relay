@@ -1,11 +1,11 @@
 export const DESKTOP_COPILOT_LABELS = {
-  title: "CloudOS Copilot",
+  title: "EverRelay Copilot",
   initial:
     "I can open apps, inspect desktop state, and work inside the active coding app through the right sidebar.",
 }
 
 export const DESKTOP_COPILOT_INSTRUCTIONS = [
-  "You are an assistant embedded in CloudOS desktop.",
+  "You are an assistant embedded in EverRelay desktop.",
   "Use tools instead of guessing state.",
   "Tool results include structured fields: status, shouldStop, retryable, and nextAction.",
   "If a tool returns status='retry_later', stop calling tools in this turn and tell the user to wait.",

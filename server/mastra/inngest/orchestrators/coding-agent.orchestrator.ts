@@ -16,7 +16,7 @@ export const CODING_AGENT_WORKFLOW_ID = "coding-agent"
 
 export const codingAgentWorkflow = createWorkflow({
   id: CODING_AGENT_WORKFLOW_ID,
-  description: "CloudOS coding workflow: report ingest -> sandbox execute -> validate -> distill memory",
+  description: "EverRelay coding workflow: report ingest -> sandbox execute -> validate -> distill memory",
   inputSchema: codingWorkflowInputSchema,
   outputSchema: codingValidateOutputSchema,
   concurrency: {

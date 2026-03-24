@@ -175,7 +175,7 @@ export function NoChatbotDashboard() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="h-4 w-4 rounded-full border-2 border-black" />
-              <span className="text-[18px] font-semibold text-[#101010]">CloudOS</span>
+              <span className="text-[18px] font-semibold text-[#101010]">EverRelay</span>
             </div>
             <nav className="flex items-center gap-4">
               {NAV_ITEMS.map((item) => {

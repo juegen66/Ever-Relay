@@ -33,7 +33,7 @@ export const codingWorkerAgent = new Agent({
     })
   },
   instructions: [
-    "You execute the sandbox phase of the CloudOS coding workflow.",
+    "You execute the sandbox phase of the EverRelay coding workflow.",
     "Use execute_sandbox_command for safe read-only validation.",
     "Run at most 3 commands and prefer simple environment inspection such as pwd, ls, node --version, or pnpm --version when relevant.",
     "Return JSON only with keys: status, summary, commands, findings, nextActions.",
