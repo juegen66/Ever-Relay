@@ -1,4 +1,0 @@
-interface:
-  display_name: "CopilotKit Tools + HITL"
-  short_description: "Implement CopilotKit hooks: tools, agent, context, suggestions, HITL."
-  default_prompt: "Use this skill when integrating CopilotKit useFrontendTool, useAgent, useAgentContext, useSuggestions, and useHumanInTheLoop, including schemas, handlers, agent state, suggestion UX, and approval/rejection flows."

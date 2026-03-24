@@ -38,6 +38,9 @@ fronted/public/third-party-apps/*
 # Cursor and docs (local/planning)
 changeversion/
 .cursor/
+.augment/
+.claude/
+.kilocode/
 .factory/
 .worktrees/
 docs/
