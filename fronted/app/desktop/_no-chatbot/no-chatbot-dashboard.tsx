@@ -33,9 +33,9 @@ type WorkflowStep = {
 const NAV_ITEMS = ["Dashboard", "Tasks", "Files"] as const
 
 const WORKFLOW_STEPS: WorkflowStep[] = [
-  { id: 0, title: "Data Import", subtitle: "Validated input files" },
-  { id: 1, title: "Analysis", subtitle: "Running Models" },
-  { id: 2, title: "Generate PDF", subtitle: "Waiting for output" },
+  { id: 0, title: "Observe Work", subtitle: "Read windows, files, and context" },
+  { id: 1, title: "Analyze Friction", subtitle: "Identify blockers and waste" },
+  { id: 2, title: "Recommend Actions", subtitle: "Rank next best improvements" },
 ]
 
 function getTimeGreeting() {
@@ -116,21 +116,21 @@ export function NoChatbotDashboard() {
   const handleTriggerWorkflow = () => {
     void queueDesktopPredictionRun({ force: true }).then((result) => {
       if (result === "started") {
-        setTriggerMessage("Prediction workflow started. Results will appear here shortly.")
+        setTriggerMessage("Optimization workflow started. Results will appear here shortly.")
         return
       }
 
       if (result === "restarted") {
-        setTriggerMessage("Prediction workflow restarted with a fresh thread.")
+        setTriggerMessage("Optimization workflow restarted with a fresh thread.")
         return
       }
 
       if (result === "running" || silentRunning || isLoading) {
-        setTriggerMessage("Prediction workflow is already running.")
+        setTriggerMessage("Optimization workflow is already running.")
         return
       }
 
-      setTriggerMessage("Prediction trigger skipped. Try again in a moment.")
+      setTriggerMessage("Optimization trigger skipped. Try again in a moment.")
     })
   }
 
@@ -142,9 +142,9 @@ export function NoChatbotDashboard() {
   const hasSuggestions = suggestions.length > 0
   const activeStep = isLoading ? 1 : hasPredictions || hasSuggestions ? 2 : 0
   const workflowStatus = isLoading
-    ? "Analyzing desktop activity"
+    ? "Analyzing your work"
     : hasPredictions || hasSuggestions
-      ? "Prediction results ready"
+      ? "Optimization guidance ready"
       : "Ready"
 
   return createPortal(
@@ -220,12 +220,12 @@ export function NoChatbotDashboard() {
             )}
           </section>
 
-          {/* Predicted Next Steps */}
+          {/* Top Optimization Actions */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#242424]">
                 <Circle className="h-4 w-4 fill-[#131313] text-[#131313]" />
-                Predicted Next Steps
+                Top Optimization Actions
               </div>
               <div className="rounded-full border border-black/10 bg-white px-3 py-1 text-[11px] font-medium text-[#919191]">
                 {isLoading ? "Analyzing..." : formatTimeSince(lastUpdated)}
@@ -236,7 +236,7 @@ export function NoChatbotDashboard() {
               <div className="flex items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-[#919191]" />
-                  <p className="text-[15px] text-[#919191]">AI is analyzing your activity...</p>
+                  <p className="text-[15px] text-[#919191]">AI is analyzing your work for optimization opportunities...</p>
                 </div>
               </div>
             ) : hasPredictions ? (
@@ -281,12 +281,12 @@ export function NoChatbotDashboard() {
                         variant={index === 0 ? "default" : "outline"}
                         onClick={() => {
                           dispatchPredictionActionToCopilot({
-                            message: `Please help me with: ${pred.title}\n\n${pred.description}`,
+                            message: `Please help me apply this optimization:\n${pred.title}\n\n${pred.description}`,
                           })
                           router.push("/desktop")
                         }}
                       >
-                        {pred.actionLabel ?? "Start"}
+                        {pred.actionLabel ?? "Apply"}
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -296,31 +296,31 @@ export function NoChatbotDashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center rounded-[26px] border border-black/10 bg-white p-12 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
                 <p className="text-[15px] text-[#919191]">
-                  No predictions yet. Trigger a prediction run to generate events and confidence scores.
+                  No optimization actions yet. Trigger a run to generate ranked recommendations.
                 </p>
                 <Button
                   className="mt-5 h-11 rounded-[14px] px-6 text-[14px] font-medium"
                   onClick={handleTriggerWorkflow}
                   disabled={silentStatus === "stopping"}
                 >
-                  {isLoading ? "Analyzing..." : "Trigger Workflow"}
+                  {isLoading ? "Analyzing..." : "Run Optimizer"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
           </section>
 
-          {/* Improvement Layer + Active Workflow */}
+          {/* Supporting Suggestions + Advisor Status */}
           <section className="space-y-3 pb-2">
             <div className="grid grid-cols-[320px_1fr] items-center gap-5">
               <div className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#242424]">
                 <Sparkles className="h-4 w-4" />
-                Improvement Layer
+                Supporting Suggestions
               </div>
               <div className="flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#242424]">
                   <Zap className="h-4 w-4" />
-                  Active Workflow
+                  Optimization Workflow
                 </div>
                 <p className="text-[11px] font-medium text-[#9a9a9a]">{workflowStatus}</p>
               </div>
@@ -352,17 +352,17 @@ export function NoChatbotDashboard() {
                         const selected = suggestions[activeSuggestion]
                         if (!selected) return
                         dispatchPredictionActionToCopilot({
-                          message: `Please help me with this suggestion: ${selected.title}\n\n${selected.description}`,
+                          message: `Please help me apply this optimization suggestion:\n${selected.title}\n\n${selected.description}`,
                         })
                         router.push("/desktop")
                       }}
                     >
-                      Apply selected suggestion
+                      Apply selected optimization
                     </button>
                   </>
                 ) : (
                   <div className="flex items-center justify-center py-8">
-                    <p className="text-[13px] text-[#919191]">No suggestions yet.</p>
+                    <p className="text-[13px] text-[#919191]">No supporting suggestions yet.</p>
                   </div>
                 )}
               </div>
@@ -380,10 +380,7 @@ export function NoChatbotDashboard() {
                       const active = step.id === activeStep
                       return (
                         <div key={step.id} className="flex flex-1 items-center">
-                          <button
-                            onClick={() => setActiveStep(step.id)}
-                            className="group flex min-w-[120px] flex-col items-center text-center"
-                          >
+                          <div className="group flex min-w-[120px] flex-col items-center text-center">
                             <span
                               className={`flex h-12 w-12 items-center justify-center rounded-full border transition ${
                                 active
@@ -397,7 +394,7 @@ export function NoChatbotDashboard() {
                             </span>
                             <p className={`mt-4 text-[16px] font-medium ${active ? "text-[#222]" : "text-[#a4a4a4]"}`}>{step.title}</p>
                             <p className={`mt-1 text-[13px] ${active ? "text-[#727272]" : "text-[#b8b8b8]"}`}>{step.subtitle}</p>
-                          </button>
+                          </div>
                           {index < WORKFLOW_STEPS.length - 1 ? (
                             <div className="mx-3 h-px flex-1 bg-[#e8e8e8]" />
                           ) : null}

@@ -14,7 +14,7 @@ const anthropicProvider = createAnthropic({
   },
 })
 
-const lzmodel4oMini = openaiProvider.chat("gpt-4o-mini")
+const lzmodel4oMini = anthropicProvider.chat("gpt-5.4")
 
 const model = {
   lzmodel4oMini,

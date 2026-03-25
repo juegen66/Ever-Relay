@@ -21,9 +21,13 @@ import { PREDICTION_INTERVAL_MS, queueDesktopPredictionRun } from "../lib/predic
 import { DesktopAgentContextProvider } from "../providers/desktop-agent-context-provider"
 
 const PREDICTION_PROMPT = [
-  "Based on my current desktop state, open windows, and recent action history, generate predicted next steps and improvement suggestions.",
+  "Based on my current desktop state, open windows, and recent action history, generate the next best optimization actions for the work I am already doing.",
+  "Do not predict my future behavior. Focus on what I should do next to improve quality, reduce friction, or make progress faster.",
+  "Prioritize the active application and active document. Do not default to Logo or Canvas suggestions unless the current context is clearly design work.",
+  "If a text file is open or was recently edited, use its text content to ground your recommendations. If the excerpt is insufficient, call read_text_file_content(fileId) before making document-specific suggestions.",
+  "Use update_predictions with ranked primary optimization actions in predictions[] and secondary improvements in suggestions[].",
   "",
-  "IMPORTANT: If ANY prediction has confidence ≥ 80%, you MUST first activate the prediction-report-builder skill via skill-activate, generate a detailed HTML report, and call generate_prediction_report BEFORE calling update_predictions.",
+  "IMPORTANT: If ANY primary optimization action has confidence >= 80, you MUST first activate the prediction-report-builder skill via skill-activate, generate a detailed HTML optimization report, and call generate_prediction_report BEFORE calling update_predictions.",
   "After handling the report (if needed), call update_predictions with the full result.",
 ].join("\n")
 

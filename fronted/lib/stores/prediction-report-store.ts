@@ -12,7 +12,7 @@ interface PredictionReportStore {
 
 export const usePredictionReportStore = create<PredictionReportStore>((set) => ({
   html: null,
-  title: "Predict Report",
+  title: "Optimize Report",
   generatedAt: null,
   setReport: (html, title) =>
     set({
@@ -23,7 +23,7 @@ export const usePredictionReportStore = create<PredictionReportStore>((set) => (
   clearReport: () =>
     set({
       html: null,
-      title: "Predict Report",
+      title: "Optimize Report",
       generatedAt: null,
     }),
 }))

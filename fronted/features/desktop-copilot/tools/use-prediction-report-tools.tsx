@@ -14,14 +14,14 @@ export function usePredictionReportTools() {
     {
       name: "generate_prediction_report",
       description:
-        "Generate and display a prediction report in the Predict Report desktop app. Pass a complete HTML document string as the report content. This will store the report and open the app window automatically.",
+        "Generate and display an optimization report in the Optimize Report desktop app. Pass a complete HTML document string as the report content. This will store the report and open the app window automatically.",
       followUp: true,
       parameters: [
         {
           name: "html",
           type: "string",
           description:
-            "The complete HTML document string for the prediction report. Must be a self-contained single-file HTML with Tailwind CSS from CDN.",
+            "The complete HTML document string for the optimization report. Must be a self-contained single-file HTML with Tailwind CSS from CDN.",
           required: true,
         },
         {
@@ -33,7 +33,7 @@ export function usePredictionReportTools() {
       ],
       handler: (args) => {
         const html = String(args.html ?? "")
-        const title = String(args.title ?? "Predict Report")
+        const title = String(args.title ?? "Optimize Report")
 
         if (!html.trim()) {
           return toolErr("Empty HTML")
@@ -51,7 +51,7 @@ export function usePredictionReportTools() {
         })
 
         return toolOk(
-          `Succeeded: prediction report "${title}" was saved and the Predict Report app will open.`,
+          `Succeeded: optimization report "${title}" was saved and the Optimize Report app will open.`,
           { title }
         )
       },
