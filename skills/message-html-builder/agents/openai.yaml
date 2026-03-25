@@ -1,0 +1,6 @@
+interface:
+  display_name: "Message HTML Builder"
+  short_description: "Use HTML when chat replies need visual clarity"
+  default_prompt: "Use $message-html-builder when a chat reply would be clearer as embeddable single-file HTML."
+policy:
+  allow_implicit_invocation: true
