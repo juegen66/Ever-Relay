@@ -37,6 +37,8 @@ fronted/public/third-party-apps/*
 
 # Cursor and docs (local/planning)
 changeversion/
+.agent/
+.agents/
 .cursor/
 .augment/
 .claude/
