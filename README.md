@@ -185,4 +185,4 @@ If you want the deeper system context behind this repo, start in `article/`. It 
 
 ## Official Website
 
-Full product introduction: **https://www.everrelay.com**
+Full product introduction: **https://everrelay.com**
