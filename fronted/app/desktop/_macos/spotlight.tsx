@@ -16,7 +16,7 @@ const BASE_SPOTLIGHT_APPS: { id: AppId; name: string; category: string }[] = [
   { id: "canvas", name: "Canvas", category: "Applications" },
   { id: "logo", name: "Logo Studio", category: "Applications" },
   { id: "vibecoding", name: "Coding Apps", category: "Applications" },
-  { id: "report", name: "Predict Report", category: "Applications" },
+  { id: "report", name: "Optimize Report", category: "Applications" },
   { id: "activity", name: "Agent Activity", category: "Applications" },
   { id: "plugins", name: "Plugin Manager", category: "Developer Tools" },
 ]

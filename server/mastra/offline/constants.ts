@@ -38,11 +38,11 @@ export const DEFAULT_AGENT_REGISTRY_ENTRIES: DefaultAgentRegistryEntry[] = [
     agentId: OFFLINE_DISCOVERY_AGENT_ID,
     name: "Offline Discovery Agent",
     description:
-      "Chooses the highest-value offline task and routes it to the correct app agent.",
+      "Plans dependency-aware offline proactive tasks and routes them to the correct app agent.",
     offlineCapable: false,
     metadata: {
       runtimeAgentKey: OFFLINE_DISCOVERY_AGENT_ID,
-      role: "discovery",
+      role: "planner",
       appId: "system",
       scope: "Desktop",
       parallelWorkflowEnabled: false,

@@ -19,9 +19,9 @@ export function ReportApp() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-neutral-400">
         <FileBarChart className="h-12 w-12 opacity-40" />
-        <p className="text-sm">No prediction report yet.</p>
+        <p className="text-sm">No optimization report yet.</p>
         <p className="text-xs text-neutral-300">
-          A report will appear here when a high-confidence prediction is generated.
+          A report will appear here when a high-confidence optimization is generated.
         </p>
       </div>
     )

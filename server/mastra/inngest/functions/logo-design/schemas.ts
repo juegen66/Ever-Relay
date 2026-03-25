@@ -20,6 +20,32 @@ export const logoConceptSchema = z.object({
   logoSvg: z.string().min(1),
 })
 
+export const logoConceptBlueprintSchema = z.object({
+  conceptName: z.string().min(1),
+  coreIdea: z.string().min(1),
+  silhouetteStrategy: z.string().min(1),
+  constructionPrinciples: z.array(z.string().min(1)).min(3).max(6),
+  wordmarkDirection: z.string().min(1),
+  colorStrategy: z.string().min(1),
+  avoidMotifs: z.array(z.string().min(1)).max(8).optional(),
+})
+
+export const logoGenerationStageDebugSchema = z.object({
+  initialStatus: z.enum(["success", "invalid", "error"]),
+  repairAttempted: z.boolean(),
+  repairStatus: z.enum(["not_attempted", "success", "invalid", "error"]),
+  fallbackUsed: z.boolean(),
+  failureReason: z.string().optional(),
+  validationHint: z.string().optional(),
+})
+
+export const logoGenerationDebugSchema = z.object({
+  fallbackUsed: z.boolean(),
+  fallbackStrategy: z.string().optional(),
+  blueprint: logoGenerationStageDebugSchema,
+  lockups: logoGenerationStageDebugSchema,
+})
+
 export const logoBrandOutputSchema = z.object({
   conceptName: z.string().min(1),
   rationaleMd: z.string().min(1),
@@ -58,6 +84,9 @@ export const logoDesignConceptOutputSchema = z.object({
   brandBrief: z.record(z.string(), z.unknown()).optional(),
   logoBriefMarkdown: z.string().min(1),
   designPhilosophyMarkdown: z.string().min(1),
+  conceptBlueprint: logoConceptBlueprintSchema.optional(),
+  generationDebug: logoGenerationDebugSchema.optional(),
+  fallbackStrategy: z.string().optional(),
   logoConcepts: z.array(logoConceptSchema).min(3),
   selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
@@ -69,6 +98,9 @@ export const logoDesignPhilosophyOutputSchema = z.object({
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
   logoBriefMarkdown: z.string().min(1),
+  conceptBlueprint: logoConceptBlueprintSchema.optional(),
+  generationDebug: logoGenerationDebugSchema.optional(),
+  fallbackStrategy: z.string().optional(),
   logoConcepts: z.array(logoConceptSchema).min(3),
   selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
@@ -81,6 +113,9 @@ export const logoDesignPosterOutputSchema = z.object({
   prompt: z.string().min(1),
   brandBrief: z.record(z.string(), z.unknown()).optional(),
   logoBriefMarkdown: z.string().min(1),
+  conceptBlueprint: logoConceptBlueprintSchema.optional(),
+  generationDebug: logoGenerationDebugSchema.optional(),
+  fallbackStrategy: z.string().optional(),
   logoConcepts: z.array(logoConceptSchema).min(3),
   selectedConceptId: z.string().min(1),
   brandOutput: logoBrandOutputSchema,
@@ -93,6 +128,9 @@ export const logoDesignFinalOutputSchema = z.object({
   userId: z.string().min(1),
   prompt: z.string().min(1),
   logoBriefMarkdown: z.string().min(1),
+  conceptBlueprint: logoConceptBlueprintSchema.optional(),
+  generationDebug: logoGenerationDebugSchema.optional(),
+  fallbackStrategy: z.string().optional(),
   logoConcepts: z.array(logoConceptSchema).min(3),
   selectedConceptId: z.string().min(1),
   designPhilosophyMarkdown: z.string().min(1),
@@ -102,7 +140,10 @@ export const logoDesignFinalOutputSchema = z.object({
 
 export type LogoBrandOutput = z.infer<typeof logoBrandOutputSchema>
 export type LogoConcept = z.infer<typeof logoConceptSchema>
+export type LogoConceptBlueprint = z.infer<typeof logoConceptBlueprintSchema>
 export type LogoConceptLockupType = z.infer<typeof logoConceptLockupTypeSchema>
+export type LogoGenerationDebug = z.infer<typeof logoGenerationDebugSchema>
+export type LogoGenerationStageDebug = z.infer<typeof logoGenerationStageDebugSchema>
 export type LogoPosterOutput = z.infer<typeof logoPosterOutputSchema>
 export type LogoDesignWorkflowInput = z.infer<typeof logoDesignWorkflowInputSchema>
 export type LogoDesignBriefOutput = z.infer<typeof logoDesignBriefOutputSchema>

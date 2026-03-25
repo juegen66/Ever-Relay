@@ -101,21 +101,21 @@ export function ActionLogDebugPanel() {
   const handleTriggerPredict = () => {
     void queueDesktopPredictionRun({ force: true }).then((result) => {
       if (result === "started") {
-        setTriggerMessage("Triggered background predict run.")
+        setTriggerMessage("Triggered background optimization run.")
         return
       }
 
       if (result === "restarted") {
-        setTriggerMessage("Restarted prediction with a fresh thread.")
+        setTriggerMessage("Restarted optimization run with a fresh thread.")
         return
       }
 
       if (result === "running" || silentRunning || isLoading) {
-        setTriggerMessage("Predict is already running.")
+        setTriggerMessage("Optimizer is already running.")
         return
       }
 
-      setTriggerMessage("Predict trigger skipped by debounce.")
+      setTriggerMessage("Optimizer trigger skipped by debounce.")
     })
   }
 
@@ -157,10 +157,10 @@ export function ActionLogDebugPanel() {
 
       {!collapsed && (
         <div className="max-h-[400px] overflow-auto">
-          {/* Prediction Status */}
+          {/* Optimization Status */}
           <div className="border-b border-white/10 px-3 py-2">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Prediction Engine</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Optimization Advisor</p>
               <button
                 type="button"
                 onClick={handleTriggerPredict}
@@ -168,7 +168,7 @@ export function ActionLogDebugPanel() {
                 className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-[10px] font-medium text-white/80 transition hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Sparkles className="h-3 w-3" />
-                Trigger Predict
+                Run Optimizer
               </button>
             </div>
             <div className="mt-1.5 flex items-center gap-2">
@@ -177,7 +177,7 @@ export function ActionLogDebugPanel() {
                 {isLoading
                   ? "Analyzing..."
                   : predictions.length > 0
-                    ? `${predictions.length} predictions, ${suggestions.length} suggestions`
+                    ? `${predictions.length} actions, ${suggestions.length} suggestions`
                     : "Idle"}
               </span>
             </div>
@@ -206,7 +206,7 @@ export function ActionLogDebugPanel() {
               <div className="mt-2 rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-medium text-cyan-100">
-                    Proactive reminder
+                    Top optimization
                   </span>
                   <span className="text-[10px] text-cyan-300">
                     {proactiveReminder.confidence}%

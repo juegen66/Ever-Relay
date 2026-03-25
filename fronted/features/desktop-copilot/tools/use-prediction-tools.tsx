@@ -17,21 +17,21 @@ export function usePredictionTools() {
     {
       name: "update_predictions",
       description:
-        "Update the No Chatbot dashboard with AI-generated predictions and improvement suggestions. Call this after analyzing user behavior.",
+        "Update the No Chatbot dashboard with AI-generated optimization actions and supporting suggestions. Call this after analyzing the user's current work.",
       followUp: false,
       parameters: [
         {
           name: "predictions",
           type: "object[]",
           description:
-            "Array of predicted next steps. Each object: { id: string, title: string, description: string, confidence: number (0-100), actionLabel?: string, estimatedTime?: string }",
+            "Array of ranked primary optimization actions. Each object: { id: string, title: string, description: string, confidence: number (0-100), actionLabel?: string, estimatedTime?: string }",
           required: true,
         },
         {
           name: "suggestions",
           type: "object[]",
           description:
-            "Array of improvement suggestions. Each object: { id: string, title: string, description: string }",
+            "Array of secondary optimization suggestions. Each object: { id: string, title: string, description: string }",
           required: true,
         },
       ],
@@ -53,16 +53,16 @@ export function usePredictionTools() {
           proactiveReminder.key !== previousReminder?.key
         ) {
           useDesktopNotificationStore.getState().enqueueNotification({
-            app: "Predict",
+            app: "Optimize",
             title: proactiveReminder.title,
-            message: `${proactiveReminder.message} Click the Predict Report app in the Dock to view the detailed analysis.`,
+            message: `${proactiveReminder.message} Click the Optimize Report app in the Dock to view the detailed analysis.`,
             time: "now",
             iconColor: "#0f766e",
           })
         }
 
         return toolOk(
-          `Succeeded: dashboard updated with ${predictions.length} prediction(s) and ${suggestions.length} suggestion(s).`,
+          `Succeeded: dashboard updated with ${predictions.length} optimization action(s) and ${suggestions.length} suggestion(s).`,
           {
             predictionsCount: predictions.length,
             suggestionsCount: suggestions.length,

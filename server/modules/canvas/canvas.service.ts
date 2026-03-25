@@ -20,6 +20,11 @@ import type {
 } from "@/shared/contracts/canvas"
 import { db } from "@/server/core/database"
 import {
+  canvasSvgGenerationOutputSchema,
+  canvasSvgGeneratorAgent,
+} from "@/server/mastra/agents/canvas/canvas-svg-generator-agent"
+import model from "@/server/mastra/model"
+import {
   canvasProjectActivityLogs,
   canvasProjectTags,
   canvasProjects,
@@ -29,9 +34,14 @@ import {
 const DEFAULT_LIST_LIMIT = 40
 const MAX_LIST_LIMIT = 100
 const MAX_SVG_LENGTH = 200_000
-const SVG_BLOCKED_TAG_PATTERN = /<\s*(script|foreignObject|iframe|object|embed|audio|video)\b/i
+const SVG_BLOCKED_TAG_PATTERN = /<\s*(script|style|foreignObject|iframe|object|embed|audio|video|image|use|filter|mask|pattern|animate|animateMotion|animateTransform|set|a)\b/i
 const SVG_EVENT_HANDLER_PATTERN = /\son[a-z]+\s*=/i
 const SVG_JAVASCRIPT_HREF_PATTERN = /\b(?:href|xlink:href)\s*=\s*['"]?\s*javascript:/i
+const SVG_EXTERNAL_HREF_PATTERN = /\b(?:href|xlink:href)\s*=\s*['"]?\s*(?!#)[^"' >]+/i
+const SVG_FENCE_PATTERN = /```(?:svg|xml)?\s*([\s\S]*?)\s*```/i
+const SVG_DOCUMENT_PATTERN = /<svg\b[\s\S]*<\/svg>/i
+const SVG_XML_DECLARATION_PATTERN = /^\s*<\?xml[\s\S]*?\?>\s*/i
+const SVG_DOCTYPE_PATTERN = /^\s*<!DOCTYPE[\s\S]*?>\s*/i
 
 type CanvasProjectRecord = typeof canvasProjects.$inferSelect
 type CanvasTagRecord = typeof canvasTags.$inferSelect
@@ -77,6 +87,16 @@ export class CanvasSvgValidationError extends Error {
   }
 }
 
+export class CanvasSvgGenerationError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message)
+    this.name = "CanvasSvgGenerationError"
+    if (options?.cause !== undefined) {
+      Object.assign(this, { cause: options.cause })
+    }
+  }
+}
+
 function normalizeLimit(limit?: number) {
   if (!limit || Number.isNaN(limit)) {
     return DEFAULT_LIST_LIMIT
@@ -100,8 +120,54 @@ function trimCopySuffixTitle(title: string) {
   return title.slice(0, 240)
 }
 
-function validateSvgMarkup(markup: string) {
-  const normalized = markup.trim()
+function extractSvgMarkup(markup: string) {
+  let normalized = markup.trim()
+  const fenced = normalized.match(SVG_FENCE_PATTERN)?.[1]
+  if (fenced?.trim()) {
+    normalized = fenced.trim()
+  }
+
+  normalized = normalized
+    .replace(/^\uFEFF/, "")
+    .replace(SVG_XML_DECLARATION_PATTERN, "")
+    .replace(SVG_DOCTYPE_PATTERN, "")
+    .trim()
+
+  const svgDocument = normalized.match(SVG_DOCUMENT_PATTERN)?.[0]
+  if (svgDocument?.trim()) {
+    normalized = svgDocument.trim()
+  }
+
+  return normalized
+}
+
+function upsertSvgAttribute(openingTag: string, name: string, value: string) {
+  const attributePattern = new RegExp(`\\b${name}\\s*=\\s*(['"])[^'"]*\\1`, "i")
+  if (attributePattern.test(openingTag)) {
+    return openingTag.replace(attributePattern, `${name}="${value}"`)
+  }
+
+  return openingTag.replace(/<svg/i, (match) => `${match} ${name}="${value}"`)
+}
+
+function normalizeSvgRootAttributes(markup: string, width: number, height: number) {
+  const openingTagMatch = markup.match(/<svg\b[^>]*>/i)
+  const openingTag = openingTagMatch?.[0]
+  if (!openingTag) {
+    throw new CanvasSvgValidationError("SVG payload must be a full <svg>...</svg> document")
+  }
+
+  let normalizedTag = openingTag
+  normalizedTag = upsertSvgAttribute(normalizedTag, "xmlns", "http://www.w3.org/2000/svg")
+  normalizedTag = upsertSvgAttribute(normalizedTag, "width", String(width))
+  normalizedTag = upsertSvgAttribute(normalizedTag, "height", String(height))
+  normalizedTag = upsertSvgAttribute(normalizedTag, "viewBox", `0 0 ${width} ${height}`)
+
+  return markup.replace(openingTag, normalizedTag)
+}
+
+function validateSvgMarkup(markup: string, width: number, height: number) {
+  const normalized = normalizeSvgRootAttributes(extractSvgMarkup(markup), width, height)
   if (!normalized) {
     throw new CanvasSvgValidationError("svg is required")
   }
@@ -127,34 +193,65 @@ function validateSvgMarkup(markup: string) {
     throw new CanvasSvgValidationError("SVG contains blocked javascript href")
   }
 
+  if (SVG_EXTERNAL_HREF_PATTERN.test(normalized)) {
+    throw new CanvasSvgValidationError("SVG contains blocked external href")
+  }
+
   return normalized
 }
 
-function escapeXml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
+function buildCanvasSvgPrompt(input: {
+  prompt: string
+  width: number
+  height: number
+}) {
+  return [
+    "Generate original SVG artwork for the EverRelay Canvas app.",
+    `User request: ${input.prompt}`,
+    `Required size: ${input.width}x${input.height}`,
+    "",
+    "Hard requirements:",
+    `- Return one complete <svg> document with width=\"${input.width}\" height=\"${input.height}\" viewBox=\"0 0 ${input.width} ${input.height}\".`,
+    "- Produce a real design based on the request, not a placeholder card and not a plain prompt echo.",
+    "- Use only inline SVG elements and attributes.",
+    "- Prefer paths, groups, gradients, and layered vector composition when helpful.",
+    "- Use text only when the request explicitly asks for text or lettering.",
+    "- No markdown fences, prose, comments, scripts, styles, filters, masks, external resources, or raster images.",
+    "- Keep the output renderable by common SVG parsers such as Fabric.js.",
+    "",
+    "Compatibility subset:",
+    "- Allowed: svg, g, defs, linearGradient, radialGradient, stop, rect, circle, ellipse, path, polygon, polyline, line, text, tspan, clipPath.",
+    "- Disallowed: script, style, foreignObject, iframe, object, embed, audio, video, image, use, filter, mask, pattern, animation, anchor tags.",
+    "",
+    "Design guidance:",
+    "- Make the composition intentional and visually finished.",
+    "- Use the whole canvas when the request suggests a poster, scene, or background.",
+    "- Preserve negative space when the request suggests an icon or emblem.",
+    "- Transparent background is acceptable unless the request asks for a background.",
+  ].join("\n")
 }
 
-function pickAccentFromPrompt(prompt: string) {
-  const palette = [
-    ["#38bdf8", "#0ea5e9"],
-    ["#34d399", "#10b981"],
-    ["#f59e0b", "#f97316"],
-    ["#f472b6", "#ec4899"],
-    ["#a78bfa", "#8b5cf6"],
-    ["#22d3ee", "#06b6d4"],
-  ] as const
-
-  let hash = 0
-  for (let i = 0; i < prompt.length; i += 1) {
-    hash = (hash * 31 + prompt.charCodeAt(i)) >>> 0
-  }
-  const index = hash % palette.length
-  return palette[index]
+function buildCanvasSvgRepairPrompt(input: {
+  prompt: string
+  width: number
+  height: number
+  invalidSvg: string
+  validationError: string
+}) {
+  return [
+    "Repair the SVG so it becomes valid and safe for the EverRelay Canvas app.",
+    `Original user request: ${input.prompt}`,
+    `Required size: ${input.width}x${input.height}`,
+    `Validation error: ${input.validationError}`,
+    "",
+    "Return one corrected <svg> document only in the svg field.",
+    `The root element must use width=\"${input.width}\" height=\"${input.height}\" viewBox=\"0 0 ${input.width} ${input.height}\".`,
+    "Keep the original design intent, but remove incompatible or blocked constructs.",
+    "Do not use markdown fences, scripts, styles, filters, masks, patterns, external hrefs, images, use tags, or animation.",
+    "",
+    "Invalid SVG to repair:",
+    input.invalidSvg,
+  ].join("\n")
 }
 
 export class CanvasService {
@@ -448,6 +545,26 @@ export class CanvasService {
     return { ok: true, project: fullProject }
   }
 
+  private async requestGeneratedSvg(prompt: string) {
+    try {
+      const output = await canvasSvgGeneratorAgent.generate(prompt, {
+        maxSteps: 1,
+        toolChoice: "none",
+        structuredOutput: {
+          schema: canvasSvgGenerationOutputSchema,
+          model: model.lzmodel4oMini,
+          jsonPromptInjection: true,
+        },
+      })
+
+      return canvasSvgGenerationOutputSchema.parse(output.object).svg
+    } catch (error) {
+      throw new CanvasSvgGenerationError("Canvas SVG model request failed", {
+        cause: error,
+      })
+    }
+  }
+
   async generateSvgCode(input: GenerateCanvasSvgParams): Promise<GenerateSvgResult> {
     const prompt = input.prompt.trim()
     if (!prompt) {
@@ -456,32 +573,51 @@ export class CanvasService {
 
     const width = Math.max(120, Math.min(2400, Math.trunc(input.width ?? 720)))
     const height = Math.max(120, Math.min(2400, Math.trunc(input.height ?? 480)))
-    const [accentFrom, accentTo] = pickAccentFromPrompt(prompt)
+    let invalidSvg = ""
+    let validationError = ""
 
-    const content = prompt.replace(/\s+/g, " ").trim().slice(0, 72)
-    const lines = content.length <= 26
-      ? [content]
-      : [content.slice(0, 26).trim(), content.slice(26).trim()]
-    const lineHeight = Math.max(24, Math.floor(height * 0.08))
-    const baseY = Math.floor(height * 0.58)
-    const firstLineY = lines.length === 1 ? baseY : baseY - Math.floor(lineHeight * 0.55)
-    const textLines = lines.map((line, index) => {
-      const y = firstLineY + index * lineHeight
-      return `<text x="50%" y="${y}" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="${Math.max(20, Math.floor(height * 0.08))}" font-weight="700" fill="#0f172a">${escapeXml(line)}</text>`
-    }).join("")
+    try {
+      invalidSvg = await this.requestGeneratedSvg(
+        buildCanvasSvgPrompt({
+          prompt,
+          width,
+          height,
+        })
+      )
 
-    const svg = [
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none">`,
-      `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${accentFrom}"/><stop offset="100%" stop-color="${accentTo}"/></linearGradient></defs>`,
-      `<rect x="0" y="0" width="${width}" height="${height}" rx="${Math.max(12, Math.floor(Math.min(width, height) * 0.08))}" fill="url(#bg)"/>`,
-      `<circle cx="${Math.floor(width * 0.18)}" cy="${Math.floor(height * 0.22)}" r="${Math.max(14, Math.floor(Math.min(width, height) * 0.09))}" fill="rgba(255,255,255,0.38)"/>`,
-      `<circle cx="${Math.floor(width * 0.82)}" cy="${Math.floor(height * 0.72)}" r="${Math.max(12, Math.floor(Math.min(width, height) * 0.07))}" fill="rgba(255,255,255,0.28)"/>`,
-      `<rect x="${Math.floor(width * 0.08)}" y="${Math.floor(height * 0.12)}" width="${Math.floor(width * 0.84)}" height="${Math.floor(height * 0.76)}" rx="${Math.max(10, Math.floor(Math.min(width, height) * 0.06))}" fill="rgba(255,255,255,0.72)"/>`,
-      textLines,
-      `</svg>`,
-    ].join("")
+      const normalizedSvg = validateSvgMarkup(invalidSvg, width, height)
+      return {
+        prompt,
+        width,
+        height,
+        svg: normalizedSvg,
+        generatedAt: new Date().toISOString(),
+      }
+    } catch (error) {
+      if (error instanceof CanvasSvgGenerationError) {
+        throw error
+      }
 
-    const normalizedSvg = validateSvgMarkup(svg)
+      if (error instanceof CanvasSvgValidationError) {
+        validationError = error.message
+      } else {
+        throw new CanvasSvgGenerationError("Canvas SVG generation failed", {
+          cause: error,
+        })
+      }
+    }
+
+    const repairedSvg = await this.requestGeneratedSvg(
+      buildCanvasSvgRepairPrompt({
+        prompt,
+        width,
+        height,
+        invalidSvg: invalidSvg.slice(0, 12_000),
+        validationError: validationError || "Generated SVG failed validation.",
+      })
+    )
+
+    const normalizedSvg = validateSvgMarkup(repairedSvg, width, height)
     return {
       prompt,
       width,

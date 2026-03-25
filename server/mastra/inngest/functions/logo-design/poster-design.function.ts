@@ -202,6 +202,9 @@ export const posterDesignStep = createStep({
 
       await logoDesignService.markCompleted(inputData.runId, {
         logoBriefMarkdown: inputData.logoBriefMarkdown,
+        conceptBlueprint: inputData.conceptBlueprint,
+        generationDebug: inputData.generationDebug,
+        fallbackStrategy: inputData.fallbackStrategy,
         logoConcepts: inputData.logoConcepts,
         selectedConceptId: selectedConcept.id,
         designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
@@ -213,6 +216,7 @@ export const posterDesignStep = createStep({
         poster: finalPosterOutput,
         inMemoryArtifacts: {
           logoBriefMarkdown: inputData.logoBriefMarkdown,
+          conceptBlueprint: inputData.conceptBlueprint,
           logoConcepts: inputData.logoConcepts,
           designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
           posterSvgCode: finalPosterOutput.posterSvg,

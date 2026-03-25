@@ -1,5 +1,7 @@
+import { RequestContext } from "@mastra/core/request-context"
 import { createStep } from "@mastra/inngest"
 
+import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
 import model from "@/server/mastra/model"
 import { agentRegistryService } from "@/server/modules/agent-activity/agent-registry.service"
 import { offlineExecutionResultSchema } from "@/shared/contracts/offline-proactive"
@@ -30,6 +32,26 @@ function buildExecutionResult(
     sourceFingerprint: options.sourceFingerprint ?? null,
     agentId: options.agentId ?? null,
   }
+}
+
+function normalizeRequestContext(
+  requestContext: RequestContext<unknown> | null | undefined,
+  inputData: { userId: string }
+) {
+  const rawUserId = requestContext?.get?.("userId")
+  const rawRunId = requestContext?.get?.("runId")
+  const rawProjectId = requestContext?.get?.("projectId")
+  const rawAppId = requestContext?.get?.("appId")
+
+  return createBuildRunRequestContext({
+    userId:
+      typeof rawUserId === "string" && rawUserId.trim()
+        ? rawUserId.trim()
+        : inputData.userId,
+    runId: typeof rawRunId === "string" && rawRunId.trim() ? rawRunId : undefined,
+    projectId: typeof rawProjectId === "string" ? rawProjectId : null,
+    appId: typeof rawAppId === "string" ? rawAppId : null,
+  })
 }
 
 export const executeOfflineTargetAgentStep = createStep({
@@ -79,6 +101,11 @@ export const executeOfflineTargetAgentStep = createStep({
     }
 
     try {
+      const normalizedRequestContext = normalizeRequestContext(
+        requestContext,
+        inputData
+      )
+
       const response = await agent.generate(
         [
           "Execute this offline proactive task.",
@@ -97,7 +124,7 @@ export const executeOfflineTargetAgentStep = createStep({
           "- agentId: the agent id that executed the task",
         ].join("\n"),
         {
-          requestContext,
+          requestContext: normalizedRequestContext,
           maxSteps: 8,
           structuredOutput: {
             schema: offlineExecutionResultSchema,

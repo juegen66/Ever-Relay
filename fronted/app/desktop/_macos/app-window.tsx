@@ -22,7 +22,7 @@ const APP_TITLES: Record<string, string> = {
   logo: "Logo Studio",
   vibecoding: "Coding Apps",
   textedit: "TextEdit",
-  report: "Predict Report",
+  report: "Optimize Report",
   activity: "Agent Activity",
   plugins: "Plugin Manager",
 }

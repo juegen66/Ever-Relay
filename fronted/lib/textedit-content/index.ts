@@ -2,11 +2,16 @@
 
 import { filesApi } from "@/lib/api/modules/files"
 
-import type { TextEditWriteEventDetail } from "./types"
+import type {
+  TextEditContentChangedEventDetail,
+  TextEditWriteEventDetail,
+} from "./types"
 
 export { type TextEditWriteEventDetail } from "./types"
+export { type TextEditContentChangedEventDetail } from "./types"
 
 export const TEXTEDIT_WRITE_EVENT = "desktop:textedit-write"
+export const TEXTEDIT_CONTENT_CHANGED_EVENT = "desktop:textedit-content-changed"
 
 const textEditorContentCache = new Map<string, string>()
 const readyEditors = new Set<string>()
@@ -24,7 +29,18 @@ function notifyReadyWaiters(fileId: string, ready: boolean) {
 }
 
 export function setTextEditorContentCache(fileId: string, content: string) {
+  const previous = textEditorContentCache.get(fileId)
   textEditorContentCache.set(fileId, content)
+
+  if (previous === content || typeof window === "undefined") {
+    return
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<TextEditContentChangedEventDetail>(TEXTEDIT_CONTENT_CHANGED_EVENT, {
+      detail: { fileId, content },
+    })
+  )
 }
 
 export function clearTextEditorContentCache(fileId: string) {
