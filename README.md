@@ -2,7 +2,7 @@
 
 EverRelay is a browser-based agent workspace built around a desktop shell, scoped copilots, workflow orchestration, and an Agentic File System (AFS).
 
-This README is intentionally repository-focused. For the product overview and external-facing introduction, visit **https://www.everrelay.com**.
+This README is intentionally repository-focused. For the product overview and external-facing introduction, visit **https://everrelay.com**.
 
 ## Overview
 
