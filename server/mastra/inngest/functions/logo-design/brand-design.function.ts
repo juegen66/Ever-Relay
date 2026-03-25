@@ -6,17 +6,24 @@ import { brandDesignerAgent } from "@/server/mastra/agents/logo-studio/brand-des
 import { inngest } from "@/server/mastra/inngest/client"
 import { LOGO_DESIGN_FAILED_EVENT } from "@/server/mastra/inngest/events"
 import { createBuildRunRequestContext } from "@/server/mastra/inngest/request-context"
-import { canvasDesignLogoFusionBlock } from "@/server/mastra/prompts/logo-workflow-prompt"
 import { logoDesignService } from "@/server/modules/logo-design/logo-design.service"
 
 import {
+  logoConceptBlueprintSchema,
   logoDesignBriefOutputSchema,
   logoDesignConceptOutputSchema,
+  logoGenerationDebugSchema,
   type LogoConcept,
+  type LogoConceptBlueprint,
   type LogoConceptLockupType,
+  type LogoGenerationDebug,
+  type LogoGenerationStageDebug,
 } from "./schemas"
 import {
+  chooseFallbackLogoStrategy,
   createFallbackBrandOutput,
+  createFallbackConceptBlueprint,
+  type FallbackLogoStrategy,
   errorToMessage,
   parseJsonObject,
 } from "./utils"
@@ -30,7 +37,8 @@ const REQUIRED_CONCEPT_TYPES: LogoConceptLockupType[] = [
 ]
 
 const TEXT_ELEMENT_PATTERN = /<(text|tspan)\b/i
-const GRAPHIC_ELEMENT_PATTERN = /<(path|circle|ellipse|rect|polygon|polyline|line|use|image)\b/i
+const GRAPHIC_TAG_PATTERN =
+  /<(path|circle|ellipse|rect|polygon|polyline|line|use|image)\b([^>]*)\/?>/gi
 
 function asRecord(value: unknown) {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -50,6 +58,26 @@ function asRecordArray(value: unknown) {
   return value
     .map((item) => asRecord(item))
     .filter((item): item is Record<string, unknown> => item !== null)
+}
+
+function asStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value
+    .map((item) => asString(item))
+    .filter((item): item is string => Boolean(item))
+}
+
+function splitListText(value: string | null) {
+  if (!value) {
+    return []
+  }
+
+  return value
+    .split(/\r?\n|[•·;]/)
+    .map((item) => item.replace(/^[\s,-]+/, "").trim())
+    .filter(Boolean)
 }
 
 function isLikelySvg(value: string) {
@@ -92,9 +120,105 @@ function normalizeConceptType(value: unknown): LogoConceptLockupType | null {
   return null
 }
 
-function detectConceptTypeFromSvg(svg: string): LogoConceptLockupType | null {
+function readStyleValue(style: string | null, name: string) {
+  if (!style) {
+    return null
+  }
+
+  const match = new RegExp(`${name}\\s*:\\s*([^;]+)`, "i").exec(style)
+  return match?.[1]?.trim() ?? null
+}
+
+function readAttr(attrs: string, name: string) {
+  const directMatch = new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(attrs)
+  if (directMatch?.[1]) {
+    return directMatch[1].trim()
+  }
+
+  const style = new RegExp(`style\\s*=\\s*["']([^"']+)["']`, "i").exec(attrs)?.[1] ?? null
+  return readStyleValue(style, name)
+}
+
+function isZeroLike(value: string | null) {
+  if (!value) {
+    return false
+  }
+  return /^0(?:\.0+)?$/.test(value.trim())
+}
+
+function hasVisibleFill(tagName: string, attrs: string) {
+  if (tagName === "line" || tagName === "polyline") {
+    return false
+  }
+
+  const fill = readAttr(attrs, "fill")
+  if (fill) {
+    const normalized = fill.toLowerCase()
+    if (normalized === "none" || normalized === "transparent") {
+      return false
+    }
+  }
+
+  return !isZeroLike(readAttr(attrs, "fill-opacity"))
+}
+
+function hasVisibleStroke(attrs: string) {
+  const stroke = readAttr(attrs, "stroke")
+  if (!stroke) {
+    return false
+  }
+
+  const normalized = stroke.toLowerCase()
+  if (normalized === "none" || normalized === "transparent") {
+    return false
+  }
+
+  if (isZeroLike(readAttr(attrs, "stroke-opacity"))) {
+    return false
+  }
+
+  if (isZeroLike(readAttr(attrs, "stroke-width"))) {
+    return false
+  }
+
+  return true
+}
+
+function isHiddenGraphic(attrs: string) {
+  const display = readAttr(attrs, "display")?.toLowerCase()
+  const visibility = readAttr(attrs, "visibility")?.toLowerCase()
+  const opacity = readAttr(attrs, "opacity")
+
+  return display === "none" || visibility === "hidden" || isZeroLike(opacity)
+}
+
+function hasVisibleGraphicElements(svg: string) {
+  const content = svg.replace(/<defs[\s\S]*?<\/defs>/gi, " ")
+  GRAPHIC_TAG_PATTERN.lastIndex = 0
+
+  let match: RegExpExecArray | null
+  while ((match = GRAPHIC_TAG_PATTERN.exec(content))) {
+    const tagName = match[1]?.toLowerCase()
+    const attrs = match[2] ?? ""
+    if (!tagName || isHiddenGraphic(attrs)) {
+      continue
+    }
+
+    if (tagName === "image" || tagName === "use") {
+      return true
+    }
+
+    if (hasVisibleFill(tagName, attrs) || hasVisibleStroke(attrs)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+export function detectConceptTypeFromSvg(svg: string): LogoConceptLockupType | null {
   const hasText = TEXT_ELEMENT_PATTERN.test(svg)
-  const hasGraphics = GRAPHIC_ELEMENT_PATTERN.test(svg)
+  const hasGraphics = hasVisibleGraphicElements(svg)
 
   if (hasGraphics && !hasText) {
     return "icon_only"
@@ -108,6 +232,22 @@ function detectConceptTypeFromSvg(svg: string): LogoConceptLockupType | null {
   return null
 }
 
+function hasExplicitConceptConflict(
+  explicitConceptType: LogoConceptLockupType,
+  svg: string
+) {
+  const hasText = TEXT_ELEMENT_PATTERN.test(svg)
+  const hasGraphics = hasVisibleGraphicElements(svg)
+
+  if (explicitConceptType === "icon_only") {
+    return hasText || !hasGraphics
+  }
+  if (explicitConceptType === "icon_with_wordmark") {
+    return !hasText || !hasGraphics
+  }
+  return hasGraphics || !hasText
+}
+
 function svgFingerprint(svg: string) {
   const normalized = svg.replace(/\s+/g, " ").trim()
   return createHash("sha1").update(normalized).digest("hex")
@@ -116,7 +256,7 @@ function svgFingerprint(svg: string) {
 function normalizeConcept(
   raw: Record<string, unknown>,
   fallbackIndex: number
-): LogoConcept | null {
+): { concept: LogoConcept | null; reason: string | null } {
   const conceptName =
     asString(raw.conceptName) ??
     asString(raw.name) ??
@@ -136,7 +276,10 @@ function normalizeConcept(
     asString(logoSvgValue)
 
   if (!logoSvg || !isLikelySvg(logoSvg)) {
-    return null
+    return {
+      concept: null,
+      reason: `${conceptName} is missing complete SVG markup in logoSvg.`,
+    }
   }
 
   const explicitConceptType =
@@ -145,27 +288,34 @@ function normalizeConcept(
     normalizeConceptType(raw.variantType) ??
     normalizeConceptType(raw.type)
   const detectedConceptType = detectConceptTypeFromSvg(logoSvg)
-  const conceptType = detectedConceptType ?? explicitConceptType
-  if (!conceptType) {
-    return null
+
+  if (explicitConceptType && hasExplicitConceptConflict(explicitConceptType, logoSvg)) {
+    return {
+      concept: null,
+      reason: `${conceptName} declares ${explicitConceptType} but its SVG does not satisfy that lockup contract.`,
+    }
   }
-  if (
-    explicitConceptType &&
-    detectedConceptType &&
-    explicitConceptType !== detectedConceptType
-  ) {
-    return null
+
+  const conceptType = explicitConceptType ?? detectedConceptType
+  if (!conceptType) {
+    return {
+      concept: null,
+      reason: `${conceptName} could not be classified as icon_only, icon_with_wordmark, or wordmark_only.`,
+    }
   }
 
   const conceptId =
     asString(raw.id) ?? conceptIdFromName(`${conceptType}-${conceptName}`, fallbackIndex)
 
   return {
-    id: conceptId,
-    conceptType,
-    conceptName,
-    rationaleMd,
-    logoSvg,
+    concept: {
+      id: conceptId,
+      conceptType,
+      conceptName,
+      rationaleMd,
+      logoSvg,
+    },
+    reason: null,
   }
 }
 
@@ -213,14 +363,101 @@ function buildSyntheticConceptsFromLogoSvgSet(container: Record<string, unknown>
   ]
 }
 
-function normalizeConceptList(
-  parsed: Record<string, unknown> | null
-): {
-  logoConcepts: LogoConcept[]
-  selectedConceptId?: string
-} | null {
-  if (!parsed) {
+function normalizeConceptBlueprint(raw: Record<string, unknown> | null) {
+  const container = asRecord(raw?.conceptBlueprint) ?? asRecord(raw?.blueprint) ?? raw
+  if (!container) {
     return null
+  }
+
+  const constructionPrinciples = Array.from(
+    new Set([
+      ...asStringArray(container.constructionPrinciples),
+      ...asStringArray(container.principles),
+      ...splitListText(asString(container.constructionPrinciples)),
+      ...splitListText(asString(container.principles)),
+    ])
+  ).slice(0, 6)
+
+  const avoidMotifs = Array.from(
+    new Set([
+      ...asStringArray(container.avoidMotifs),
+      ...asStringArray(container.avoidList),
+      ...splitListText(asString(container.avoidMotifs)),
+      ...splitListText(asString(container.avoidList)),
+    ])
+  ).slice(0, 8)
+
+  const normalized = logoConceptBlueprintSchema.safeParse({
+    conceptName:
+      asString(container.conceptName) ??
+      asString(container.name) ??
+      asString(container.title),
+    coreIdea:
+      asString(container.coreIdea) ??
+      asString(container.coreMetaphor) ??
+      asString(container.conceptCore),
+    silhouetteStrategy:
+      asString(container.silhouetteStrategy) ??
+      asString(container.silhouette) ??
+      asString(container.silhouetteLogic),
+    constructionPrinciples,
+    wordmarkDirection:
+      asString(container.wordmarkDirection) ??
+      asString(container.typographyDirection) ??
+      asString(container.wordmarkSystem),
+    colorStrategy:
+      asString(container.colorStrategy) ??
+      asString(container.paletteStrategy) ??
+      asString(container.colorUse),
+    avoidMotifs: avoidMotifs.length > 0 ? avoidMotifs : undefined,
+  })
+
+  return normalized.success ? normalized.data : null
+}
+
+function createStageDebug(
+  input: Partial<LogoGenerationStageDebug>
+): LogoGenerationStageDebug {
+  return {
+    initialStatus: "error",
+    repairAttempted: false,
+    repairStatus: "not_attempted",
+    fallbackUsed: false,
+    ...input,
+  }
+}
+
+function analyzeBlueprintResponse(parsed: Record<string, unknown> | null) {
+  if (!parsed) {
+    return {
+      normalized: null,
+      validationHint:
+        "Return JSON with a conceptBlueprint object containing conceptName, coreIdea, silhouetteStrategy, 3-6 constructionPrinciples, wordmarkDirection, and colorStrategy.",
+    }
+  }
+
+  const blueprint = normalizeConceptBlueprint(parsed)
+  if (!blueprint) {
+    return {
+      normalized: null,
+      validationHint:
+        "conceptBlueprint is missing required fields or does not include 3-6 constructionPrinciples.",
+    }
+  }
+
+  return {
+    normalized: blueprint,
+    validationHint: "Blueprint response looks valid.",
+  }
+}
+
+export function analyzeConceptResponse(parsed: Record<string, unknown> | null) {
+  if (!parsed) {
+    return {
+      normalized: null,
+      validationHint:
+        "Return JSON with exactly three logoConcepts and one selectedConceptId.",
+    }
   }
 
   const container = asRecord(parsed.brand) ?? asRecord(parsed.output) ?? parsed
@@ -236,12 +473,34 @@ function normalizeConceptList(
       ? arrayConcepts
       : buildSyntheticConceptsFromLogoSvgSet(container)
 
+  if (rawConcepts.length === 0) {
+    return {
+      normalized: null,
+      validationHint:
+        "No logoConcepts array was found. Return exactly three lockups: icon_only, icon_with_wordmark, and wordmark_only.",
+    }
+  }
+
+  const normalizationErrors: string[] = []
   const normalized = rawConcepts
     .map((item, index) => normalizeConcept(item, index))
-    .filter((item): item is LogoConcept => item !== null)
+    .flatMap((result) => {
+      if (!result.concept) {
+        if (result.reason) {
+          normalizationErrors.push(result.reason)
+        }
+        return []
+      }
+      return [result.concept]
+    })
 
   if (normalized.length === 0) {
-    return null
+    return {
+      normalized: null,
+      validationHint:
+        normalizationErrors[0] ??
+        "No valid SVG lockups were produced. Ensure each lockup contains complete SVG markup.",
+    }
   }
 
   const byType = new Map<LogoConceptLockupType, LogoConcept[]>()
@@ -254,6 +513,7 @@ function normalizeConceptList(
     if (!bucket) {
       continue
     }
+
     const fingerprint = svgFingerprint(concept.logoSvg)
     if (bucket.some((item) => svgFingerprint(item.logoSvg) === fingerprint)) {
       continue
@@ -261,24 +521,34 @@ function normalizeConceptList(
     bucket.push(concept)
   }
 
-  const selected: LogoConcept[] = []
-  for (const conceptType of REQUIRED_CONCEPT_TYPES) {
-    const candidate = byType.get(conceptType)?.[0]
-    if (!candidate) {
-      return null
+  const missingTypes = REQUIRED_CONCEPT_TYPES.filter((conceptType) => {
+    return (byType.get(conceptType)?.length ?? 0) === 0
+  })
+
+  if (missingTypes.length > 0) {
+    return {
+      normalized: null,
+      validationHint: `Missing required lockup types: ${missingTypes.join(", ")}.`,
     }
-    selected.push(candidate)
   }
 
-  const selectedConceptId =
-    asString(container.selectedConceptId) ??
-    asString(container.primaryConceptId) ??
-    selected.find((item) => item.conceptType === "icon_with_wordmark")?.id ??
-    selected[0]?.id
+  const selected = REQUIRED_CONCEPT_TYPES.map((conceptType) => {
+    return byType.get(conceptType)?.[0]
+  }).filter((item): item is LogoConcept => item !== undefined)
+
+  const selectedConceptIdRaw =
+    asString(container.selectedConceptId) ?? asString(container.primaryConceptId)
+  const selectedConceptId = selected.some((item) => item.id === selectedConceptIdRaw)
+    ? selectedConceptIdRaw
+    : selected.find((item) => item.conceptType === "icon_with_wordmark")?.id ??
+      selected[0]?.id
 
   return {
-    logoConcepts: selected,
-    selectedConceptId: selectedConceptId ?? undefined,
+    normalized: {
+      logoConcepts: selected,
+      selectedConceptId: selectedConceptId ?? undefined,
+    },
+    validationHint: "Concept response looks valid.",
   }
 }
 
@@ -292,6 +562,7 @@ function pickConceptByType(
 function buildBrandOutputFromConcepts(inputData: {
   logoConcepts: LogoConcept[]
   selectedConceptId: string
+  conceptBlueprint?: LogoConceptBlueprint
 }) {
   const selectedConcept =
     inputData.logoConcepts.find((item) => item.id === inputData.selectedConceptId) ??
@@ -305,6 +576,15 @@ function buildBrandOutputFromConcepts(inputData: {
   const wordmarkConcept =
     pickConceptByType(inputData.logoConcepts, "wordmark_only") ?? selectedConcept
 
+  const blueprint = inputData.conceptBlueprint
+  const brandGuidelines = blueprint
+    ? [
+        `Master concept: ${blueprint.coreIdea}`,
+        `Silhouette: ${blueprint.silhouetteStrategy}`,
+        `Wordmark: ${blueprint.wordmarkDirection}`,
+      ].join(" ")
+    : "Primary concept selected from three lockup-specific SVG explorations."
+
   return {
     selectedConcept,
     brandOutput: {
@@ -315,24 +595,100 @@ function buildBrandOutputFromConcepts(inputData: {
         icon: iconConcept.logoSvg,
         wordmark: wordmarkConcept.logoSvg,
       },
-      brandGuidelines:
-        "Primary concept selected from three lockup-specific in-memory SVG explorations (icon-only, icon+wordmark, wordmark-only).",
+      brandGuidelines,
     },
   }
 }
 
-function buildConceptsPrompt(inputData: {
+function buildBlueprintPrompt(inputData: {
   prompt: string
   logoBriefMarkdown: string
   designPhilosophyMarkdown: string
   brandBrief?: Record<string, unknown>
 }) {
   const parts = [
-    "You are in step 2 of a canvas-first logo workflow.",
-    "Generate exactly 3 SVG lockups for the same brand identity.",
-    "Treat the canonical design philosophy as the primary creative authority.",
-    "Use the factual brand context only as a grounding layer.",
-    "The output must feel like three lockups of one aesthetic movement, not three unrelated concept directions.",
+    "You are in step 2A of a logo identity workflow.",
+    "Create exactly one logo concept blueprint for a single identity direction.",
+    "You are designing a logo system, not a poster, art print, or canvas composition.",
+    "Synthesize the brief into one refined concept instead of proposing multiple unrelated directions.",
+    "Prioritize distinctiveness, silhouette clarity, black-and-white-first strength, and small-size legibility.",
+    "Avoid generic startup geometry unless the brief explicitly asks for it.",
+    "Return JSON only. No markdown. No code fences. No extra prose.",
+    "JSON shape:",
+    JSON.stringify({
+      conceptBlueprint: {
+        conceptName: "string",
+        coreIdea: "string",
+        silhouetteStrategy: "string",
+        constructionPrinciples: ["string", "string", "string"],
+        wordmarkDirection: "string",
+        colorStrategy: "string",
+        avoidMotifs: ["string"],
+      },
+    }),
+    "Hard rules:",
+    "- choose one master concept only",
+    "- constructionPrinciples must contain 3 to 6 actionable rules",
+    "- no stars, sparks, AI brains, circuit traces, or random polygons unless the brief explicitly demands them",
+    "- the concept must be specific enough that a second model could draw consistent SVG lockups from it",
+    `Original prompt: ${inputData.prompt}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+  ]
+
+  if (inputData.brandBrief) {
+    parts.push(`Structured brand brief: ${JSON.stringify(inputData.brandBrief)}`)
+  }
+
+  return parts.join("\n\n")
+}
+
+function buildBlueprintRepairPrompt(inputData: {
+  prompt: string
+  logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
+  invalidOutput: string
+  validationHint: string
+  brandBrief?: Record<string, unknown>
+}) {
+  const parts = [
+    "Your previous logo blueprint output was invalid.",
+    "Fix it and return JSON only. No markdown. No code fences.",
+    "Required JSON shape:",
+    JSON.stringify({
+      conceptBlueprint: {
+        conceptName: "string",
+        coreIdea: "string",
+        silhouetteStrategy: "string",
+        constructionPrinciples: ["string", "string", "string"],
+        wordmarkDirection: "string",
+        colorStrategy: "string",
+        avoidMotifs: ["string"],
+      },
+    }),
+    `Validation hint: ${inputData.validationHint}`,
+    `Original prompt: ${inputData.prompt}`,
+    `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
+    `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+    inputData.brandBrief ? `Structured brand brief: ${JSON.stringify(inputData.brandBrief)}` : "",
+    `Invalid output to repair: ${inputData.invalidOutput}`,
+  ]
+
+  return parts.filter(Boolean).join("\n\n")
+}
+
+function buildConceptsPrompt(inputData: {
+  prompt: string
+  logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
+  conceptBlueprint: LogoConceptBlueprint
+  brandBrief?: Record<string, unknown>
+}) {
+  const parts = [
+    "You are in step 2B of a logo identity workflow.",
+    "Generate exactly three SVG lockups from the provided single concept blueprint.",
+    "These are three lockups of one identity, not three separate creative directions.",
+    "You are designing logo assets, not posters or canvas compositions.",
     "Return JSON only. No markdown. No code fences. No extra prose.",
     "JSON shape:",
     JSON.stringify({
@@ -364,21 +720,22 @@ function buildConceptsPrompt(inputData: {
     "Hard rules:",
     "- logoConcepts length must be exactly 3",
     "- conceptType must include exactly one of each: icon_only, icon_with_wordmark, wordmark_only",
-    "- icon_only SVG: must contain graphics and must NOT include <text> or <tspan>",
-    "- icon_with_wordmark SVG: must include both graphics and <text>/<tspan>",
-    "- wordmark_only SVG: must include <text>/<tspan> and must NOT include graphics tags (path/circle/ellipse/rect/polygon/polyline/line/use/image)",
-    "- selectedConceptId must match one concept id",
-    "- all three SVGs must express the same philosophy and subtle conceptual thread",
-    "- keep all outputs aligned with the brief constraints",
-    "Relevant canvas-design source text to preserve wherever applicable:",
-    canvasDesignLogoFusionBlock,
+    "- icon_only SVG: must contain visible graphics and must NOT include <text> or <tspan>",
+    "- icon_with_wordmark SVG: must include both visible graphics and <text>/<tspan>",
+    "- wordmark_only SVG: must include <text>/<tspan>; <defs> and invisible layout guides are allowed, but no visible symbol graphics",
+    "- selectedConceptId must match one concept id and should normally point to icon_with_wordmark",
+    "- keep all three lockups faithful to the same concept blueprint",
+    "- avoid gradients, 3D effects, and stock AI symbols unless the brief or blueprint explicitly requires them",
     `Original prompt: ${inputData.prompt}`,
     `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
     `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+    `Concept blueprint JSON:\n${JSON.stringify(inputData.conceptBlueprint)}`,
   ]
+
   if (inputData.brandBrief) {
     parts.push(`Structured brand brief: ${JSON.stringify(inputData.brandBrief)}`)
   }
+
   return parts.join("\n\n")
 }
 
@@ -386,12 +743,13 @@ function buildConceptsRepairPrompt(inputData: {
   prompt: string
   logoBriefMarkdown: string
   designPhilosophyMarkdown: string
+  conceptBlueprint: LogoConceptBlueprint
   invalidOutput: string
-  validationHint?: string
+  validationHint: string
   brandBrief?: Record<string, unknown>
 }) {
   const parts = [
-    "Your previous output is invalid.",
+    "Your previous logo lockup output is invalid.",
     "Fix it and return JSON only. No markdown. No code fences.",
     "Required JSON shape:",
     JSON.stringify({
@@ -408,18 +766,13 @@ function buildConceptsRepairPrompt(inputData: {
     }),
     "Hard rules:",
     "- output exactly 3 concepts",
-    "- conceptType must include exactly one icon_only, one icon_with_wordmark, one wordmark_only",
-    "- icon_only must have no <text>/<tspan>",
-    "- icon_with_wordmark must include both text and graphics",
-    "- wordmark_only must include text and no graphics tags",
-    "- selectedConceptId must match one concept id",
-    "- all three SVGs must express the same philosophy and subtle conceptual thread",
-    inputData.validationHint ? `Validation hint: ${inputData.validationHint}` : "",
-    "Relevant canvas-design source text to preserve wherever applicable:",
-    canvasDesignLogoFusionBlock,
+    "- include exactly one icon_only, one icon_with_wordmark, one wordmark_only",
+    "- wordmark_only may use <defs> or invisible layout helpers, but it must not contain a visible symbol",
+    `Validation hint: ${inputData.validationHint}`,
     `Original prompt: ${inputData.prompt}`,
     `Brand context markdown:\n${inputData.logoBriefMarkdown}`,
     `Canonical design philosophy markdown:\n${inputData.designPhilosophyMarkdown}`,
+    `Concept blueprint JSON:\n${JSON.stringify(inputData.conceptBlueprint)}`,
     inputData.brandBrief ? `Structured brand brief: ${JSON.stringify(inputData.brandBrief)}` : "",
     `Invalid output to repair: ${inputData.invalidOutput}`,
   ]
@@ -430,10 +783,14 @@ function buildConceptsRepairPrompt(inputData: {
 function buildFallbackConcepts(inputData: {
   prompt: string
   brandBrief?: Record<string, unknown>
+  fallbackStrategy?: FallbackLogoStrategy
 }) {
+  const fallbackStrategy =
+    inputData.fallbackStrategy ?? chooseFallbackLogoStrategy(inputData)
   const fallback = createFallbackBrandOutput({
     prompt: inputData.prompt,
     brandBrief: inputData.brandBrief,
+    fallbackStrategy,
   })
 
   const baseConcepts: LogoConcept[] = [
@@ -463,10 +820,12 @@ function buildFallbackConcepts(inputData: {
   return {
     logoConcepts: baseConcepts,
     selectedConceptId: baseConcepts[1].id,
+    fallbackStrategy,
+    brandOutput: fallback,
   }
 }
 
-async function generateConceptsWithRecovery(inputData: {
+async function generateBlueprintWithRecovery(inputData: {
   prompt: string
   logoBriefMarkdown: string
   designPhilosophyMarkdown: string
@@ -474,12 +833,15 @@ async function generateConceptsWithRecovery(inputData: {
   requestContext: RunRequestContext
 }) {
   let initialText = ""
+  let initialStatus: LogoGenerationStageDebug["initialStatus"] = "error"
+  let repairStatus: LogoGenerationStageDebug["repairStatus"] = "not_attempted"
   let validationHint =
-    "Missing required lockup set: one icon_only, one icon_with_wordmark, one wordmark_only."
+    "Return a valid conceptBlueprint object with the required fields."
+  let failureReason: string | undefined
 
   try {
     const output = await brandDesignerAgent.generate(
-      buildConceptsPrompt({
+      buildBlueprintPrompt({
         prompt: inputData.prompt,
         logoBriefMarkdown: inputData.logoBriefMarkdown,
         designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
@@ -492,67 +854,206 @@ async function generateConceptsWithRecovery(inputData: {
     )
 
     initialText = output.text ?? ""
-    const parsed = parseJsonObject(initialText)
-    const normalized = normalizeConceptList(parsed)
-    if (normalized && normalized.logoConcepts.length === 3) {
+    const analysis = analyzeBlueprintResponse(parseJsonObject(initialText))
+    if (analysis.normalized) {
       return {
-        logoConcepts: normalized.logoConcepts,
-        selectedConceptId:
-          normalized.selectedConceptId ??
-          normalized.logoConcepts.find((item) => item.conceptType === "icon_with_wordmark")?.id ??
-          normalized.logoConcepts[0]?.id ??
-          "",
-      }
-    }
-    validationHint =
-      "Parsed JSON did not meet lockup contract (icon_only/icon_with_wordmark/wordmark_only)."
-  } catch {
-    validationHint = "Initial generation failed. Regenerate with strict lockup contract."
-  }
-
-  if (initialText.trim()) {
-    try {
-      const repaired = await brandDesignerAgent.generate(
-        buildConceptsRepairPrompt({
-          prompt: inputData.prompt,
-          logoBriefMarkdown: inputData.logoBriefMarkdown,
-          designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
-          brandBrief: inputData.brandBrief,
-          invalidOutput: initialText.slice(0, 8000),
-          validationHint,
+        conceptBlueprint: analysis.normalized,
+        debug: createStageDebug({
+          initialStatus: "success",
+          repairAttempted: false,
+          repairStatus: "not_attempted",
+          fallbackUsed: false,
         }),
-        {
-          requestContext: inputData.requestContext,
-          toolChoice: "none",
-        }
-      )
-      const repairedText = repaired.text ?? ""
-      const parsed = parseJsonObject(repairedText)
-      const normalized = normalizeConceptList(parsed)
-      if (normalized && normalized.logoConcepts.length === 3) {
-        return {
-          logoConcepts: normalized.logoConcepts,
-          selectedConceptId:
-            normalized.selectedConceptId ??
-            normalized.logoConcepts.find((item) => item.conceptType === "icon_with_wordmark")?.id ??
-            normalized.logoConcepts[0]?.id ??
-            "",
-        }
+        fallbackStrategy: undefined,
       }
-    } catch {
-      // Fall through to deterministic fallback.
     }
+
+    initialStatus = "invalid"
+    validationHint = analysis.validationHint
+  } catch (error) {
+    initialStatus = "error"
+    failureReason = errorToMessage(error)
+    validationHint =
+      "Blueprint generation failed. Return the exact conceptBlueprint JSON contract."
   }
 
-  return buildFallbackConcepts({
+  try {
+    const repaired = await brandDesignerAgent.generate(
+      buildBlueprintRepairPrompt({
+        prompt: inputData.prompt,
+        logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
+        brandBrief: inputData.brandBrief,
+        invalidOutput: initialText.slice(0, 8000) || "<empty>",
+        validationHint,
+      }),
+      {
+        requestContext: inputData.requestContext,
+        toolChoice: "none",
+      }
+    )
+
+    const repairedText = repaired.text ?? ""
+    const analysis = analyzeBlueprintResponse(parseJsonObject(repairedText))
+    if (analysis.normalized) {
+      return {
+        conceptBlueprint: analysis.normalized,
+        debug: createStageDebug({
+          initialStatus,
+          repairAttempted: true,
+          repairStatus: "success",
+          fallbackUsed: false,
+        }),
+        fallbackStrategy: undefined,
+      }
+    }
+
+    repairStatus = "invalid"
+    validationHint = analysis.validationHint
+  } catch (error) {
+    repairStatus = "error"
+    failureReason = failureReason ?? errorToMessage(error)
+  }
+
+  const fallbackStrategy = chooseFallbackLogoStrategy(inputData)
+
+  return {
+    conceptBlueprint: createFallbackConceptBlueprint({
+      prompt: inputData.prompt,
+      brandBrief: inputData.brandBrief,
+      fallbackStrategy,
+    }),
+    debug: createStageDebug({
+      initialStatus,
+      repairAttempted: true,
+      repairStatus,
+      fallbackUsed: true,
+      failureReason,
+      validationHint,
+    }),
+    fallbackStrategy,
+  }
+}
+
+async function generateConceptsWithRecovery(inputData: {
+  prompt: string
+  logoBriefMarkdown: string
+  designPhilosophyMarkdown: string
+  conceptBlueprint: LogoConceptBlueprint
+  brandBrief?: Record<string, unknown>
+  requestContext: RunRequestContext
+  fallbackStrategy?: FallbackLogoStrategy
+}) {
+  let initialText = ""
+  let initialStatus: LogoGenerationStageDebug["initialStatus"] = "error"
+  let repairStatus: LogoGenerationStageDebug["repairStatus"] = "not_attempted"
+  let validationHint =
+    "Return exactly three logoConcepts with one icon_only, one icon_with_wordmark, and one wordmark_only."
+  let failureReason: string | undefined
+
+  try {
+    const output = await brandDesignerAgent.generate(
+      buildConceptsPrompt({
+        prompt: inputData.prompt,
+        logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
+        conceptBlueprint: inputData.conceptBlueprint,
+        brandBrief: inputData.brandBrief,
+      }),
+      {
+        requestContext: inputData.requestContext,
+        toolChoice: "none",
+      }
+    )
+
+    initialText = output.text ?? ""
+    const analysis = analyzeConceptResponse(parseJsonObject(initialText))
+    if (analysis.normalized) {
+      return {
+        ...analysis.normalized,
+        debug: createStageDebug({
+          initialStatus: "success",
+          repairAttempted: false,
+          repairStatus: "not_attempted",
+          fallbackUsed: false,
+        }),
+        fallbackStrategy: undefined,
+      }
+    }
+
+    initialStatus = "invalid"
+    validationHint = analysis.validationHint
+  } catch (error) {
+    initialStatus = "error"
+    failureReason = errorToMessage(error)
+    validationHint =
+      "Lockup generation failed. Return the exact three-lockup JSON contract."
+  }
+
+  try {
+    const repaired = await brandDesignerAgent.generate(
+      buildConceptsRepairPrompt({
+        prompt: inputData.prompt,
+        logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
+        conceptBlueprint: inputData.conceptBlueprint,
+        brandBrief: inputData.brandBrief,
+        invalidOutput: initialText.slice(0, 8000) || "<empty>",
+        validationHint,
+      }),
+      {
+        requestContext: inputData.requestContext,
+        toolChoice: "none",
+      }
+    )
+
+    const repairedText = repaired.text ?? ""
+    const analysis = analyzeConceptResponse(parseJsonObject(repairedText))
+    if (analysis.normalized) {
+      return {
+        ...analysis.normalized,
+        debug: createStageDebug({
+          initialStatus,
+          repairAttempted: true,
+          repairStatus: "success",
+          fallbackUsed: false,
+        }),
+        fallbackStrategy: undefined,
+      }
+    }
+
+    repairStatus = "invalid"
+    validationHint = analysis.validationHint
+  } catch (error) {
+    repairStatus = "error"
+    failureReason = failureReason ?? errorToMessage(error)
+  }
+
+  const fallback = buildFallbackConcepts({
     prompt: inputData.prompt,
     brandBrief: inputData.brandBrief,
+    fallbackStrategy: inputData.fallbackStrategy,
   })
+
+  return {
+    logoConcepts: fallback.logoConcepts,
+    selectedConceptId: fallback.selectedConceptId,
+    brandOutput: fallback.brandOutput,
+    debug: createStageDebug({
+      initialStatus,
+      repairAttempted: true,
+      repairStatus,
+      fallbackUsed: true,
+      failureReason,
+      validationHint,
+    }),
+    fallbackStrategy: fallback.fallbackStrategy,
+  }
 }
 
 export const brandDesignStep = createStep({
   id: "logo_brand_design",
-  description: "Generate 3 SVG logo lockups from the canonical design philosophy",
+  description: "Generate 3 SVG logo lockups from a single refined logo concept blueprint",
   inputSchema: logoDesignBriefOutputSchema,
   outputSchema: logoDesignConceptOutputSchema,
   execute: async ({ inputData }) => {
@@ -561,19 +1062,31 @@ export const brandDesignStep = createStep({
       const existingResult = run?.resultJson as
         | {
             brand?: Record<string, unknown>
+            conceptBlueprint?: unknown
+            generationDebug?: unknown
+            fallbackStrategy?: unknown
             logoConcepts?: unknown
             selectedConceptId?: unknown
           }
         | null
 
-      const existingConcepts = normalizeConceptList({
+      const existingConcepts = analyzeConceptResponse({
         logoConcepts:
           existingResult?.logoConcepts ??
           asRecord(existingResult?.brand)?.logoConcepts,
         selectedConceptId:
           existingResult?.selectedConceptId ??
           asRecord(existingResult?.brand)?.selectedConceptId,
-      })
+      }).normalized
+      const existingBlueprint = normalizeConceptBlueprint(
+        asRecord(existingResult?.conceptBlueprint)
+      )
+      const existingGenerationDebug = logoGenerationDebugSchema.safeParse(
+        asRecord(existingResult?.generationDebug)
+      ).success
+        ? logoGenerationDebugSchema.parse(asRecord(existingResult?.generationDebug))
+        : undefined
+      const existingFallbackStrategy = asString(existingResult?.fallbackStrategy)
 
       if (existingConcepts && existingConcepts.logoConcepts.length === 3) {
         const logoConcepts = existingConcepts.logoConcepts
@@ -584,10 +1097,14 @@ export const brandDesignStep = createStep({
         const { selectedConcept, brandOutput } = buildBrandOutputFromConcepts({
           logoConcepts,
           selectedConceptId,
+          conceptBlueprint: existingBlueprint ?? undefined,
         })
 
         return {
           ...inputData,
+          conceptBlueprint: existingBlueprint ?? undefined,
+          generationDebug: existingGenerationDebug,
+          fallbackStrategy: existingFallbackStrategy ?? undefined,
           logoConcepts,
           selectedConceptId: selectedConcept.id,
           brandOutput,
@@ -601,7 +1118,7 @@ export const brandDesignStep = createStep({
         runId: inputData.runId,
       })
 
-      const generated = await generateConceptsWithRecovery({
+      const blueprintGenerated = await generateBlueprintWithRecovery({
         prompt: inputData.prompt,
         logoBriefMarkdown: inputData.logoBriefMarkdown,
         designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
@@ -609,15 +1126,44 @@ export const brandDesignStep = createStep({
         requestContext,
       })
 
-      const logoConcepts = generated.logoConcepts.slice(0, 3)
+      const conceptsGenerated = await generateConceptsWithRecovery({
+        prompt: inputData.prompt,
+        logoBriefMarkdown: inputData.logoBriefMarkdown,
+        designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
+        conceptBlueprint: blueprintGenerated.conceptBlueprint,
+        brandBrief: inputData.brandBrief as Record<string, unknown> | undefined,
+        requestContext,
+        fallbackStrategy: blueprintGenerated.fallbackStrategy,
+      })
+
+      const logoConcepts = conceptsGenerated.logoConcepts.slice(0, 3)
       const selectedConceptId =
-        generated.selectedConceptId ||
+        conceptsGenerated.selectedConceptId ||
         logoConcepts.find((item) => item.conceptType === "icon_with_wordmark")?.id ||
         logoConcepts[0].id
-      const { selectedConcept, brandOutput } = buildBrandOutputFromConcepts({
+      const generationDebug: LogoGenerationDebug = {
+        fallbackUsed:
+          blueprintGenerated.debug.fallbackUsed || conceptsGenerated.debug.fallbackUsed,
+        fallbackStrategy:
+          conceptsGenerated.fallbackStrategy ?? blueprintGenerated.fallbackStrategy,
+        blueprint: blueprintGenerated.debug,
+        lockups: conceptsGenerated.debug,
+      }
+      const selectedConcept =
+        logoConcepts.find((item) => item.id === selectedConceptId) ?? logoConcepts[0]
+      const { brandOutput: derivedBrandOutput } = buildBrandOutputFromConcepts({
         logoConcepts,
         selectedConceptId,
+        conceptBlueprint: blueprintGenerated.conceptBlueprint,
       })
+      const brandOutput =
+        conceptsGenerated.fallbackStrategy && conceptsGenerated.brandOutput
+          ? {
+              ...conceptsGenerated.brandOutput,
+              conceptName: selectedConcept.conceptName,
+              rationaleMd: selectedConcept.rationaleMd,
+            }
+          : derivedBrandOutput
 
       await logoDesignService.updateRun(inputData.runId, {
         stage: "brand_designing",
@@ -625,6 +1171,9 @@ export const brandDesignStep = createStep({
         resultJson: {
           logoBriefMarkdown: inputData.logoBriefMarkdown,
           designPhilosophyMarkdown: inputData.designPhilosophyMarkdown,
+          conceptBlueprint: blueprintGenerated.conceptBlueprint,
+          generationDebug,
+          fallbackStrategy: generationDebug.fallbackStrategy,
           logoConcepts,
           selectedConceptId: selectedConcept.id,
           brand: {
@@ -637,6 +1186,9 @@ export const brandDesignStep = createStep({
 
       return {
         ...inputData,
+        conceptBlueprint: blueprintGenerated.conceptBlueprint,
+        generationDebug,
+        fallbackStrategy: generationDebug.fallbackStrategy,
         logoConcepts,
         selectedConceptId: selectedConcept.id,
         brandOutput,

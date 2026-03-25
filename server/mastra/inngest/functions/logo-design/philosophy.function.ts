@@ -72,6 +72,9 @@ export const philosophyStep = createStep({
         resultJson: {
           ...(existingResult ?? {}),
           logoBriefMarkdown: inputData.logoBriefMarkdown,
+          conceptBlueprint: inputData.conceptBlueprint,
+          generationDebug: inputData.generationDebug,
+          fallbackStrategy: inputData.fallbackStrategy,
           logoConcepts: inputData.logoConcepts,
           selectedConceptId: selectedConcept.id,
           brand: {

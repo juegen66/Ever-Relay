@@ -10,6 +10,7 @@ export type OfflineDiscoveryOutput = z.infer<typeof offlineDiscoveryOutputSchema
 
 export const offlineProactiveWorkflowInputSchema = z.object({
   userId: z.string().min(1),
+  forceRun: z.boolean().optional(),
 })
 
 export type OfflineProactiveWorkflowInput = z.infer<typeof offlineProactiveWorkflowInputSchema>
